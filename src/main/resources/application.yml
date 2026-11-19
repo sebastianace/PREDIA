@@ -1,0 +1,60 @@
+# Configuración de Predia. Los secretos llegan por variables de entorno o por el archivo .env (no versionado).
+spring:
+  application:
+    name: predia
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:predia}
+    username: ${DB_USER:predia}
+    password: ${DB_PASSWORD:predia}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1026}
+  ai:
+    # Predia solo usa chat y embeddings; se desactivan los demás modelos de OpenAI.
+    model:
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
+    openai:
+      # Sin clave, Predia arranca igual y trabaja en modo manual (ver EstadoIa).
+      api-key: ${OPENAI_API_KEY:sin-configurar}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-5.4-mini}
+      embedding:
+        options:
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+predia:
+  jwt:
+    secreto: ${JWT_SECRET:}
+    horas-validez: ${JWT_HORAS_VALIDEZ:8}
+  demo:
+    habilitada: ${DEMO_HABILITADA:true}
+    password: ${DEMO_PASSWORD:}
+
+logging:
+  level:
+    co.predia: INFO
