@@ -80,14 +80,51 @@ public class Fragmentador {
                 continue;
             }
             for (String parrafo : PATRON_SEPARADOR_PARRAFOS.split(pagina.texto())) {
-                String texto = parrafo.strip();
-                if (texto.isEmpty()) {
-                    continue;
-                }
-                bloques.add(new Bloque(pagina.numero(), texto, pagina.esOcr(), esEncabezado(texto)));
+                agregarBloquesDelParrafo(bloques, pagina, parrafo.strip());
             }
         }
         return bloques;
+    }
+
+    /**
+     * Un párrafo puede traer varios encabezados pegados al texto (los PDF casi nunca separan los títulos con una
+     * línea en blanco). Cada encabezado se separa en su propio bloque. Una línea en mayúsculas solo cuenta como
+     * título si empieza el párrafo o la línea anterior cerró una frase: así un nombre en mayúsculas en medio de una
+     * oración no se confunde con un título. Los encabezados legales (CLÁUSULA, ARTÍCULO…) siempre cuentan.
+     */
+    private void agregarBloquesDelParrafo(List<Bloque> bloques, PaginaTexto pagina, String parrafo) {
+        if (parrafo.isEmpty()) {
+            return;
+        }
+        StringBuilder texto = new StringBuilder();
+        String anterior = null;
+        for (String linea : parrafo.lines().map(String::strip).filter(l -> !l.isEmpty()).toList()) {
+            boolean esTitulo = esEncabezado(linea)
+                    && (anterior == null || cierraUnaFrase(anterior) || PATRON_ENCABEZADO_LEGAL.matcher(linea).matches());
+            if (esTitulo) {
+                vaciar(bloques, pagina, texto);
+                bloques.add(new Bloque(pagina.numero(), linea, pagina.esOcr(), true));
+            } else {
+                if (!texto.isEmpty()) {
+                    texto.append('\n');
+                }
+                texto.append(linea);
+            }
+            anterior = linea;
+        }
+        vaciar(bloques, pagina, texto);
+    }
+
+    private static void vaciar(List<Bloque> bloques, PaginaTexto pagina, StringBuilder texto) {
+        if (!texto.isEmpty()) {
+            bloques.add(new Bloque(pagina.numero(), texto.toString(), pagina.esOcr(), false));
+            texto.setLength(0);
+        }
+    }
+
+    private static boolean cierraUnaFrase(String linea) {
+        char ultimo = linea.charAt(linea.length() - 1);
+        return ".:;!?)".indexOf(ultimo) >= 0;
     }
 
     private boolean esEncabezado(String texto) {

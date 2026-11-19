@@ -80,6 +80,32 @@ class FragmentadorTest {
     }
 
     @Test
+    void detectaLosEncabezadosAunqueVayanPegadosAlTextoSinLineasEnBlanco() {
+        // Así llega el texto de casi cualquier PDF: sin líneas en blanco entre párrafos.
+        String pagina = "CONTRATO DE ARRENDAMIENTO\n"
+                + "Entre los suscritos se celebra el presente contrato.\n"
+                + "CLÁUSULA PRIMERA. OBJETO\n"
+                + "El arrendador entrega el inmueble ubicado en la calle 30.\n"
+                + "CLÁUSULA SEGUNDA. CANON\n"
+                + "El canon mensual es de un millón de pesos.";
+
+        List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(new PaginaTexto(1, pagina, false)));
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).seccion()).isEqualTo("CLÁUSULA SEGUNDA. CANON");
+    }
+
+    @Test
+    void unaLineaEnMayusculasEnMitadDeUnaOracionNoSeTomaPorTitulo() {
+        String pagina = "El arrendador entrega al arrendatario\nEL INMUEBLE\nubicado en la calle 30 de la ciudad.";
+
+        List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(new PaginaTexto(1, pagina, false)));
+
+        assertThat(resultado.get(0).seccion()).isNull();
+        assertThat(resultado.get(0).texto()).contains("EL INMUEBLE");
+    }
+
+    @Test
     void unaPaginaEscaneadaMarcaElFragmentoComoOcr() {
         List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(
                 new PaginaTexto(1, parrafoDe(100), false),
