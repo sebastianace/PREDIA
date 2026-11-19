@@ -43,6 +43,9 @@ public class ConfiguracionSeguridad {
                         .requestMatchers("/error").permitAll()
                         // Escrituras de configuración: solo ADMIN (se revisa antes de validar el cuerpo).
                         .requestMatchers(HttpMethod.PUT, "/api/parametros").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/tasas").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/tasas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/tasas/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o
