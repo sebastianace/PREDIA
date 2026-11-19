@@ -16,3 +16,10 @@ const horaFecha = new Intl.DateTimeFormat('es-CO', {
 
 export const formatoFecha = (valor: string | null | undefined) => (valor ? fecha.format(new Date(valor)) : '—')
 export const formatoFechaHora = (valor: string | null | undefined) => (valor ? horaFecha.format(new Date(valor)) : '—')
+
+/** 0,2964 → "29,6 %". El número ya viene calculado por el backend; aquí solo se muestra. */
+export const formatoPorcentaje = (fraccion: number | null | undefined, decimales = 1) =>
+  fraccion == null ? '—' : `${(fraccion * 100).toLocaleString('es-CO', { maximumFractionDigits: decimales })} %`
+
+/** 0,12 → "12 % E.A." */
+export const formatoTasaEa = (fraccion: number) => `${formatoPorcentaje(fraccion, 2)} E.A.`
