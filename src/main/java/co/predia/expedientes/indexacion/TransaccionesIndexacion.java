@@ -1,7 +1,9 @@
 package co.predia.expedientes.indexacion;
 
 import co.predia.expedientes.Documento;
+import co.predia.expedientes.DocumentoClasificado;
 import co.predia.expedientes.DocumentoRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +26,11 @@ public class TransaccionesIndexacion {
     private final TrabajoIndexacionRepository trabajos;
     private final DocumentoRepository documentos;
     private final FragmentoRepositorioJdbc fragmentos;
+    private final ApplicationEventPublisher eventos;
 
     public TransaccionesIndexacion(TrabajoIndexacionRepository trabajos, DocumentoRepository documentos,
-                                   FragmentoRepositorioJdbc fragmentos) {
+                                   FragmentoRepositorioJdbc fragmentos, ApplicationEventPublisher eventos) {
+        this.eventos = eventos;
         this.trabajos = trabajos;
         this.documentos = documentos;
         this.fragmentos = fragmentos;
@@ -66,8 +70,13 @@ public class TransaccionesIndexacion {
         Documento documento = documentos.findById(claim.documentoId())
                 .orElseThrow(() -> new IllegalStateException("El documento ya no existe."));
         documento.marcarIndexado(paginas, paginasOcr, embeddings != null);
-        sugerencia.ifPresent(s -> documento.registrarSugerencia(s.tipoDocumento(), parsearFecha(s.fechaExpedicion()),
-                confianzaAcotada(s.confianza())));
+        sugerencia.ifPresent(s -> {
+            LocalDate fecha = parsearFecha(s.fechaExpedicion());
+            documento.registrarSugerencia(s.tipoDocumento(), fecha, confianzaAcotada(s.confianza()));
+            // Si el documento es de un negocio, el requisito que corresponde pasa a SUGERIDO (nunca a RECIBIDO).
+            eventos.publishEvent(new DocumentoClasificado(documento.getId(), documento.getInmobiliariaId(),
+                    documento.getNegocioId(), s.tipoDocumento(), fecha));
+        });
 
         TrabajoIndexacion trabajo = trabajos.findById(claim.id())
                 .orElseThrow(() -> new IllegalStateException("El trabajo ya no existe."));

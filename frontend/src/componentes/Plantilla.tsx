@@ -1,16 +1,19 @@
-import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSesion } from '../sesion/Sesion'
 import { AvisoIa } from './AvisoIa'
 import { Icono, type NombreIcono } from './Iconos'
 
-// Las secciones se agregan a medida que cada fase queda lista.
-const secciones: { ruta: string; nombre: string; icono: NombreIcono }[] = [
-  { ruta: '/', nombre: 'Inicio', icono: 'inicio' },
-  { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario' },
-  { ruta: '/clientes', nombre: 'Clientes', icono: 'clientes' },
-  { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente' },
-  { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas' },
+// En escritorio van todas en la barra lateral; en celular, las principales abajo y el resto en "Más".
+const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: boolean }[] = [
+  { ruta: '/', nombre: 'Inicio', icono: 'inicio', principal: true },
+  { ruta: '/negocios', nombre: 'Negocios', icono: 'negocios', principal: true },
+  { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario', principal: true },
+  { ruta: '/clientes', nombre: 'Clientes', icono: 'clientes', principal: true },
+  { ruta: '/recordatorios', nombre: 'Recordatorios', icono: 'recordatorios', principal: false },
+  { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente', principal: false },
+  { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas', principal: false },
+  { ruta: '/requisitos', nombre: 'Requisitos', icono: 'requisitos', principal: false },
 ]
 
 const iniciales = (nombre = '') =>
@@ -19,6 +22,10 @@ const iniciales = (nombre = '') =>
 export function Plantilla() {
   const { usuario, cerrar } = useSesion()
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [masAbierto, setMasAbierto] = useState(false)
+  const { pathname } = useLocation()
+  const secundariaActiva = secciones.some((x) => !x.principal && pathname.startsWith(x.ruta))
+  useEffect(() => { setMasAbierto(false) }, [pathname])
 
   return (
     <div className="min-h-dvh md:flex">
@@ -27,7 +34,7 @@ export function Plantilla() {
         <div className="ancha px-7 pb-8 pt-8 text-2xl font-bold tracking-tight">Predia</div>
         <nav className="flex flex-1 flex-col gap-0.5 px-4" aria-label="Secciones">
           {secciones.map((s) => (
-            <NavLink key={s.ruta} to={s.ruta} end
+            <NavLink key={s.ruta} to={s.ruta} end={s.ruta === '/'}
               className={({ isActive }) =>
                 `relative flex items-center gap-3 rounded-control px-3 py-2.5 text-[15px] transition-colors ${
                   isActive ? 'bg-white/10 font-medium text-white before:absolute before:inset-y-2 before:-left-4 before:w-[3px] before:rounded-r before:bg-white'
@@ -79,18 +86,38 @@ export function Plantilla() {
       </div>
 
       {/* Navegación inferior en celular: al alcance del pulgar durante las visitas */}
+      {masAbierto && (
+        <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-20 border-t border-linea bg-white p-2 shadow-[0_-12px_32px_-16px_rgb(11_37_69/0.35)] md:hidden">
+          <ul className="grid grid-cols-2 gap-1">
+            {secciones.filter((x) => !x.principal).map((x) => (
+              <li key={x.ruta}>
+                <NavLink to={x.ruta} className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-control px-3 py-3 text-sm ${isActive ? 'bg-papel font-semibold text-tinta' : 'text-grafito'}`}>
+                  <Icono nombre={x.icono} className="size-5 text-niebla" />
+                  {x.nombre}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <nav aria-label="Secciones"
-        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-linea bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        {secciones.map((s) => (
-          <NavLink key={s.ruta} to={s.ruta} end
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-linea bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        {secciones.filter((x) => x.principal).map((x) => (
+          <NavLink key={x.ruta} to={x.ruta} end={x.ruta === '/'}
             className={({ isActive }) =>
               `relative flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-xs ${
                 isActive ? 'font-semibold text-tinta before:absolute before:inset-x-8 before:top-0 before:h-[3px] before:rounded-b before:bg-cobalto'
                   : 'text-niebla'}`}>
-            <Icono nombre={s.icono} className="size-6" />
-            {s.nombre}
+            <Icono nombre={x.icono} className="size-6" />
+            {x.nombre}
           </NavLink>
         ))}
+        <button onClick={() => setMasAbierto((v) => !v)} aria-expanded={masAbierto}
+          className={`relative flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-xs ${masAbierto || secundariaActiva ? 'font-semibold text-tinta' : 'text-niebla'}`}>
+          <Icono nombre="mas" className="size-6" />
+          Más
+        </button>
       </nav>
     </div>
   )

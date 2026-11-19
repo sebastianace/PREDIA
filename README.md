@@ -27,7 +27,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 2 | Indexación asíncrona de PDF (PDFBox, OCR, fragmentos, embeddings) | ✅ Listo |
 | 3 | Consulta RAG híbrida con citas | ✅ Listo |
 | 4 | Inventario, presupuesto y simulador de crédito | ✅ Listo |
-| 5 | Cierre del negocio: documentos del vendedor y recordatorios | ⏳ Pendiente |
+| 5 | Cierre del negocio: documentos del vendedor y recordatorios | ✅ Listo |
 | 6 | Asistente con herramientas | ⏳ Pendiente |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
