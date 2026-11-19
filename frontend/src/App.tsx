@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Plantilla } from './componentes/Plantilla'
+import { Expedientes } from './paginas/Expedientes'
 import { Inicio } from './paginas/Inicio'
 import { Inventario } from './paginas/Inventario'
 import { Login } from './paginas/Login'
@@ -14,6 +15,7 @@ function Rutas() {
       <Route element={<Plantilla />}>
         <Route index element={<Inicio />} />
         <Route path="inventario" element={<Inventario />} />
+        <Route path="expedientes" element={<Expedientes />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -8,6 +8,7 @@ import { Icono, type NombreIcono } from './Iconos'
 const secciones: { ruta: string; nombre: string; icono: NombreIcono }[] = [
   { ruta: '/', nombre: 'Inicio', icono: 'inicio' },
   { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario' },
+  { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente' },
 ]
 
 const iniciales = (nombre = '') =>
