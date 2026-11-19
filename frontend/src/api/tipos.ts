@@ -47,3 +47,43 @@ export interface Inmueble {
   descripcion: string
   estado: EstadoInmueble
 }
+
+export type EstadoIndexacion = 'EN_COLA' | 'PROCESANDO' | 'INDEXADO' | 'ERROR'
+export type ClasificacionEstado = 'SIN_CLASIFICAR' | 'SUGERIDA' | 'CONFIRMADA'
+
+export interface Documento {
+  id: number
+  inmuebleId: number
+  negocioId: number | null
+  nombreArchivo: string
+  tamanoBytes: number
+  paginas: number | null
+  paginasOcr: number
+  estadoIndexacion: EstadoIndexacion
+  error: string | null
+  indexadoEn: string | null
+  vectorizado: boolean
+  tipoSugerido: string | null
+  fechaExpedicionSugerida: string | null
+  confianza: number | null
+  clasificacionEstado: ClasificacionEstado
+  tipoConfirmado: string | null
+  fechaExpedicionConfirmada: string | null
+  creadoEn: string
+}
+
+export interface Cita {
+  numero: number
+  documentoId: number
+  nombreArchivo: string
+  paginaInicio: number
+  paginaFin: number
+  seccion: string | null
+}
+
+export interface RespuestaConsulta {
+  respuesta: string | null
+  citas: Cita[]
+  sinEvidencia: boolean
+  modoManual: boolean
+}
