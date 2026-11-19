@@ -1,5 +1,11 @@
 package co.predia.comun.demo;
 
+import co.predia.clientes.Cliente;
+import co.predia.clientes.ClienteRepository;
+import co.predia.clientes.Intencion;
+import co.predia.credito.TasaCredito;
+import co.predia.credito.TasaCreditoRepository;
+import co.predia.credito.TipoTasa;
 import co.predia.inmobiliaria.Inmobiliaria;
 import co.predia.inmobiliaria.InmobiliariaRepository;
 import co.predia.inmobiliaria.ParametrosInmobiliaria;
@@ -23,11 +29,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Siembra los datos FICTICIOS de la demo (Altos Inmobiliaria, Bucaramanga). Es idempotente:
- * si la inmobiliaria ya existe, no hace nada. Se desactiva con DEMO_HABILITADA=false.
+ * Siembra los datos FICTICIOS de la demo (Altos Inmobiliaria, Bucaramanga). Es idempotente, por partes:
+ * crea lo que falte (inmobiliaria base, clientes, tasas) sin tocar lo que ya existe, así una base creada en una
+ * fase anterior recibe los datos nuevos. Se desactiva con DEMO_HABILITADA=false.
  */
 @Component
 @ConditionalOnProperty(name = "predia.demo.habilitada", havingValue = "true")
@@ -43,16 +51,21 @@ public class DatosDemo implements ApplicationRunner {
     private final UsuarioRepository usuarios;
     private final ParametrosInmobiliariaRepository parametros;
     private final InmuebleRepository inmuebles;
+    private final ClienteRepository clientes;
+    private final TasaCreditoRepository tasas;
     private final PasswordEncoder passwordEncoder;
     private final String passwordDemo;
 
     public DatosDemo(InmobiliariaRepository inmobiliarias, UsuarioRepository usuarios,
                      ParametrosInmobiliariaRepository parametros, InmuebleRepository inmuebles,
+                     ClienteRepository clientes, TasaCreditoRepository tasas,
                      PasswordEncoder passwordEncoder, @Value("${predia.demo.password:}") String passwordDemo) {
         this.inmobiliarias = inmobiliarias;
         this.usuarios = usuarios;
         this.parametros = parametros;
         this.inmuebles = inmuebles;
+        this.clientes = clientes;
+        this.tasas = tasas;
         this.passwordEncoder = passwordEncoder;
         this.passwordDemo = passwordDemo;
     }
@@ -60,13 +73,18 @@ public class DatosDemo implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (inmobiliarias.findByNit(NIT_ALTOS).isPresent()) {
-            return;
+        Inmobiliaria altos = inmobiliarias.findByNit(NIT_ALTOS).orElse(null);
+        if (altos == null) {
+            if (passwordDemo == null || passwordDemo.isBlank()) {
+                log.warn("No se sembraron los datos de demo: falta DEMO_PASSWORD en el archivo .env.");
+                return;
+            }
+            altos = crearBase();
         }
-        if (passwordDemo == null || passwordDemo.isBlank()) {
-            log.warn("No se sembraron los datos de demo: falta DEMO_PASSWORD en el archivo .env.");
-            return;
-        }
+        sembrarClientesYTasas(altos.getId());
+    }
+
+    private Inmobiliaria crearBase() {
         Inmobiliaria altos = inmobiliarias.save(new Inmobiliaria("Altos Inmobiliaria", NIT_ALTOS, "Bucaramanga"));
         Long id = altos.getId();
 
@@ -81,6 +99,29 @@ public class DatosDemo implements ApplicationRunner {
 
         sembrarInmuebles(id);
         log.info("Datos de demo sembrados para Altos Inmobiliaria (todos son ficticios).");
+        return altos;
+    }
+
+    private void sembrarClientesYTasas(Long id) {
+        Usuario laura = usuarios.findByEmailIgnoreCaseAndActivoTrue(EMAIL_LAURA).orElse(null);
+        if (laura == null) {
+            return;
+        }
+        if (clientes.countByInmobiliariaId(id) == 0) {
+            // Paola y Juan: ingreso familiar $7.500.000 y ahorro $90.000.000 (con su autorización de datos).
+            Cliente paolaYJuan = new Cliente(id, laura.getId());
+            paolaYJuan.actualizarPerfil("Paola y Juan", "paolayjuan@ejemplo.test", "3000000000",
+                    new BigDecimal("7500000"), new BigDecimal("90000000"), BigDecimal.ZERO, Intencion.COMPRAR,
+                    (short) 3, List.of("Floridablanca"),
+                    "Apartamento de tres habitaciones con parqueadero, que acepte mascotas y esté cerca de colegios.");
+            clientes.save(paolaYJuan);
+            log.info("Cliente de demo sembrado: Paola y Juan (ficticio).");
+        }
+        if (tasas.countByInmobiliariaId(id) == 0) {
+            tasas.save(new TasaCredito(id, "Banco Ejemplo", TipoTasa.NO_VIS, new BigDecimal("0.12"),
+                    LocalDate.of(2026, 1, 1), "Tasa de ejemplo para la demo; no es una tasa real", true, null));
+            log.info("Tasa de ejemplo sembrada: Banco Ejemplo, 12 % E.A.");
+        }
     }
 
     private void sembrarInmuebles(Long id) {

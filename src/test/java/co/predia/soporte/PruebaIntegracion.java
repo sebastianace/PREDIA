@@ -1,6 +1,12 @@
 package co.predia.soporte;
 
+import co.predia.clientes.Cliente;
+import co.predia.clientes.ClienteRepository;
+import co.predia.clientes.Intencion;
 import co.predia.comun.seguridad.ServicioJwt;
+import co.predia.credito.TasaCredito;
+import co.predia.credito.TasaCreditoRepository;
+import co.predia.credito.TipoTasa;
 import co.predia.inmobiliaria.Inmobiliaria;
 import co.predia.inmobiliaria.InmobiliariaRepository;
 import co.predia.inmobiliaria.ParametrosInmobiliaria;
@@ -24,6 +30,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -31,6 +38,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -59,6 +68,8 @@ public abstract class PruebaIntegracion {
     @Autowired protected PasswordEncoder passwordEncoder;
     @Autowired protected ServicioJwt servicioJwt;
     @Autowired protected InmuebleRepository inmuebles;
+    @Autowired protected ClienteRepository clientes;
+    @Autowired protected TasaCreditoRepository tasas;
 
     /** Crea una inmobiliaria nueva (NIT único) con sus parámetros por defecto. */
     protected Inmobiliaria crearInmobiliaria(String nombre) {
@@ -118,5 +129,24 @@ public abstract class PruebaIntegracion {
         return java.util.stream.IntStream.range(0, lineas)
                 .mapToObj(i -> "%s: el inmueble numero %d tiene balcon y vista a la montana.".formatted(tema, i))
                 .toArray(String[]::new);
+    }
+
+    /** Un cliente con la autorización de datos ya registrada, como exige la base de datos. */
+    protected Cliente crearCliente(Inmobiliaria inmobiliaria, Usuario registradoPor, String nombre, String ingreso,
+                                   String ahorro) {
+        Cliente c = new Cliente(inmobiliaria.getId(), registradoPor.getId());
+        c.actualizarPerfil(nombre, null, null, new BigDecimal(ingreso), new BigDecimal(ahorro), BigDecimal.ZERO,
+                Intencion.COMPRAR, (short) 3, List.of("Floridablanca"), "Apartamento con parqueadero");
+        return clientes.save(c);
+    }
+
+    protected TasaCredito crearTasa(Inmobiliaria inmobiliaria, String banco, TipoTasa tipo, String tasaEa) {
+        return tasas.save(new TasaCredito(inmobiliaria.getId(), banco, tipo, new BigDecimal(tasaEa),
+                LocalDate.of(2026, 1, 1), "Fuente de prueba", true, null));
+    }
+
+    protected static Long idDe(MvcResult resultado) throws Exception {
+        return ((Number) new com.fasterxml.jackson.databind.ObjectMapper()
+                .readValue(resultado.getResponse().getContentAsString(), java.util.Map.class).get("id")).longValue();
     }
 }
