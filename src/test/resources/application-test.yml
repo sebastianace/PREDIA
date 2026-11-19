@@ -1,0 +1,11 @@
+# Perfil de pruebas: nunca llama a OpenAI ni siembra la demo. La base la levanta Testcontainers.
+spring:
+  ai:
+    openai:
+      api-key: sin-configurar
+predia:
+  jwt:
+    secreto: secreto-solo-para-pruebas-automatizadas-0123456789
+    horas-validez: 1
+  demo:
+    habilitada: false
