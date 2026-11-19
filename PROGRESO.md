@@ -1,5 +1,39 @@
 # Progreso de Predia
 
+## Fase 4 — Inventario, clientes, presupuesto y crédito ✅ (19/11/2026)
+
+**Rama:** `feature/inventario-presupuesto-credito` (sale de `feature/consulta-rag`; las Fases 2 y 3 siguen en PR abierto)
+
+### Qué quedó
+- Migración `V4__clientes_y_tasas.sql`: `cliente` (con `autorizacion_datos BOOLEAN CHECK (autorizacion_datos)`, fecha y asesor que la registró) y `tasa_credito`.
+- **Fórmulas en Java, con pruebas** (nunca las calcula el modelo): `CalculadoraCredito` (tasa mensual `(1+EA)^(1/12)−1`, cuota `P·i/(1−(1+i)^−n)`, y su inverso) y `CalculadoraPresupuesto` (cuota máxima = 30 % del ingreso; tope = el menor entre `ahorro ÷ % cuota inicial` y `ahorro + lo que soporta la cuota máxima`). Todo en `BigDecimal`; los redondeos son conservadores (el tope y lo que soporta la cuota, hacia abajo).
+- **Inventario:** `POST/PUT /api/inmuebles` (crear, editar y cambiar de estado) y `POST /api/inmuebles/busqueda` **en dos pasos**: primero SQL filtra lo no negociable (solo `DISPONIBLE`, de la inmobiliaria del usuario, dentro del presupuesto, con las habitaciones pedidas) y después pgvector ordena por similitud con lo que pidió el cliente, con el porcentaje de coincidencia. Los vectores se calculan al crear o editar y, si faltan, al buscar. Sin IA se ordena por precio, sin porcentaje, con un aviso; y una edición sin IA borra el vector viejo para no dejar uno desactualizado.
+- **Clientes:** CRUD con la autorización de datos obligatoria (422 sin ella), derecho de supresión (`DELETE`) y `POST /api/clientes/extraer-perfil`: la IA propone el perfil con salida estructurada, Java lo valida (descarta negativos y vacíos) y queda **SUGERIDO**: no guarda nada, el asesor lo revisa en el formulario.
+- **Presupuesto:** `GET /api/clientes/{id}/presupuesto?plazoAnios=&tasaId=&vis=` con la tasa usada, el plazo, los porcentajes aplicados y avisos. Las deudas mensuales **no se restan** de la cuota máxima: generan una alerta cuando cuota máxima + deudas superan el 40 % del ingreso (umbral de referencia, no una regla legal).
+- **Crédito:** `GET/POST/PUT/DELETE /api/tasas` (escritura solo para el ADMIN, verificada antes de validar el cuerpo) y `POST /api/creditos/simular` con `monto`, o con `inmuebleId` + `clienteId` (financia precio − ahorro). Devuelve cuota, % sobre el ingreso, si cumple la cuota máxima y la cuota inicial mínima, la tasa usada con su banco, fuente y fecha, y el aviso «Es una simulación; la aprobación es del banco». Si no hay una tasa vigente cargada, **no inventa una**: responde 422.
+- **Datos semilla** (incrementales: se agregan a una base que ya existía): cliente Paola y Juan (ingreso $7.500.000, ahorro $90.000.000, con autorización) y Banco Ejemplo, 12 % E.A., marcada «de ejemplo».
+- **Corrección:** un JSON mal formado devolvía 500; ahora responde 400 (lo descubrí al probar).
+- **Frontend:** Clientes (lista, alta/edición con «Leer con IA» como sugerencia y casilla de autorización), detalle del cliente (presupuesto con plazo, tasa y VIS; búsqueda de inmuebles; simulador por inmueble), Tasas (el ADMIN las carga) y alta/edición de inmuebles.
+
+### Pruebas (69 en total; las 39 nuevas no llaman a OpenAI)
+- `CalculadoraCreditoTest` y `CalculadoraPresupuestoTest` (11): **crédito de $210.000.000 al 12 % E.A. a 240 meses → cuota ≈ $2.223.000**; **ingreso $7.500.000 y ahorro $90.000.000 → cuota máxima $2.250.000 y tope ≈ $300.000.000**; la tasa mensual se verificó contra un cálculo de 40 dígitos; las deudas no restan; límites e inválidos.
+- `CreditoApiTest` (8), `ClienteApiTest` (6), `ExtraccionPerfilTest` (4, con `ChatModel` mockeado), `InventarioApiTest` (7) e `InventarioBusquedaIaTest` (3, con `EmbeddingModel` mockeado): permisos del ADMIN, aislamiento entre inmobiliarias, autorización de datos, **un inmueble no disponible nunca se ofrece (aunque encaje mejor)**, orden por similitud con porcentaje, y que nada se invente sin tasa.
+
+### Cómo probarlo
+1. Backend y frontend corriendo; entra como `laura@altos.test` → **Clientes → Paola y Juan**: el presupuesto da cuota máxima $2.250.000 y tope $300.000.000.
+2. «Buscar inmuebles dentro del presupuesto»: salen Ciudadela, Provenza y Cañaveral (la Casa Lagos II de $330 M, el Apto Cabecera vendido y el de Real de Minas arrendado quedan fuera).
+3. «Simular crédito» en el Apto 1102 Cañaveral: cuota **$2.223.109** (29,6 % del ingreso), cumple la cuota máxima y la cuota inicial. Verificado en vivo contra PostgreSQL real, tras aplicar la migración V4 sobre la base que ya existía.
+4. `./mvnw test` (con Docker abierto).
+
+### Cosas a tener en cuenta
+- El «% de coincidencia» es la similitud coseno entre el vector de la descripción de cada inmueble y el de lo que pidió el cliente. Sirve para **ordenar**; con `text-embedding-3-small` los valores típicos son moderados (no esperes 90 % en cosas parecidas).
+- Con IA, el texto pegado para «Leer con IA» se envía al modelo para extraer el perfil, pero no se almacena.
+- La tasa VIS no tiene semilla (solo hay la de 12 % no VIS): para un inmueble VIS hay que cargarla en la pantalla de Tasas.
+
+### Qué falta
+- Fase 5: cierre del negocio (catálogo de requisitos, semáforo, recordatorios con aprobación y Mailpit).
+
+---
 ## Fase 3 — Consulta RAG híbrida con citas ✅ (19/11/2026)
 
 **Rama:** `feature/consulta-rag` (sale de `feature/indexacion-asincrona`, con la Fase 2 ya adentro)
