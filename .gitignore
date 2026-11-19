@@ -1,0 +1,24 @@
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Secretos
+.env
+*.env.local
+
+# Archivos temporales de indexación (nunca deben subirse)
+tmp/
+.predia-tmp/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
