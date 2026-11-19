@@ -1,16 +1,79 @@
+@import "@fontsource-variable/archivo/wdth.css";
 @import "tailwindcss";
 
-/* Paleta de Predia: verde petróleo sobrio con acento ámbar para alertas. */
+/*
+ * Identidad de Predia: "plano arquitectónico".
+ * Azul de Prusia (el de los planos impresos), papel blanco y tinta negra.
+ * El cobalto se reserva para lo que se puede tocar o lo que está disponible.
+ */
 @theme {
-  --color-marca-50: #eef7f6;
-  --color-marca-100: #d5ebe8;
-  --color-marca-500: #2f7f7a;
-  --color-marca-600: #1f6662;
-  --color-marca-700: #17504d;
-  --color-marca-900: #0f3d3e;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-prusia: #0b2545;
+  --color-prusia-claro: #1b3a66;
+  --color-cobalto: #1f4fd1;
+  --color-cobalto-hondo: #183fa8;
+  --color-cobalto-suave: #e9effc;
+  --color-papel: #f5f7fa;
+  --color-tinta: #000000;
+  --color-grafito: #3a4150;
+  --color-niebla: #7d8699;
+  --color-linea: #dfe4ec;
+  --color-ambar: #a8650f;
+  --color-ambar-suave: #fdf4e3;
+
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-control: 6px;
+  --radius-panel: 12px;
 }
 
-body {
-  @apply bg-stone-50 text-stone-900 antialiased;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-papel font-sans text-grafito antialiased;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 {
+    @apply text-tinta;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-cobalto);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Archivo ensanchada: titulares y cifras, como los rótulos de un plano. */
+  .ancha {
+    font-stretch: 118%;
+    letter-spacing: -0.01em;
+  }
+  .cifra {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  /* Retícula de plano: solo en el login. */
+  .reticula {
+    background-color: var(--color-prusia);
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.07) 1px, transparent 1px),
+      linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+    background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+  }
+}
+
+/* El plano se traza una sola vez al entrar. */
+@keyframes trazar {
+  from { stroke-dashoffset: var(--largo, 1200); }
+  to { stroke-dashoffset: 0; }
+}
+.trazo {
+  stroke-dasharray: var(--largo, 1200);
+  animation: trazar 1.8s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trazo { animation: none; stroke-dasharray: none; }
 }
