@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/cliente'
 import type { EstadoInmueble as Estado, Inmueble } from '../api/tipos'
 import { EstadoInmueble, estilosEstado } from '../componentes/EstadoInmueble'
+import { claseBotonPrimario } from '../componentes/Formulario'
 import { Icono } from '../componentes/Iconos'
 import { formatoPesos } from '../formato'
 
@@ -23,10 +25,15 @@ export function Inventario() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Inventario</h1>
-      <p className="mt-1 text-niebla">
-        {inmuebles ? `${inmuebles.length} inmuebles de tu inmobiliaria` : 'Cargando inmuebles…'}
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Inventario</h1>
+          <p className="mt-1 text-niebla">
+            {inmuebles ? `${inmuebles.length} inmuebles de tu inmobiliaria` : 'Cargando inmuebles…'}
+          </p>
+        </div>
+        <Link to="/inventario/nuevo" className={`${claseBotonPrimario} shrink-0`}>Nuevo inmueble</Link>
+      </div>
 
       <div role="tablist" aria-label="Filtrar por estado"
         className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
@@ -52,7 +59,10 @@ export function Inventario() {
             <li key={i.id} className="flex flex-col rounded-panel border border-linea bg-white p-5">
               <div className="flex items-center justify-between gap-3">
                 <EstadoInmueble estado={i.estado} />
-                <span className="text-xs text-niebla">{i.codigo}</span>
+                <span className="flex items-center gap-3 text-xs text-niebla">
+                  {i.codigo}
+                  <Link to={`/inventario/${i.id}/editar`} className="font-medium text-cobalto hover:text-cobalto-hondo">Editar</Link>
+                </span>
               </div>
 
               <h2 className="mt-3 text-lg font-semibold leading-snug">{i.titulo}</h2>
