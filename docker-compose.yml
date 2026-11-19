@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: predia-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-predia}
+      POSTGRES_USER: ${DB_USER:-predia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-predia}
+    ports:
+      # 5434 en el host para no chocar con otros PostgreSQL locales (5432/5433)
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
+    volumes:
+      - predia-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-predia} -d ${DB_NAME:-predia}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    container_name: predia-mailpit
+    ports:
+      - "127.0.0.1:${MAIL_PORT:-1026}:1025"   # SMTP
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8026}:8025"   # Interfaz web: http://localhost:8026
+
+volumes:
+  predia-pgdata:
