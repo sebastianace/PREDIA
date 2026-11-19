@@ -1,51 +1,88 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/cliente'
-import type { EstadoInmueble, Inmueble } from '../api/tipos'
+import type { EstadoInmueble as Estado, Inmueble } from '../api/tipos'
+import { EstadoInmueble, estilosEstado } from '../componentes/EstadoInmueble'
+import { Icono } from '../componentes/Iconos'
 import { formatoPesos } from '../formato'
 
-const colorEstado: Record<EstadoInmueble, string> = {
-  DISPONIBLE: 'bg-emerald-50 text-emerald-700',
-  SEPARADO: 'bg-amber-50 text-amber-700',
-  ARRENDADO: 'bg-sky-50 text-sky-700',
-  VENDIDO: 'bg-stone-100 text-stone-600',
-}
+type Filtro = 'TODOS' | Estado
+const filtros: Filtro[] = ['TODOS', 'DISPONIBLE', 'SEPARADO', 'ARRENDADO', 'VENDIDO']
+const nombreFiltro = (f: Filtro) => (f === 'TODOS' ? 'Todos' : `${estilosEstado[f].nombre}s`)
 
 export function Inventario() {
   const [inmuebles, setInmuebles] = useState<Inmueble[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [filtro, setFiltro] = useState<Filtro>('TODOS')
 
   useEffect(() => {
     api<Inmueble[]>('/inmuebles').then(setInmuebles).catch((e) => setError(e.message))
   }, [])
 
-  return (
-    <section className="mx-auto max-w-4xl">
-      <h1 className="mb-4 text-2xl font-semibold">Inventario</h1>
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {!inmuebles && !error && <p className="text-stone-500">Cargando…</p>}
+  const visibles = (inmuebles ?? []).filter((i) => filtro === 'TODOS' || i.estado === filtro)
+  const cuantos = (f: Filtro) => (inmuebles ?? []).filter((i) => f === 'TODOS' || i.estado === f).length
 
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {inmuebles?.map((i) => (
-          <li key={i.id} className="rounded-xl border border-stone-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h2 className="font-semibold">{i.titulo}</h2>
-                <p className="text-sm text-stone-500">{i.barrio}, {i.ciudad}</p>
+  return (
+    <div className="mx-auto max-w-5xl">
+      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Inventario</h1>
+      <p className="mt-1 text-niebla">
+        {inmuebles ? `${inmuebles.length} inmuebles de tu inmobiliaria` : 'Cargando inmuebles…'}
+      </p>
+
+      <div role="tablist" aria-label="Filtrar por estado"
+        className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
+        {filtros.map((f) => {
+          const activo = f === filtro
+          return (
+            <button key={f} role="tab" aria-selected={activo} onClick={() => setFiltro(f)}
+              className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                activo ? 'border-tinta bg-tinta font-medium text-white' : 'border-linea bg-white text-grafito hover:border-niebla'}`}>
+              {nombreFiltro(f)}
+              <span className={`cifra text-xs ${activo ? 'text-white/70' : 'text-niebla'}`}>{cuantos(f)}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {error && <p role="alert" className="mt-6 border-l-2 border-red-600 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+
+      <ul className="mt-6 grid gap-4 lg:grid-cols-2">
+        {visibles.map((i) => {
+          const fueraDeOferta = i.estado === 'VENDIDO' || i.estado === 'ARRENDADO'
+          return (
+            <li key={i.id} className="flex flex-col rounded-panel border border-linea bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <EstadoInmueble estado={i.estado} />
+                <span className="text-xs text-niebla">{i.codigo}</span>
               </div>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${colorEstado[i.estado]}`}>
-                {i.estado.toLowerCase()}
-              </span>
-            </div>
-            <p className="mt-3 text-lg font-semibold text-marca-700">
-              {formatoPesos(i.operacion === 'VENTA' ? i.precioVenta : i.canonArriendo)}
-              {i.operacion === 'ARRIENDO' && <span className="text-sm font-normal text-stone-500"> / mes</span>}
-            </p>
-            <p className="mt-1 text-sm text-stone-600">
-              {i.habitaciones} hab · {i.banos} baños · {i.areaM2} m² · {i.parqueaderos > 0 ? `${i.parqueaderos} parq.` : 'sin parqueadero'}
-            </p>
-          </li>
-        ))}
+
+              <h2 className="mt-3 text-lg font-semibold leading-snug">{i.titulo}</h2>
+              <p className="text-sm text-niebla">{i.barrio}, {i.ciudad}{i.estrato ? `, estrato ${i.estrato}` : ''}</p>
+
+              <p className={`ancha cifra mt-4 text-[26px] font-semibold leading-none ${fueraDeOferta ? 'text-niebla' : 'text-tinta'}`}>
+                {formatoPesos(i.operacion === 'VENTA' ? i.precioVenta : i.canonArriendo)}
+                {i.operacion === 'ARRIENDO' && <span className="ml-1 text-sm font-normal text-niebla">al mes</span>}
+              </p>
+              {i.valorAdministracion > 0 && (
+                <p className="mt-1.5 text-xs text-niebla">Administración {formatoPesos(i.valorAdministracion)}</p>
+              )}
+
+              <div className="min-h-5 grow" aria-hidden="true" />
+              <ul className="flex flex-wrap gap-x-5 gap-y-2 border-t border-linea pt-4 text-sm text-grafito">
+                <li className="flex items-center gap-1.5"><Icono nombre="cama" className="size-4 text-niebla" />{i.habitaciones} habitaciones</li>
+                <li className="flex items-center gap-1.5"><Icono nombre="bano" className="size-4 text-niebla" />{i.banos} baños</li>
+                <li className="flex items-center gap-1.5"><Icono nombre="area" className="size-4 text-niebla" />{i.areaM2} m²</li>
+                <li className="flex items-center gap-1.5"><Icono nombre="carro" className="size-4 text-niebla" />
+                  {i.parqueaderos === 0 ? 'Sin parqueadero' : i.parqueaderos === 1 ? '1 parqueadero' : `${i.parqueaderos} parqueaderos`}
+                </li>
+              </ul>
+            </li>
+          )
+        })}
       </ul>
-    </section>
+
+      {inmuebles && visibles.length === 0 && (
+        <p className="mt-6 text-niebla">No hay inmuebles {nombreFiltro(filtro).toLowerCase()} en este momento.</p>
+      )}
+    </div>
   )
 }
