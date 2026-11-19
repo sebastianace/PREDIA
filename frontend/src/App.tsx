@@ -6,6 +6,11 @@ import { Clientes } from './paginas/Clientes'
 import { Expedientes } from './paginas/Expedientes'
 import { InmuebleForm } from './paginas/InmuebleForm'
 import { Inicio } from './paginas/Inicio'
+import { NegocioDetalle } from './paginas/NegocioDetalle'
+import { NegocioNuevo } from './paginas/NegocioNuevo'
+import { Negocios } from './paginas/Negocios'
+import { Recordatorios } from './paginas/Recordatorios'
+import { Requisitos } from './paginas/Requisitos'
 import { Inventario } from './paginas/Inventario'
 import { Login } from './paginas/Login'
 import { Tasas } from './paginas/Tasas'
@@ -26,6 +31,11 @@ function Rutas() {
         <Route path="clientes/nuevo" element={<ClienteForm />} />
         <Route path="clientes/:id" element={<ClienteDetalle />} />
         <Route path="clientes/:id/editar" element={<ClienteForm />} />
+        <Route path="negocios" element={<Negocios />} />
+        <Route path="negocios/nuevo" element={<NegocioNuevo />} />
+        <Route path="negocios/:id" element={<NegocioDetalle />} />
+        <Route path="recordatorios" element={<Recordatorios />} />
+        <Route path="requisitos" element={<Requisitos />} />
         <Route path="expedientes" element={<Expedientes />} />
         <Route path="tasas" element={<Tasas />} />
         <Route path="*" element={<Navigate to="/" replace />} />
