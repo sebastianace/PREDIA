@@ -189,3 +189,129 @@ export interface Simulacion {
   cumpleCuotaInicial: boolean | null
   aviso: string
 }
+
+export type EstadoRequisito = 'PENDIENTE' | 'SUGERIDO' | 'RECIBIDO' | 'POR_VENCER' | 'VENCIDO' | 'NO_APLICA'
+export type HipotecaVigente = 'SI' | 'NO' | 'DESCONOCIDO'
+export type EstadoCivil = 'SOLTERO' | 'CASADO' | 'UNION_MARITAL' | 'DIVORCIADO' | 'VIUDO'
+export type TipoPersona = 'NATURAL' | 'JURIDICA'
+
+export interface Propietario {
+  id: number
+  tipoPersona: TipoPersona
+  nombre: string
+  tipoDocumento: string
+  numeroDocumento: string
+  email: string | null
+  telefono: string | null
+  estadoCivil: EstadoCivil | null
+  autorizacionDatos: boolean
+  autorizacionFecha: string
+}
+
+export interface Negocio {
+  id: number
+  inmuebleId: number
+  inmuebleTitulo: string
+  propietarioId: number
+  propietarioNombre: string
+  clienteCompradorId: number | null
+  clienteCompradorNombre: string | null
+  asesorId: number
+  asesorNombre: string | null
+  fechaFirmaTentativa: string | null
+  actuaPorApoderado: boolean
+  hipotecaVigente: HipotecaVigente
+  estado: 'ABIERTO' | 'FIRMADO' | 'CANCELADO'
+  listoParaFirmar: boolean
+  semaforo: string
+  faltan: number
+  porcentajeAvance: number
+}
+
+export interface ItemDocumental {
+  id: number
+  requisitoId: number
+  codigo: string
+  nombre: string
+  descripcion: string
+  obligatorio: boolean
+  estado: EstadoRequisito
+  detalle: string
+  venceEl: string | null
+  estadoRegistrado: 'PENDIENTE' | 'SUGERIDO' | 'RECIBIDO' | 'NO_APLICA_MANUAL'
+  fechaExpedicion: string | null
+  documentoId: number | null
+  documentoNombre: string | null
+  recibidoPor: string | null
+  recibidoEn: string | null
+  nota: string | null
+  requiereFecha: boolean
+}
+
+export interface EstadoDocumental {
+  negocioId: number
+  listoParaFirmar: boolean
+  semaforo: string
+  faltan: number
+  obligatoriosQueAplican: number
+  recibidos: number
+  porcentajeAvance: number
+  items: ItemDocumental[]
+  advertencias: string[]
+  aviso: string
+}
+
+export type EstadoRecordatorio = 'SUGERIDO' | 'APROBADO' | 'ENVIADO' | 'DESCARTADO' | 'ERROR_ENVIO'
+
+export interface Recordatorio {
+  id: number
+  negocioId: number
+  inmuebleTitulo: string | null
+  propietarioNombre: string | null
+  destinatarioEmail: string | null
+  estado: EstadoRecordatorio
+  items: { codigo: string; nombre: string; estado: string; detalle: string; venceEl: string | null }[]
+  asunto: string
+  cuerpo: string
+  cuerpoSugerido: string
+  origenTexto: 'IA' | 'PLANTILLA'
+  creadoEn: string
+  editadoPor: string | null
+  aprobadoPor: string | null
+  aprobadoEn: string | null
+  enviadoEn: string | null
+  error: string | null
+  advertencias: string[]
+}
+
+export interface Requisito {
+  id: number
+  codigo: string
+  nombre: string
+  descripcion: string
+  orden: number
+  activo: boolean
+  reglaAplica: string
+  obligatorio: boolean
+  reglaVigencia: 'NINGUNA' | 'DIAS_DESDE_EXPEDICION' | 'ANIO_EN_CURSO' | 'MES_EN_CURSO'
+  vigenciaDias: number | null
+  aviso: string
+}
+
+export interface ResumenDiario {
+  fecha: string
+  negociosAbiertos: number
+  bloqueados: {
+    negocioId: number
+    inmueble: string
+    propietario: string
+    fechaFirma: string | null
+    semaforo: string
+    faltan: number
+    vencidos: number
+    porVencer: number
+    pendientes: string[]
+  }[]
+  vencenEstaSemana: { negocioId: number; inmueble: string; documento: string; venceEl: string; diasRestantes: number }[]
+  recordatoriosPorAprobar: number
+}
