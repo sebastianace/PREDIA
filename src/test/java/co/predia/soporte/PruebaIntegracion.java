@@ -1,9 +1,19 @@
 package co.predia.soporte;
 
+import co.predia.cierre.negocio.EstadoCivil;
+import co.predia.cierre.negocio.HipotecaVigente;
+import co.predia.cierre.negocio.Negocio;
+import co.predia.cierre.negocio.NegocioRepository;
+import co.predia.cierre.negocio.NegocioService;
+import co.predia.cierre.negocio.Propietario;
+import co.predia.cierre.negocio.PropietarioRepository;
+import co.predia.cierre.negocio.TipoPersona;
 import co.predia.clientes.Cliente;
 import co.predia.clientes.ClienteRepository;
 import co.predia.clientes.Intencion;
+import co.predia.comun.ConfiguracionReloj;
 import co.predia.comun.seguridad.ServicioJwt;
+import co.predia.comun.seguridad.UsuarioActual;
 import co.predia.credito.TasaCredito;
 import co.predia.credito.TasaCreditoRepository;
 import co.predia.credito.TipoTasa;
@@ -70,6 +80,9 @@ public abstract class PruebaIntegracion {
     @Autowired protected InmuebleRepository inmuebles;
     @Autowired protected ClienteRepository clientes;
     @Autowired protected TasaCreditoRepository tasas;
+    @Autowired protected PropietarioRepository propietarios;
+    @Autowired protected NegocioRepository negocios;
+    @Autowired protected NegocioService negocioService;
 
     /** Crea una inmobiliaria nueva (NIT único) con sus parámetros por defecto. */
     protected Inmobiliaria crearInmobiliaria(String nombre) {
@@ -148,5 +161,29 @@ public abstract class PruebaIntegracion {
     protected static Long idDe(MvcResult resultado) throws Exception {
         return ((Number) new com.fasterxml.jackson.databind.ObjectMapper()
                 .readValue(resultado.getResponse().getContentAsString(), java.util.Map.class).get("id")).longValue();
+    }
+
+    /** "Hoy" como lo ven las reglas del cierre: en la hora de Colombia. */
+    protected static LocalDate hoy() {
+        return LocalDate.now(ConfiguracionReloj.ZONA_COLOMBIA);
+    }
+
+    protected Propietario crearPropietario(Inmobiliaria inmobiliaria, Usuario registradoPor, String nombre,
+                                           String email, TipoPersona tipo, EstadoCivil estadoCivil) {
+        Propietario p = new Propietario(inmobiliaria.getId(), registradoPor.getId());
+        p.actualizar(tipo, nombre, tipo == TipoPersona.NATURAL ? "CC" : "NIT", "1234567890", email, "3000000000",
+                estadoCivil);
+        return propietarios.save(p);
+    }
+
+    /** Un negocio con la lista de requisitos ya instanciada; el inmueble queda como propiedad horizontal. */
+    protected Negocio crearNegocio(Inmobiliaria inmobiliaria, Usuario asesor, Inmueble inmueble,
+                                   Propietario propietario, LocalDate fechaFirma) {
+        inmueble.setPropiedadHorizontal(true);
+        inmuebles.save(inmueble);
+        return negocioService.crear(new UsuarioActual(asesor.getId(), inmobiliaria.getId(), asesor.getNombre(),
+                        asesor.getEmail(), asesor.getRol()),
+                new NegocioService.Datos(inmueble.getId(), propietario.getId(), null, fechaFirma, false,
+                        HipotecaVigente.NO, null));
     }
 }
