@@ -25,7 +25,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 |---|---|---|
 | 1 | Esqueleto, autenticación JWT, multi-inmobiliaria, datos semilla | ✅ Listo |
 | 2 | Indexación asíncrona de PDF (PDFBox, OCR, fragmentos, embeddings) | ✅ Listo |
-| 3 | Consulta RAG híbrida con citas | ⏳ Pendiente |
+| 3 | Consulta RAG híbrida con citas | ✅ Listo |
 | 4 | Inventario, presupuesto y simulador de crédito | ⏳ Pendiente |
 | 5 | Cierre del negocio: documentos del vendedor y recordatorios | ⏳ Pendiente |
 | 6 | Asistente con herramientas | ⏳ Pendiente |
