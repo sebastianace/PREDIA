@@ -54,6 +54,15 @@ predia:
   demo:
     habilitada: ${DEMO_HABILITADA:true}
     password: ${DEMO_PASSWORD:}
+  expedientes:
+    # El PDF solo vive aquí mientras se indexa; se borra al terminar (ver ProcesadorIndexacion).
+    directorio-temporal: ${EXPEDIENTES_TMP_DIR:${java.io.tmpdir}/predia/documentos}
+    tamano-maximo-mb: 20
+  ocr:
+    idioma: spa
+    # macOS: brew install tesseract tesseract-lang (ver README). Linux: suele ser /usr/share/tesseract-ocr/*/tessdata.
+    tessdata-path: ${TESSDATA_PREFIX:/opt/homebrew/share/tessdata}
+    dpi: 300
 
 logging:
   level:
