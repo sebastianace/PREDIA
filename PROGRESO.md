@@ -1,5 +1,57 @@
 # Progreso de Predia
 
+## Fase 5 — Cierre del negocio: documentos del vendedor ✅ (19/11/2026)
+
+**Rama:** `feature/cierre-negocio` (sale de `feature/inventario-presupuesto-credito`)
+
+### Qué quedó
+- Migración `V5__cierre_del_negocio.sql`: `propietario`, `negocio`, `requisito_catalogo`, `requisito_negocio` y `recordatorio`; el `negocio_id` de los documentos (Fase 2) ahora apunta a un negocio real.
+- **Catálogo de requisitos** por inmobiliaria, sembrado con la lista base de 12 (cédula, certificado de tradición y libertad, escritura de adquisición, predial, valorización, administración, promesa de compraventa, levantamiento de hipoteca, cónyuge, poder especial, existencia y representación, servicios públicos). Cada uno trae su regla de cuándo aplica y su regla de vigencia; el ADMIN puede activarlos, desactivarlos, hacerlos recomendados (no bloquean) o cambiar los días de vigencia. La interfaz y la API repiten: *«Lista de referencia; confirma los requisitos con la notaría»*. Predia no da asesoría legal.
+- **Motor de reglas** (`MotorReglasCierre`, Java puro, con "hoy" inyectable): en la base solo queda lo que hizo una persona (o la IA sugirió); el estado que se muestra —PENDIENTE, SUGERIDO, RECIBIDO, POR_VENCER, VENCIDO, NO_APLICA— se calcula siempre.
+  - Vencido si `vence_el < hoy`; por vencer si vence antes de la firma o en menos de N días (parámetro de la inmobiliaria).
+  - Vigencias: N días desde la expedición, año en curso (predial), mes en curso (administración).
+  - Aplicación: propiedad horizontal, valorización (ciudades configuradas), hipoteca (solo si el asesor confirma que está vigente), casado o en unión marital, apoderado, persona jurídica.
+  - **Semáforo:** «Listo para firmar» o «Faltan X documentos», con el porcentaje de avance. Los requisitos recomendados no bloquean.
+- **Negocios y propietarios:** el propietario solo se guarda con su autorización de datos. Un negocio solo se abre sobre un inmueble en venta; al abrirlo se instancian los requisitos. `GET /api/negocios/{id}/estado-documental` devuelve semáforo, avance, advertencias y el detalle de cada requisito, con frases escritas en Java (las fechas y plazos nunca los redacta el modelo).
+- **La IA solo sugiere:** cuando se indexa un documento de un negocio y la IA reconoce su tipo y su fecha, el requisito pasa a **SUGERIDO** (con el documento y la fecha propuesta). **Solo el asesor lo pasa a RECIBIDO**; si ya lo había decidido, la sugerencia no lo pisa; y si corrige el tipo del documento, la sugerencia se mueve al requisito correcto.
+- **Recordatorios al propietario:**
+  - La IA recibe **solo** la lista de pendientes que entregó el motor de reglas. Su texto se valida en Java: menciona todos los pendientes, **no menciona ningún documento que no esté pendiente** y no trae números que no salgan de la propia lista. Si falla la validación, o no hay IA, se usa una **plantilla determinista**.
+  - Quedan SUGERIDOS en la bandeja: el asesor los edita (si menciona algo de más, se le avisa sin bloquearlo) y los aprueba. **`POST /aprobar` es la única forma de enviar un correo** (Spring Mail → Mailpit en desarrollo); el trabajo diario nunca envía.
+  - Historial por negocio: qué se pidió, cuándo y quién lo aprobó. Si el envío falla queda `ERROR_ENVIO` y se puede reintentar.
+- **Trabajo diario** (`@Scheduled`, 7:00 hora de Colombia, configurable con `CRON_RECORDATORIOS`): deja un borrador por cada negocio abierto con pendientes, sin duplicar y sin insistir si ya se envió uno hace menos de 3 días.
+- **Resumen diario** `GET /api/resumen-diario`: negocios bloqueados y documentos que vencen esta semana (el asesor ve los suyos; el ADMIN, todos).
+- **Datos semilla:** propietario Jorge Ramírez Pardo y el negocio del Apto 1102 Cañaveral con el certificado de tradición **vencido** (expedido hace 45 días) y el paz y salvo de administración **pendiente**: «Faltan 2 documentos», 67 %, y un borrador de recordatorio en la bandeja.
+- **PDF de ejemplo** (`demo/pdfs/`, todos ficticios): contrato de arrendamiento, escritura, reglamento de propiedad horizontal, certificado de tradición y paz y salvo de administración. Se regeneran con:
+  ```bash
+  ./mvnw -q compile exec:java -Dexec.mainClass=co.predia.comun.demo.GeneradorPdfsDemo -Dexec.args="demo/pdfs"
+  ```
+- **Frontend:** negocios (lista con semáforo, alta con el vendedor y detalle con cada documento: marcar recibido con su fecha, no aplica, reabrir, subir un PDF), bandeja de recordatorios (editar, aprobar, descartar, historial), catálogo de requisitos y el resumen diario en el inicio. La navegación del celular pasa a 4 secciones + «Más».
+
+### Dos mejoras que salieron de probar
+- **Fragmentador:** solo reconocía los títulos (`CLÁUSULA…`, `ARTÍCULO…`) si venían separados por una línea en blanco, y casi ningún PDF las trae. Ahora los separa aunque vayan pegados al texto, sin confundir una línea en mayúsculas en mitad de una oración. Mejora la «sección» de las citas de cualquier documento.
+- **Fechas en la interfaz:** `new Date("2026-12-01")` mostraba el 30 de noviembre en Colombia (UTC−5); las fechas sin hora ahora se leen como fechas locales.
+
+### Pruebas (124 en total; las 55 nuevas de esta fase no llaman a OpenAI)
+- `MotorReglasCierreTest` (13): **certificado expedido hace 31 días → VENCIDO; hace 25 días con firma en 10 → POR_VENCER**; paz y salvo de administración **NO_APLICA si el inmueble no es propiedad horizontal**; el último día de vigencia todavía vale; la IA nunca da algo por RECIBIDO; el semáforo.
+- `CierreApiTest` (11): 12 requisitos de partida, vigencias, fecha obligatoria y no futura, llegar a «Listo para firmar», no aplica y reabrir, vendedor persona jurídica, catálogo del ADMIN, y **un usuario de otra inmobiliaria no ve ni toca negocios, ni sube documentos a un negocio ajeno**.
+- `SugerenciaRequisitosTest` (3, con `ChatModel` mockeado): SUGERIDO y no RECIBIDO, no pisa lo que ya decidió el asesor, corrección de tipo.
+- `RecordatoriosApiTest` (10, con `JavaMailSender` mockeado): **el recordatorio solo menciona documentos faltantes reales; no se envía nada sin aprobar** (`verifyNoInteractions`), ni desde el trabajo diario; aprobación, edición con advertencias, descarte, fallo de envío con reintento, aislamiento entre inmobiliarias.
+- `RecordatorioConIaTest` (5): un texto de la IA solo se usa si pasa la validación; menciona un documento de más, olvida uno, inventa un número o falla → plantilla.
+- `ValidadorYPlantillaTest` (6), `ResumenDiarioTest` (3), `GeneradorPdfsDemoTest` (2) y 2 pruebas nuevas del fragmentador.
+
+### Cómo probarlo
+1. `./mvnw spring-boot:run` y `npm run dev`; entra como `laura@altos.test`. El inicio ya muestra el negocio del 1102 con «Faltan 2 documentos».
+2. **Negocios → Apto 1102 Cañaveral:** ves el semáforo, el 67 % y cada requisito con su estado. Marca el paz y salvo de administración como recibido con la fecha de hoy: queda **POR VENCER** (es «del mes en curso» y la firma es en otro mes).
+3. **Recordatorios:** el borrador pide solo lo que falta. Apruébalo y míralo llegar en Mailpit (<http://localhost:8026>), con «responder a» la asesora. Verificado en vivo: Mailpit tenía 0 mensajes antes de aprobar y 1 después.
+4. Con una API key de OpenAI: sube `demo/pdfs/certificado-tradicion-y-libertad.pdf` al negocio y la IA sugiere el requisito y la fecha, que tú confirmas.
+5. `./mvnw test` (con Docker abierto).
+
+### Qué falta
+- Fase 6: el asistente con herramientas (`estadoDocumentalNegocio` y `redactarRecordatorioPropietario` reutilizan lo de esta fase; el recordatorio siempre queda SUGERIDO).
+- La hipoteca la confirma el asesor a mano: la IA todavía no la sugiere a partir del certificado de tradición.
+
+---
+
 ## Fase 4 — Inventario, clientes, presupuesto y crédito ✅ (19/11/2026)
 
 **Rama:** `feature/inventario-presupuesto-credito` (sale de `feature/consulta-rag`; las Fases 2 y 3 siguen en PR abierto)
