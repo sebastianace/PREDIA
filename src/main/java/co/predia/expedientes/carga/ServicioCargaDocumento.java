@@ -4,13 +4,16 @@ import co.predia.comun.seguridad.UsuarioActual;
 import co.predia.comun.web.RecursoNoEncontradoException;
 import co.predia.comun.web.ReglaNegocioException;
 import co.predia.expedientes.Documento;
+import co.predia.expedientes.DocumentoClasificado;
 import co.predia.expedientes.DocumentoDto;
 import co.predia.expedientes.DocumentoRepository;
 import co.predia.expedientes.EstadoIndexacion;
 import co.predia.expedientes.indexacion.ExtractorPdf;
 import co.predia.expedientes.indexacion.TipoDocumentoSugerido;
+import co.predia.cierre.negocio.NegocioRepository;
 import co.predia.inventario.InmuebleRepository;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,10 +47,15 @@ public class ServicioCargaDocumento {
     private final InmuebleRepository inmuebles;
     private final ExtractorPdf extractorPdf;
     private final RegistroDocumentoTrabajo registro;
+    private final NegocioRepository negocios;
+    private final ApplicationEventPublisher eventos;
 
     public ServicioCargaDocumento(PropiedadesExpedientes propiedades, DocumentoRepository documentos,
                                   InmuebleRepository inmuebles, ExtractorPdf extractorPdf,
-                                  RegistroDocumentoTrabajo registro) {
+                                  RegistroDocumentoTrabajo registro, NegocioRepository negocios,
+                                  ApplicationEventPublisher eventos) {
+        this.negocios = negocios;
+        this.eventos = eventos;
         this.propiedades = propiedades;
         this.documentos = documentos;
         this.inmuebles = inmuebles;
@@ -59,6 +67,12 @@ public class ServicioCargaDocumento {
         validarTipoDeclarado(archivo);
         inmuebles.findByIdAndInmobiliariaId(inmuebleId, usuario.inmobiliariaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Inmueble", inmuebleId));
+        if (negocioId != null) {
+            // Un documento solo se asocia a un negocio de la propia inmobiliaria y de ese mismo inmueble.
+            negocios.findByIdAndInmobiliariaId(negocioId, usuario.inmobiliariaId())
+                    .filter(n -> n.getInmuebleId().equals(inmuebleId))
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Negocio", negocioId));
+        }
 
         ArchivoGuardado guardado = guardarTemporalConHash(archivo);
         try {
@@ -96,6 +110,9 @@ public class ServicioCargaDocumento {
             throw new ReglaNegocioException("Solo se puede clasificar un documento ya indexado.");
         }
         documento.confirmarClasificacion(tipo, fechaExpedicion, usuario.id());
+        // Si el asesor corrigió el tipo, la sugerencia del requisito se ajusta (sigue siendo solo una sugerencia).
+        eventos.publishEvent(new DocumentoClasificado(documento.getId(), documento.getInmobiliariaId(),
+                documento.getNegocioId(), tipo, fechaExpedicion));
         return DocumentoDto.desde(documento);
     }
 
