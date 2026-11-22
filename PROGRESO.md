@@ -1,5 +1,21 @@
 # Progreso de Predia
 
+## Fase 7 — Pulido, guion de demo y pruebas finales ✅ (22/11/2026)
+
+**Rama:** `feature/pulido-final` (sale de `develop`, con las Fases 1–6 ya fusionadas)
+
+### Qué quedó
+- **Revisión de cada pantalla** en escritorio y en celular (inicio, negocios, cierre del 1102, clientes y presupuesto, inventario, recordatorios). La identidad (azul de Prusia, papel blanco, tinta negra, Archivo) ya era coherente, así que no se rediseñó nada: solo se corrigieron detalles.
+- **Detalles corregidos:** dos textos terminaban con un punto doble porque la hora local ya trae «p. m.» («Autorización de datos registrada el … 12:30 p. m..» y «Enviado el … . Lo aprobó …»).
+- **README:** estado de las siete fases, sección de **capturas** (`docs/capturas/`, incluida una en celular) y **guion de demo** paso a paso, con lo que necesita clave de OpenAI y lo que funciona en modo manual. El guion se contrastó con el contenido real de los PDF de ejemplo: el contrato es un **arrendamiento** ficticio que incluye parqueadero, y la pregunta del asistente se redactó para ese documento.
+- **Pruebas finales:** `./mvnw test` → **149 pruebas en verde**; `npm run build` (incluye `tsc -b`) sin errores.
+
+### Lo que no se hizo
+- **No se probó con un modelo real de OpenAI** (no hay clave en el equipo de desarrollo). Falta ver cómo redacta el modelo y si respeta la instrucción del sistema del asistente.
+- **Sin captura del asistente:** sin clave la sección aparece deshabilitada; se puede agregar cuando haya una clave.
+- Los **extras de IA 2** (sentimiento de los comentarios tras la visita y *few-shot* para la intención de un mensaje) siguen pendientes.
+- Falta el recorrido final de la demo con la clave real y la rama `release/*` hacia `main` (solo cuando se pida).
+
 ## Fase 6 — Asistente con herramientas ✅ (21/11/2026)
 
 **Rama:** `feature/asistente` (sale de `feature/cierre-negocio`, ya fusionada en `develop`)
