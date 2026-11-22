@@ -29,8 +29,25 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 4 | Inventario, presupuesto y simulador de crédito | ✅ Listo |
 | 5 | Cierre del negocio: documentos del vendedor y recordatorios | ✅ Listo |
 | 6 | Asistente con herramientas (tool calling) | ✅ Listo |
+| 7 | Pulido, guion de demo y pruebas finales | ✅ Listo |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
+
+---
+
+## Capturas
+
+Capturas de la demo con los datos ficticios de Altos Inmobiliaria (sin `OPENAI_API_KEY`, por eso se ve el aviso de modo manual).
+
+| | |
+|---|---|
+| ![Inicio](docs/capturas/inicio.png) **Inicio:** inventario del día y qué ofrecer. | ![Negocios](docs/capturas/negocios.png) **Negocios:** semáforo y avance del cierre. |
+| ![Cierre del negocio](docs/capturas/cierre-negocio.png) **Cierre del Apto 1102:** qué documento falta, cuál venció y quién lo confirmó. | ![Presupuesto](docs/capturas/cliente-presupuesto.png) **Presupuesto de Paola y Juan:** tope de compra calculado en Java, con su explicación. |
+| ![Inventario](docs/capturas/inventario.png) **Inventario** de inmuebles. | ![Recordatorios](docs/capturas/recordatorios.png) **Recordatorios:** borrador para el propietario; solo sale si el asesor lo aprueba. |
+
+También se usa desde el celular (el asesor la abre en las visitas):
+
+<img src="docs/capturas/cierre-negocio-celular.png" alt="Cierre del negocio en celular" width="280">
 
 ---
 
@@ -144,6 +161,21 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Simulador de crédito | Cuota fija (sistema francés) con tasas por banco cargadas por el ADMIN. *(Fase 4)* |
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
 | Asistente con herramientas | Chat que elige entre seis herramientas (expedientes, inventario, presupuesto, crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
+
+## Guion de demo
+
+Recorrido de unos 8 minutos. Requiere `docker compose up -d`, `./mvnw spring-boot:run` y `npm run dev`; los pasos 2 y 8 necesitan `OPENAI_API_KEY` (sin ella, Predia sigue funcionando en modo manual: la búsqueda es por texto y el recordatorio sale de una plantilla). Entra como `laura@altos.test`.
+
+1. **Inicio.** Muestra el inventario del día y los inmuebles para ofrecer.
+2. **Expedientes (RAG).** En *Expedientes* elige el *Apto 1102 Cañaveral*, sube `demo/pdfs/contrato-arrendamiento.pdf` y espera a que pase a «Indexado». Pregunta «¿el inmueble incluye parqueadero?»: la respuesta trae la cita (documento, página y sección). Pregunta algo que el contrato no diga: responde que no tiene información, sin llamar al modelo. (El PDF de ejemplo es un contrato de arrendamiento ficticio.)
+3. **Cliente y presupuesto.** Abre *Clientes → Paola y Juan*: cuota máxima y tope de compra (`$300.000.000`, limitado por el ahorro), con la tasa de ejemplo que se usó.
+4. **Inmuebles para el cliente.** «Buscar inmuebles dentro del presupuesto»: aparece el Apto 1102 Cañaveral, en Floridablanca y dentro del tope.
+5. **Simulador de crédito.** Simula el 1102 a 15 años: la cuota (`$2.438.073`) supera la cuota máxima y la pantalla lo advierte.
+6. **Cierre del negocio.** En *Negocios → Apto 1102 Cañaveral*: semáforo «Faltan 2 documentos» (certificado de tradición vencido y paz y salvo pendiente). Sube `demo/pdfs/paz-y-salvo-administracion.pdf` al negocio: con IA disponible lo reconoce y deja el requisito **SUGERIDO**; sin IA lo marcas tú. En ambos casos solo el asesor lo pasa a **RECIBIDO**.
+7. **Recordatorio.** En *Recordatorios* hay un borrador para el propietario. Edítalo, apruébalo y míralo llegar en Mailpit (<http://localhost:8026>).
+8. **Asistente.** Pregunta: «¿Qué le falta al dueño del apto 1102 de Cañaveral para firmar?», «¿Qué les alcanza a Paola y Juan en Floridablanca?» y «¿El apto 1102 incluye parqueadero?» (esta necesita el contrato del paso 2). Las cifras vienen de las herramientas; si el modelo escribe un número que ninguna herramienta entregó, la interfaz lo señala.
+
+Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver [PROGRESO.md](PROGRESO.md)). Si cambias algo en la demo, deja el negocio como estaba: reabre el requisito y limpia Mailpit.
 
 ## Limitaciones conocidas
 
