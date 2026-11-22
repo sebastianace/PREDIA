@@ -97,7 +97,7 @@ export function ClienteDetalle() {
         <div><dt className="text-niebla">Deudas al mes</dt><dd className="ancha cifra mt-0.5 font-semibold text-tinta">{formatoPesos(cliente.deudasMensuales)}</dd></div>
       </dl>
       {cliente.preferencias && <p className="mt-4 text-grafito">{cliente.preferencias}</p>}
-      <p className="mt-3 text-xs text-niebla">Autorización de datos registrada el {formatoFechaHora(cliente.autorizacionFecha)}.</p>
+      <p className="mt-3 text-xs text-niebla">Autorización de datos registrada el {formatoFechaHora(cliente.autorizacionFecha)}</p>
 
       <section className="mt-10" aria-labelledby="titulo-presupuesto">
         <h2 id="titulo-presupuesto" className="text-lg font-semibold">Presupuesto de compra</h2>

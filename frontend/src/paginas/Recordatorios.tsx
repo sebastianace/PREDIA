@@ -131,7 +131,7 @@ function Tarjeta({ recordatorio: r, onCambio }: { recordatorio: Recordatorio; on
         </ul>
       )}
       {r.estado === 'ENVIADO' && (
-        <p className="mt-3 text-xs text-niebla">Enviado el {formatoFechaHora(r.enviadoEn)}. Lo aprobó {r.aprobadoPor ?? '—'}.</p>
+        <p className="mt-3 text-xs text-niebla">Enviado el {formatoFechaHora(r.enviadoEn)} · aprobó {r.aprobadoPor ?? '—'}</p>
       )}
       {r.estado === 'ERROR_ENVIO' && <div className="mt-3"><Aviso tipo="error">{r.error}</Aviso></div>}
       {error && <div className="mt-3"><Aviso tipo="error">{error}</Aviso></div>}
