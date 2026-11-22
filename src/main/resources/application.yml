@@ -54,6 +54,9 @@ predia:
   demo:
     habilitada: ${DEMO_HABILITADA:true}
     password: ${DEMO_PASSWORD:}
+  cierre:
+    # Trabajo diario que deja borradores de recordatorios en la bandeja del asesor (nunca envía nada).
+    cron-recordatorios: ${CRON_RECORDATORIOS:0 0 7 * * *}
   expedientes:
     # El PDF solo vive aquí mientras se indexa; se borra al terminar (ver ProcesadorIndexacion).
     directorio-temporal: ${EXPEDIENTES_TMP_DIR:${java.io.tmpdir}/predia/documentos}
