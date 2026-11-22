@@ -77,3 +77,11 @@
 @media (prefers-reduced-motion: reduce) {
   .trazo { animation: none; stroke-dasharray: none; }
 }
+
+/* Estudio de reducción: al imprimir solo sale el estudio, no la aplicación. */
+@media print {
+  body * { visibility: hidden; }
+  #estudio, #estudio * { visibility: visible; }
+  #estudio { position: absolute; inset: 0 auto auto 0; width: 100%; }
+  @page { margin: 14mm; }
+}

@@ -11,6 +11,7 @@ const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: 
   { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario', principal: true },
   { ruta: '/asistente', nombre: 'Asistente', icono: 'asistente', principal: true },
   { ruta: '/clientes', nombre: 'Clientes', icono: 'clientes', principal: false },
+  { ruta: '/reduccion', nombre: 'Reducción', icono: 'reduccion', principal: false },
   { ruta: '/recordatorios', nombre: 'Recordatorios', icono: 'recordatorios', principal: false },
   { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente', principal: false },
   { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas', principal: false },

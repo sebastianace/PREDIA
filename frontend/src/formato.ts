@@ -32,3 +32,13 @@ export const formatoPorcentaje = (fraccion: number | null | undefined, decimales
 
 /** 0,12 → "12 % E.A." */
 export const formatoTasaEa = (fraccion: number) => `${formatoPorcentaje(fraccion, 2)} E.A.`
+
+/** 125 → "10 años 5 meses". Los meses vienen del backend; aquí solo se escriben. */
+export function formatoMeses(meses: number): string {
+  if (meses <= 0) return '0 meses'
+  const anios = Math.floor(meses / 12)
+  const resto = meses % 12
+  const a = `${anios} ${anios === 1 ? 'año' : 'años'}`
+  const m = `${resto} ${resto === 1 ? 'mes' : 'meses'}`
+  return anios === 0 ? m : resto === 0 ? a : `${a} ${m}`
+}
