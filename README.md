@@ -28,7 +28,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 3 | Consulta RAG híbrida con citas | ✅ Listo |
 | 4 | Inventario, presupuesto y simulador de crédito | ✅ Listo |
 | 5 | Cierre del negocio: documentos del vendedor y recordatorios | ✅ Listo |
-| 6 | Asistente con herramientas | ⏳ Pendiente |
+| 6 | Asistente con herramientas (tool calling) | ✅ Listo |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
 
@@ -143,7 +143,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Presupuesto del cliente | Calcula la cuota máxima y el tope de compra con reglas configurables por inmobiliaria. *(Fase 4)* |
 | Simulador de crédito | Cuota fija (sistema francés) con tasas por banco cargadas por el ADMIN. *(Fase 4)* |
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
-| Asistente con herramientas | Chat que usa los módulos anteriores con tool calling. *(Fase 6)* |
+| Asistente con herramientas | Chat que elige entre seis herramientas (expedientes, inventario, presupuesto, crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
 
 ## Limitaciones conocidas
 
@@ -154,6 +154,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 - La columna de vectores es de 1536 dimensiones. Cambiar a un proveedor de embeddings con otra dimensión exige una migración y reindexar.
 - La lista de documentos para el cierre es de referencia. **Predia no da asesoría legal**: confirma los requisitos con la notaría.
 - Las tasas de crédito son de ejemplo; la simulación no es una aprobación del banco.
+- **El asistente depende de la IA:** sin `OPENAI_API_KEY` queda deshabilitado (el resto de Predia funciona). Un modelo de lenguaje puede equivocarse al redactar: por eso las cifras salen de las herramientas y Predia señala cualquier número de la respuesta que ninguna herramienta haya entregado. Las conversaciones se guardan en memoria y se pierden al reiniciar el servidor.
 
 ## Créditos
 
