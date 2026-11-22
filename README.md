@@ -30,6 +30,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 5 | Cierre del negocio: documentos del vendedor y recordatorios | ✅ Listo |
 | 6 | Asistente con herramientas (tool calling) | ✅ Listo |
 | 7 | Pulido, guion de demo y pruebas finales | ✅ Listo |
+| Extra | Reducción de crédito con abonos extraordinarios (Ley 546 de 1999) | ✅ Listo |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
 
@@ -44,6 +45,7 @@ Capturas de la demo con los datos ficticios de Altos Inmobiliaria (sin `OPENAI_A
 | ![Inicio](docs/capturas/inicio.png) **Inicio:** inventario del día y qué ofrecer. | ![Negocios](docs/capturas/negocios.png) **Negocios:** semáforo y avance del cierre. |
 | ![Cierre del negocio](docs/capturas/cierre-negocio.png) **Cierre del Apto 1102:** qué documento falta, cuál venció y quién lo confirmó. | ![Presupuesto](docs/capturas/cliente-presupuesto.png) **Presupuesto de Paola y Juan:** tope de compra calculado en Java, con su explicación. |
 | ![Inventario](docs/capturas/inventario.png) **Inventario** de inmuebles. | ![Recordatorios](docs/capturas/recordatorios.png) **Recordatorios:** borrador para el propietario; solo sale si el asesor lo aprueba. |
+| ![Reducción de crédito](docs/capturas/reduccion-credito.png) **Reducción de crédito:** tres abonos comparados contra el crédito actual. | |
 
 También se usa desde el celular (el asesor la abre en las visitas):
 
@@ -167,6 +169,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Inventario de inmuebles | Filtra con SQL lo no negociable y ordena por similitud con lo que pidió el cliente. *(Fase 4)* |
 | Presupuesto del cliente | Calcula la cuota máxima y el tope de compra con reglas configurables por inmobiliaria. *(Fase 4)* |
 | Simulador de crédito | Cuota fija (sistema francés) con tasas por banco cargadas por el ADMIN. *(Fase 4)* |
+| Reducción de crédito | Para un cliente que ya tiene crédito hipotecario: compara hasta tres abonos extraordinarios (mensual, anual o único) que reducen el plazo o la cuota, con el ahorro en intereses y seguros, la tabla de amortización y un estudio imprimible. Basado en el simulador del autor, reescrito en Java con pruebas. *(Extra)* |
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
 | Asistente con herramientas | Chat que elige entre siete herramientas (expedientes, inventario, presupuesto, crédito, reducción de crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
 
@@ -178,7 +181,7 @@ Recorrido de unos 8 minutos. Requiere `docker compose up -d`, `./mvnw spring-boo
 2. **Expedientes (RAG).** En *Expedientes* elige el *Apto 1102 Cañaveral*, sube `demo/pdfs/contrato-arrendamiento.pdf` y espera a que pase a «Indexado». Pregunta «¿el inmueble incluye parqueadero?»: la respuesta trae la cita (documento, página y sección). Pregunta algo que el contrato no diga: responde que no tiene información, sin llamar al modelo. (El PDF de ejemplo es un contrato de arrendamiento ficticio.)
 3. **Cliente y presupuesto.** Abre *Clientes → Paola y Juan*: cuota máxima y tope de compra (`$300.000.000`, limitado por el ahorro), con la tasa de ejemplo que se usó.
 4. **Inmuebles para el cliente.** «Buscar inmuebles dentro del presupuesto»: aparece el Apto 1102 Cañaveral, en Floridablanca y dentro del tope.
-5. **Simulador de crédito.** Simula el 1102 a 15 años: la cuota (`$2.438.073`) supera la cuota máxima y la pantalla lo advierte.
+5. **Simulador de crédito.** Simula el 1102 a 15 años: la cuota (`$2.438.073`) supera la cuota máxima y la pantalla lo advierte. En *Reducción*, para un crédito que el cliente ya tiene (por ejemplo `$150.000.000` al 11 % E.A. a 240 cuotas), compara abonos de `$500.000`, `$700.000` y `$1.000.000` al mes: con el primero se paga en 123 cuotas y se ahorran `$113.751.687` en intereses. «Imprimir estudio» genera el documento para el cliente.
 6. **Cierre del negocio.** En *Negocios → Apto 1102 Cañaveral*: semáforo «Faltan 2 documentos» (certificado de tradición vencido y paz y salvo pendiente). Sube `demo/pdfs/paz-y-salvo-administracion.pdf` al negocio: con IA disponible lo reconoce y deja el requisito **SUGERIDO**; sin IA lo marcas tú. En ambos casos solo el asesor lo pasa a **RECIBIDO**.
 7. **Recordatorio.** En *Recordatorios* hay un borrador para el propietario. Edítalo, apruébalo y míralo llegar en Mailpit (<http://localhost:8026>).
 8. **Asistente.** Pregunta: «¿Qué le falta al dueño del apto 1102 de Cañaveral para firmar?», «¿Qué les alcanza a Paola y Juan en Floridablanca?» y «¿El apto 1102 incluye parqueadero?» (esta necesita el contrato del paso 2). Las cifras vienen de las herramientas; si el modelo escribe un número que ninguna herramienta entregó, la interfaz lo señala.
@@ -194,6 +197,7 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 - La columna de vectores es de 1536 dimensiones. Cambiar a un proveedor de embeddings con otra dimensión exige una migración y reindexar.
 - La lista de documentos para el cierre es de referencia. **Predia no da asesoría legal**: confirma los requisitos con la notaría.
 - Las tasas de crédito son de ejemplo; la simulación no es una aprobación del banco.
+- **Reducción de crédito:** supone cuota fija, intereses calculados sobre el saldo de cada mes y el abono aplicado en la misma cuota, con cada valor redondeado al peso. Cada banco puede aplicar los abonos con pequeñas diferencias; el estudio es una estimación, no una oferta.
 - **El asistente depende de la IA:** sin `OPENAI_API_KEY` queda deshabilitado (el resto de Predia funciona). Un modelo de lenguaje puede equivocarse al redactar: por eso las cifras salen de las herramientas y Predia señala cualquier número de la respuesta que ninguna herramienta haya entregado. Las conversaciones se guardan en memoria y se pierden al reiniciar el servidor.
 
 ## Créditos
