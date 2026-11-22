@@ -1,0 +1,84 @@
+# Configuración de Predia. Los secretos llegan por variables de entorno o por el archivo .env (no versionado).
+spring:
+  application:
+    name: predia
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:predia}
+    username: ${DB_USER:predia}
+    password: ${DB_PASSWORD:predia}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1026}
+  http:
+    client:
+      # Si el proveedor de IA no responde, el asesor no se queda esperando: el asistente avisa y la app sigue.
+      connect-timeout: 5s
+      read-timeout: 60s
+  ai:
+    retry:
+      # Por defecto Spring AI reintenta 10 veces con esperas de hasta 3 minutos; aquí se acota a unos segundos.
+      max-attempts: 3
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 5s
+    # Predia solo usa chat y embeddings; se desactivan los demás modelos de OpenAI.
+    model:
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
+    openai:
+      # Sin clave, Predia arranca igual y trabaja en modo manual (ver EstadoIa).
+      api-key: ${OPENAI_API_KEY:sin-configurar}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-5.4-mini}
+      embedding:
+        options:
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+predia:
+  jwt:
+    secreto: ${JWT_SECRET:}
+    horas-validez: ${JWT_HORAS_VALIDEZ:8}
+  demo:
+    habilitada: ${DEMO_HABILITADA:true}
+    password: ${DEMO_PASSWORD:}
+  cierre:
+    # Trabajo diario que deja borradores de recordatorios en la bandeja del asesor (nunca envía nada).
+    cron-recordatorios: ${CRON_RECORDATORIOS:0 0 7 * * *}
+  expedientes:
+    # El PDF solo vive aquí mientras se indexa; se borra al terminar (ver ProcesadorIndexacion).
+    directorio-temporal: ${EXPEDIENTES_TMP_DIR:${java.io.tmpdir}/predia/documentos}
+    tamano-maximo-mb: 20
+  ocr:
+    idioma: spa
+    # macOS: brew install tesseract tesseract-lang (ver README). Linux: suele ser /usr/share/tesseract-ocr/*/tessdata.
+    tessdata-path: ${TESSDATA_PREFIX:/opt/homebrew/share/tessdata}
+    dpi: 300
+
+logging:
+  level:
+    co.predia: INFO

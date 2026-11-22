@@ -22,3 +22,10 @@ tmp/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# Configuración local del editor/herramientas
+.claude/
+*.tsbuildinfo
+
+# Memoria de trabajo de Claude Code: es solo local, no se versiona
+CLAUDE.md

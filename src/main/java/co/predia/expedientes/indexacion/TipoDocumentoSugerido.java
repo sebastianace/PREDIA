@@ -1,0 +1,20 @@
+package co.predia.expedientes.indexacion;
+
+/** Catálogo de tipos de documento que la IA puede sugerir al clasificar (ver catálogo del cierre, Fase 5). */
+public enum TipoDocumentoSugerido {
+    CEDULA,
+    CERTIFICADO_TRADICION_LIBERTAD,
+    ESCRITURA_PUBLICA,
+    PAZ_Y_SALVO_PREDIAL,
+    PAZ_Y_SALVO_VALORIZACION,
+    PAZ_Y_SALVO_ADMINISTRACION,
+    PROMESA_COMPRAVENTA,
+    CARTA_LEVANTAMIENTO_HIPOTECA,
+    DECLARACION_CONYUGE,
+    PODER_ESPECIAL,
+    CERTIFICADO_EXISTENCIA_REPRESENTACION,
+    RECIBO_SERVICIOS_PUBLICOS,
+    CONTRATO_ARRENDAMIENTO,
+    REGLAMENTO_PROPIEDAD_HORIZONTAL,
+    OTRO
+}
