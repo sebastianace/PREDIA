@@ -25,7 +25,19 @@ spring:
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1026}
+  http:
+    client:
+      # Si el proveedor de IA no responde, el asesor no se queda esperando: el asistente avisa y la app sigue.
+      connect-timeout: 5s
+      read-timeout: 60s
   ai:
+    retry:
+      # Por defecto Spring AI reintenta 10 veces con esperas de hasta 3 minutos; aquí se acota a unos segundos.
+      max-attempts: 3
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 5s
     # Predia solo usa chat y embeddings; se desactivan los demás modelos de OpenAI.
     model:
       audio:
