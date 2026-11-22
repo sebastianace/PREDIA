@@ -15,6 +15,10 @@ import co.predia.comun.web.ReglaNegocioException;
 import co.predia.credito.SimulacionCredito;
 import co.predia.credito.SimuladorCreditoService;
 import co.predia.credito.TasaCreditoDto;
+import co.predia.credito.reduccion.CalculadoraReduccion.Frecuencia;
+import co.predia.credito.reduccion.CalculadoraReduccion.Modo;
+import co.predia.credito.reduccion.SimulacionReduccion;
+import co.predia.credito.reduccion.SimuladorReduccionService;
 import co.predia.expedientes.consulta.Cita;
 import co.predia.expedientes.consulta.RespuestaConsulta;
 import co.predia.inventario.BusquedaInmuebles;
@@ -213,6 +217,84 @@ public class HerramientasPredia {
             salida.put("aviso", s.aviso());
             return salida;
         });
+    }
+
+    @Tool(name = "simularReduccionCredito", description = """
+            Simula qué pasa si un cliente que YA tiene un crédito hipotecario hace abonos extraordinarios a \
+            capital (Ley 546 de 1999): cuántas cuotas se reducen, cuánto ahorra en intereses y, si el abono \
+            reduce la cuota, cuál sería la cuota nueva. Compara UN abono; si piden varios, llámala una vez por \
+            cada abono. Es una simulación; la aprobación es del banco.""")
+    public Map<String, Object> simularReduccionCredito(
+            @ToolParam(description = "Saldo actual del crédito en pesos, solo dígitos, p. ej. 150000000") Long saldo,
+            @ToolParam(description = "Tasa efectiva anual EN PORCENTAJE: 11 significa 11 % E.A., no 0,11") Double tasaEaPorcentaje,
+            @ToolParam(description = "Cuotas (meses) que le faltan por pagar, de 1 a 360. Si dicen años, multiplica por 12") Integer cuotasPendientes,
+            @ToolParam(description = "Valor del abono extraordinario en pesos, solo dígitos, p. ej. 500000") Long abono,
+            @ToolParam(required = false, description = "Cada cuánto abona: 'mensual' (por defecto), 'anual' o 'unico'") String frecuencia,
+            @ToolParam(required = false, description = "Qué reduce el abono: 'plazo' (por defecto) o 'cuota'") String reduce,
+            @ToolParam(required = false, description = "Id o nombre del cliente, para compararlo con su ingreso") String cliente) {
+        return ejecutar("simularReduccionCredito", () -> {
+            Long tenant = usuario.inmobiliariaId();
+            if (saldo == null || tasaEaPorcentaje == null || cuotasPendientes == null || abono == null) {
+                throw new ReglaNegocioException("Faltan datos: saldo, tasa, cuotas pendientes y abono.");
+            }
+            Cliente c = vacioANulo(cliente) == null ? null : servicios.resolvedor().cliente(tenant, cliente);
+            Frecuencia f = frecuenciaDe(frecuencia);
+            Modo modo = "cuota".equalsIgnoreCase(vacioANulo(reduce)) ? Modo.REDUCIR_CUOTA : Modo.REDUCIR_PLAZO;
+            // La tasa llega en porcentaje; la API trabaja con fracciones.
+            BigDecimal tasa = BigDecimal.valueOf(tasaEaPorcentaje).movePointLeft(2);
+
+            SimulacionReduccion s = servicios.reduccion().simular(tenant, new SimuladorReduccionService.Solicitud(
+                    c == null ? null : c.getId(), null, BigDecimal.valueOf(saldo), tasa, cuotasPendientes, null, modo,
+                    f, List.of(BigDecimal.valueOf(abono)), 1));
+            var actual = s.actual();
+            var con = s.escenarios().getFirst();
+
+            Map<String, Object> salida = new LinkedHashMap<>();
+            if (c != null) {
+                salida.put("cliente", c.getNombre());
+            }
+            salida.put("saldo", Formato.pesos(s.saldo()));
+            salida.put("tasa", Formato.porcentaje(s.tasaEa()) + " E.A.");
+            salida.put("cuotasPendientes", actual.cuotas() + " (" + Formato.plazo(actual.cuotas()) + ")");
+            salida.put("abono", Formato.pesos(con.abono()) + " " + textoFrecuencia(f));
+            salida.put("elAbonoReduce", modo == Modo.REDUCIR_PLAZO ? "el plazo" : "la cuota");
+            salida.put("cuotaActual", Formato.pesos(actual.cuotaInicial()));
+            salida.put("totalInteresesSinAbono", Formato.pesos(actual.totalIntereses()));
+            salida.put("cuotasConAbono", con.cuotas() + " (" + Formato.plazo(con.cuotas()) + ")");
+            salida.put("cuotasReducidas", con.cuotasReducidas() + " (" + Formato.plazo(con.cuotasReducidas()) + ")");
+            if (modo == Modo.REDUCIR_CUOTA) {
+                salida.put("cuotaAlFinal", Formato.pesos(con.cuotaFinal()));
+            }
+            salida.put("totalInteresesConAbono", Formato.pesos(con.totalIntereses()));
+            salida.put("ahorroEnIntereses", Formato.pesos(con.ahorroIntereses()));
+            salida.put("desembolsoMensual", Formato.pesos(con.desembolsoMensual()));
+            salida.put("ingresoNecesario", Formato.pesos(con.ingresoRequerido())
+                    + " (con el " + Formato.porcentaje(s.pctCuotaMaxIngreso()) + " máximo de la inmobiliaria)");
+            if (con.cumpleIngreso() != null) {
+                salida.put("cumpleIngresoDelCliente", con.cumpleIngreso());
+            }
+            salida.put("aviso", s.aviso());
+            return salida;
+        });
+    }
+
+    private static Frecuencia frecuenciaDe(String texto) {
+        String t = vacioANulo(texto) == null ? "mensual" : Texto.normalizar(texto);
+        if (t.startsWith("anual")) {
+            return Frecuencia.ANUAL;
+        }
+        if (t.startsWith("unic") || t.contains("una vez") || t.contains("solo")) {
+            return Frecuencia.UNICO;
+        }
+        return Frecuencia.MENSUAL;
+    }
+
+    private static String textoFrecuencia(Frecuencia f) {
+        return switch (f) {
+            case MENSUAL -> "cada mes";
+            case ANUAL -> "una vez al año";
+            case UNICO -> "en un solo pago";
+        };
     }
 
     @Tool(name = "estadoDocumentalNegocio", description = """

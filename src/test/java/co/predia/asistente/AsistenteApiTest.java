@@ -193,6 +193,56 @@ class AsistenteApiTest extends PruebaIntegracion {
         assertThat(r.get("cifrasSinRespaldo")).isEmpty();
     }
 
+    @Autowired co.predia.credito.reduccion.SimuladorReduccionService reduccion;
+
+    @Test
+    void laReduccionDeCreditoUsaLasCifrasDeLaCalculadoraYElPorcentajeSeInterpretaBien() throws Exception {
+        iaDisponible();
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Asistente Reducción");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        crearCliente(inmobiliaria, asesor, "Paola y Juan", "7500000", "90000000");
+
+        // El modelo manda la tasa como 11 (porcentaje): la herramienta la convierte a 0,11.
+        AsistenteSimulado.instalar(chatModel, List.of(new Llamada("simularReduccionCredito",
+                        "{\"saldo\": 150000000, \"tasaEaPorcentaje\": 11, \"cuotasPendientes\": 240, "
+                                + "\"abono\": 500000, \"frecuencia\": \"mensual\", \"cliente\": \"Paola\"}")),
+                AsistenteApiTest::juntar, "no se usa");
+
+        JsonNode r = preguntar(asesor, "¿Cuánto ahorra Paola y Juan si abonan 500 mil al mes a su crédito de 150 millones?", null);
+
+        var esperado = reduccion.simular(inmobiliaria.getId(), new co.predia.credito.reduccion.SimuladorReduccionService
+                .Solicitud(null, null, new java.math.BigDecimal("150000000"), new java.math.BigDecimal("0.11"), 240,
+                null, null, null, List.of(new java.math.BigDecimal("500000")), 1));
+        var con = esperado.escenarios().getFirst();
+        String texto = r.get("respuesta").asText();
+        assertThat(con.cuotas()).isEqualTo(123);  // coincide con el simulador original
+        assertThat(texto).contains(Formato.pesos(esperado.actual().cuotaInicial()))
+                .contains(Formato.pesos(con.ahorroIntereses()))
+                .contains(Formato.pesos(con.ingresoRequerido()))
+                .contains("123 (10 años 3 meses)")
+                .contains("11 % E.A.")
+                .contains("no es una oferta ni una aprobación del banco");
+        assertThat(r.get("herramientas").toString()).contains("simularReduccionCredito");
+        assertThat(r.get("cifrasSinRespaldo")).isEmpty();
+    }
+
+    @Test
+    void laReduccionConDatosInvalidosDevuelveUnErrorAlModeloEnVezDeFallar() throws Exception {
+        iaDisponible();
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Asistente Reducción Error");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+
+        // Una tasa de 1100 % (el modelo olvidó que va en porcentaje) se rechaza.
+        AsistenteSimulado.instalar(chatModel, List.of(new Llamada("simularReduccionCredito",
+                        "{\"saldo\": 150000000, \"tasaEaPorcentaje\": 1100, \"cuotasPendientes\": 240, \"abono\": 500000}")),
+                AsistenteApiTest::juntar, "no se usa");
+
+        JsonNode r = preguntar(asesor, "Simula un abono de 500 mil", null);
+
+        assertThat(r.get("respuesta").asText()).contains("error");
+        assertThat(r.get("cifrasSinRespaldo")).isEmpty();
+    }
+
     @Autowired co.predia.credito.SimuladorCreditoService simulador;
 
     private co.predia.credito.SimulacionCredito simuladorReal(Inmobiliaria inmobiliaria, Inmueble apto, Cliente cliente) {

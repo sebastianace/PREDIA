@@ -5,6 +5,7 @@ import co.predia.cierre.recordatorios.ServicioRecordatorios;
 import co.predia.cierre.reglas.ServicioEstadoDocumental;
 import co.predia.clientes.PresupuestoService;
 import co.predia.credito.SimuladorCreditoService;
+import co.predia.credito.reduccion.SimuladorReduccionService;
 import co.predia.expedientes.consulta.MotorRag;
 import co.predia.inventario.BusquedaInmuebles;
 import co.predia.inventario.InmuebleRepository;
@@ -18,5 +19,6 @@ import org.springframework.stereotype.Component;
 public record ServiciosHerramientas(
         ResolvedorEntidades resolvedor, MotorRag motorRag, BusquedaInmuebles busquedaInmuebles,
         PresupuestoService presupuestos, SimuladorCreditoService simulador, ServicioEstadoDocumental estadoDocumental,
-        ServicioRecordatorios recordatorios, InmuebleRepository inmuebles, PropietarioRepository propietarios) {
+        ServicioRecordatorios recordatorios, InmuebleRepository inmuebles, PropietarioRepository propietarios,
+        SimuladorReduccionService reduccion) {
 }
