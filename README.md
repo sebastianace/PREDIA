@@ -121,6 +121,14 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
    ```
    Abre <http://localhost:5173>.
 
+### Atajo: un solo comando
+
+Con Docker Desktop abierto y el `.env` listo, el script levanta PostgreSQL, Mailpit, el backend y el frontend, espera a que respondan y muestra las direcciones. `Ctrl+C` apaga el backend y el frontend; con `--docker-off` también detiene PostgreSQL y Mailpit. Los registros quedan en `logs/`.
+
+```bash
+./arrancar.sh
+```
+
 ### Usuarios de la demo
 
 | Usuario | Rol | Contraseña |
