@@ -315,3 +315,22 @@ export interface ResumenDiario {
   vencenEstaSemana: { negocioId: number; inmueble: string; documento: string; venceEl: string; diasRestantes: number }[]
   recordatoriosPorAprobar: number
 }
+
+export interface CitaAsistente {
+  numero: number
+  documentoId: number
+  nombreArchivo: string
+  paginaInicio: number
+  paginaFin: number
+  seccion: string | null
+}
+
+export interface RespuestaAsistente {
+  conversacionId: string
+  respuesta: string
+  herramientas: string[]
+  citas: CitaAsistente[]
+  recordatoriosCreados: number[]
+  cifrasSinRespaldo: string[]
+  aviso: string | null
+}

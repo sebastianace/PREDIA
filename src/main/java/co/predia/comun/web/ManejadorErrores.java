@@ -67,6 +67,18 @@ public class ManejadorErrores {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
+    @ExceptionHandler(IaNoDisponibleException.class)
+    ProblemDetail iaNoDisponible(IaNoDisponibleException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+    }
+
+    @ExceptionHandler(FalloDeIaException.class)
+    ProblemDetail falloDeIa(FalloDeIaException e) {
+        // Se registra solo el tipo de la causa: el mensaje del proveedor podría traer fragmentos de la consulta.
+        log.warn("Falló la IA: {}", e.getCause() == null ? "sin causa" : e.getCause().getClass().getSimpleName());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     ProblemDetail inesperado(Exception e) {
         // No se registra el cuerpo de la petición para no exponer datos personales en los logs.

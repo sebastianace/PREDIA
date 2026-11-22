@@ -1,5 +1,62 @@
 # Progreso de Predia
 
+## Fase 6 — Asistente con herramientas ✅ (21/11/2026)
+
+**Rama:** `feature/asistente` (sale de `feature/cierre-negocio`, ya fusionada en `develop`)
+
+### Qué quedó
+- **Chat con tool calling de Spring AI 1.1.8** (`POST /api/asistente/mensajes`): el modelo conversa con el asesor y decide qué herramienta usar; las herramientas son clases de Predia (`HerramientasPredia`), no texto del modelo. Se crea **una instancia por petición, atada al usuario autenticado**: la inmobiliaria sale del JWT y **nunca de un argumento** que el modelo pueda inventar.
+- **Las seis herramientas** (reutilizan los servicios existentes; no duplican ninguna regla):
+  | Herramienta | De dónde sale el dato |
+  |---|---|
+  | `consultarExpedientes(pregunta, inmueble?)` | `MotorRag`: con citas, o «no tengo información» sin llamar al modelo |
+  | `buscarInmuebles(operacion, precioMax, habitacionesMin, ciudad, descripcion, paraCliente?)` | `BusquedaInmuebles`; con `paraCliente` usa el tope de compra calculado en Java |
+  | `calcularPresupuesto(cliente, plazoAnios?)` | `PresupuestoService` / `CalculadoraPresupuesto` |
+  | `simularCredito(inmueble, cliente, plazoAnios?, banco?)` | `SimuladorCreditoService` / `CalculadoraCredito` |
+  | `estadoDocumentalNegocio(negocio)` | `ServicioEstadoDocumental` / `MotorReglasCierre` |
+  | `redactarRecordatorioPropietario(negocio)` | `ServicioRecordatorios.generar`: **borrador SUGERIDO, nunca se envía** |
+- **Nombres o ids.** Los parámetros aceptan el id o el nombre («Paola y Juan», «apto 1102 de Cañaveral»): `ResolvedorEntidades` ignora tildes, mayúsculas y «apto/apartamento», busca solo dentro de la inmobiliaria del usuario y, si hay varias coincidencias, **no adivina**: devuelve los candidatos para que el asistente pregunte.
+- **Las cifras no las escribe el modelo.** Las herramientas las entregan ya escritas por Java (`$300.000.000`, `29,6 %`) y la instrucción del sistema ordena copiarlas. Como red de seguridad, `GuardiaCifras` compara cada número de la respuesta con lo que devolvieron las herramientas (y con lo que escribió el asesor): lo que no tenga respaldo —una suma, un redondeo, un dato inventado— se devuelve en `cifrasSinRespaldo` y la interfaz lo señala. No corrige a escondidas: avisa.
+- **Gobernanza:** ninguna herramienta confirma, recibe ni envía nada. El recordatorio queda SUGERIDO en la bandeja; solo `ServicioRecordatorios.aprobar` envía. La respuesta lista los borradores creados y la interfaz enlaza a Recordatorios.
+- **Sin IA o con IA caída, el resto sigue funcionando:** sin `OPENAI_API_KEY` el endpoint responde **503** «el asistente está deshabilitado»; si el proveedor falla responde **502** con un mensaje limpio (sin el detalle del proveedor, que podría traer una clave o fragmentos de la consulta).
+- **Memoria de conversación** en el servidor, atada al usuario y a su inmobiliaria (otro usuario no la lee aunque conozca el id), con tope de 500 conversaciones y 20 mensajes cada una; se pierde al reiniciar.
+- **Frontend:** nueva sección **Asistente** (sube a la barra inferior del celular; Clientes pasa a «Más»). Ejemplos para empezar, indicador de «consultando», etiquetas de qué herramientas se usaron, citas, aviso de borrador pendiente de aprobación, aviso de cifras sin respaldo, «Nueva conversación» y la conversación se conserva al cambiar de sección.
+
+### Tres hallazgos de probar en vivo
+1. **Reintentos de Spring AI:** con el proveedor caído, el valor por defecto (10 reintentos con esperas de hasta 3 minutos) dejaría al asesor esperando minutos. Ahora `spring.ai.retry` tiene 3 intentos con esperas de 1–5 s y `spring.http.client` conexión 5 s / lectura 60 s: con el proveedor caído el aviso llega en **~3 s**.
+2. **Texto sin espacios** (un correo, una URL, un JSON) ensanchaba la burbuja y toda la página en celular, y la barra inferior quedaba recortada.
+3. **El último mensaje quedaba tapado** por el campo de texto fijo tras el autodesplazamiento (se veía cortado un aviso de error).
+
+### Pruebas (149 en total; las 25 nuevas no llaman a OpenAI)
+- `GuardiaCifrasTest` (7): cifras respaldadas por las herramientas; una inventada, **una suma hecha por el modelo y un redondeo («294 millones» de `$294.114.000`) se señalan**; «300 millones» de `$300.000.000` sí se acepta; las cifras del asesor cuentan como fuente.
+- `ResolvedorEntidadesTest` (5): nombre con tildes y abreviaturas, ambigüedad, referencia vacía, **nunca resuelve entidades de otra inmobiliaria ni por id ni por nombre**, negocio por id/inmueble/propietario.
+- `AsistenteApiTest` (13, con `ChatModel` simulado que **ejecuta las herramientas reales** sobre PostgreSQL real): sin IA → 503 sin llamar al modelo; «¿qué les alcanza a Paola y Juan en Floridablanca?» muestra exactamente el tope que calcula `PresupuestoService` y filtra por tope y ciudad; la simulación de crédito coincide con la calculadora; «¿qué le falta al dueño del 1102?» coincide con `ServicioEstadoDocumental`; **el recordatorio queda SUGERIDO y no se envía ningún correo**; consulta de expedientes con cita (documento, sección); sin evidencia → no inventa; **un asesor de otra inmobiliaria no obtiene datos ajenos aunque el modelo pida un id ajeno**; una cifra inventada se señala; la memoria no se comparte entre usuarios; un fallo del proveedor no filtra la clave.
+
+### Probado en vivo (API real + PostgreSQL + Mailpit)
+En este equipo no hay API key de OpenAI, así que no se pudo probar contra el servicio real; en su lugar se levantó un **servidor local que imita la API de OpenAI** (`/v1/chat/completions` con `tool_calls` y `/v1/embeddings`) y Predia se apuntó a él con `SPRING_AI_OPENAI_BASE_URL`. Eso ejercitó **el bucle real de Spring AI** (esquemas JSON de los parámetros, argumentos, resultado), que el modelo simulado de las pruebas no cubre:
+- «¿Qué le falta al dueño del apto 1102 de Cañaveral para firmar?» → `estadoDocumentalNegocio`: «Faltan 2 documentos», 67 %, certificado de tradición vencido el 4 de noviembre de 2026 y paz y salvo de administración pendiente.
+- «¿Qué les alcanza a Paola y Juan en Floridablanca?» → `calcularPresupuesto` + `buscarInmuebles`: tope `$300.000.000` (lo limita el ahorro) y solo el Apto 1102 Cañaveral.
+- Simulación a 15 años: cuota `$2.438.073` (32,51 % del ingreso, supera la cuota máxima de `$2.250.000`).
+- «Redacta un recordatorio…» → borrador SUGERIDO; **Mailpit: 0 mensajes antes y después**.
+- Consulta de expedientes con cita (`reglamento-propiedad-horizontal.pdf`, pág. 1, «ARTÍCULO 6»).
+- Sin clave → 503; proveedor caído → 502 en ~3 s; 401 sin token; 400 con mensaje vacío.
+- Interfaz revisada en escritorio y en ancho de celular (375 px), con IA, sin IA y con el proveedor caído.
+Los datos de prueba se borraron de la base de desarrollo (documento, borrador y vectores falsos) y Mailpit quedó vacío. **Lo que no se pudo probar:** una conversación con un modelo de OpenAI real (no hay clave en este equipo): cómo redacta el modelo, y si respeta siempre las reglas de la instrucción, se verifica con tu clave; la guardia de cifras existe justo para eso.
+
+### Cómo probarlo
+1. `OPENAI_API_KEY` en `.env`, `./mvnw spring-boot:run` y `npm run dev`; entra como `laura@altos.test` → **Asistente**.
+2. Prueba los tres ejemplos: *«¿Qué le falta al dueño del apto 1102 de Cañaveral para firmar?»*, *«¿Qué les alcanza a Paola y Juan en Floridablanca?»* y *«¿La venta del 1102 incluye parqueadero?»* (esta última requiere haber subido el contrato al inmueble).
+3. *«Redáctale un recordatorio al dueño del 1102»* → aparece en **Recordatorios** como borrador; hasta que lo apruebas, Mailpit sigue vacío.
+4. Sin clave, el asistente muestra que está deshabilitado y el resto de Predia funciona.
+5. `./mvnw test` (con Docker abierto).
+
+### Qué falta
+- Fase 7: pulir el diseño, README con guion de demo y capturas, pruebas finales y `release/*`.
+- Extras de IA 2 (solo si sobra tiempo): sentimiento de los comentarios tras una visita y few-shot para reconocer la intención de un mensaje.
+- Las conversaciones del asistente están en memoria (se pierden al reiniciar).
+
+---
+
 ## Fase 5 — Cierre del negocio: documentos del vendedor ✅ (19/11/2026)
 
 **Rama:** `feature/cierre-negocio` (sale de `feature/inventario-presupuesto-credito`)
