@@ -23,8 +23,8 @@ export const estiloRequisito: Record<EstadoRequisito, { nombre: string; clase: s
 }
 
 /** El estado de un documento: texto con un punto, y «Vencido» como un sello (lo único que de verdad urge). */
-export function EstadoRequisitoChip({ estado }: { estado: EstadoRequisito }) {
-  const e = estiloRequisito[estado]
+export function EstadoRequisitoChip({ estado, etiqueta }: { estado: EstadoRequisito; etiqueta?: string }) {
+  const e = { ...estiloRequisito[estado], nombre: etiqueta ?? estiloRequisito[estado].nombre }
   if (estado === 'VENCIDO') {
     return (
       <span className="shrink-0 -rotate-2 rounded-sm border-[1.5px] border-sello px-2 py-0.5 text-sm font-semibold text-sello">
