@@ -4,7 +4,9 @@ import { useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Documento, EstadoDocumental, HipotecaVigente, ItemDocumental, Negocio, Recordatorio } from '../api/tipos'
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
-import { BarraAvance, EstadoRequisitoChip, Semaforo } from '../componentes/Semaforo'
+import { CotaAvance } from '../componentes/Cota'
+import { EstadoRequisitoChip } from '../componentes/Semaforo'
+import { Terreno } from '../componentes/Terreno'
 import { formatoFecha, formatoFechaHora } from '../formato'
 
 export function NegocioDetalle() {
@@ -107,29 +109,37 @@ export function NegocioDetalle() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/negocios" className="text-sm text-niebla hover:text-tinta">← Negocios</Link>
-      <h1 className="ancha mt-2 text-[30px] font-semibold leading-tight md:text-4xl">{negocio.inmuebleTitulo}</h1>
-      <p className="mt-1 text-niebla">
-        Vende {negocio.propietarioNombre}
-        {negocio.clienteCompradorNombre && ` · compra ${negocio.clienteCompradorNombre}`}
-      </p>
-
-      <section className="mt-6 rounded-panel border border-linea bg-white p-5 md:p-6" aria-label="Estado del negocio">
-        <Semaforo listo={estado.listoParaFirmar} texto={estado.semaforo} tamano="grande" />
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex-1"><BarraAvance porcentaje={estado.porcentajeAvance} /></div>
-          <span className="cifra text-sm font-medium text-tinta">{estado.porcentajeAvance} %</span>
-        </div>
-        <p className="mt-2 text-sm text-niebla">
-          {estado.recibidos} de {estado.obligatoriosQueAplican} documentos obligatorios recibidos
-          {negocio.fechaFirmaTentativa && ` · firma tentativa el ${formatoFecha(negocio.fechaFirmaTentativa)}`}
+      <header className="relative isolate overflow-hidden rounded-panel bg-prusia px-5 pb-6 pt-5 text-white md:px-8 md:pb-8 md:pt-6">
+        <Terreno semilla={negocio.inmuebleId * 31 + 7} trazar niveles={12}
+          className="absolute inset-0 -z-10 size-full text-trazo opacity-40" />
+        <Link to="/negocios" className="text-sm text-trazo hover:text-white">← Negocios</Link>
+        <p className="rotulo mt-5 text-sm text-trazo">Negocio de venta</p>
+        <h1 className="ancha mt-1 text-[32px] font-semibold leading-[1.05] text-white md:text-5xl">{negocio.inmuebleTitulo}</h1>
+        <dl className="mt-6 grid grid-cols-2 gap-x-6 text-sm md:grid-cols-4">
+          {[
+            ['Vende', negocio.propietarioNombre],
+            ['Compra', negocio.clienteCompradorNombre ?? 'Sin comprador'],
+            ['Firma', negocio.fechaFirmaTentativa ? formatoFecha(negocio.fechaFirmaTentativa) : 'Sin fecha'],
+            ['Asesor', negocio.asesorNombre ?? '—'],
+          ].map(([k, v]) => (
+            <div key={k} className="border-t border-white/25 py-2.5">
+              <dt className="rotulo text-trazo">{k}</dt>
+              <dd className="mt-0.5 break-words font-medium">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="ancha mt-6 text-2xl font-semibold md:text-3xl">
+          <span className={estado.listoParaFirmar ? 'text-[#9be7b5]' : 'text-white'}>{estado.semaforo}</span>
         </p>
-        {estado.advertencias.length > 0 && (
-          <ul className="mt-4 space-y-2">
-            {estado.advertencias.map((a) => <li key={a}><Aviso tipo="info">{a}</Aviso></li>)}
-          </ul>
-        )}
-      </section>
+        <div className="mt-4">
+          <CotaAvance items={estado.items} porcentaje={estado.porcentajeAvance} tono="sobre-azul" />
+        </div>
+      </header>
+      {estado.advertencias.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {estado.advertencias.map((a) => <li key={a}><Aviso tipo="info">{a}</Aviso></li>)}
+        </ul>
+      )}
 
       {error && <div className="mt-4"><Aviso tipo="error">{error}</Aviso></div>}
       {mensaje && <div className="mt-4"><Aviso tipo="info">{mensaje}</Aviso></div>}

@@ -106,3 +106,9 @@
   #estudio { position: absolute; inset: 0 auto auto 0; width: 100%; }
   @page { margin: 14mm; }
 }
+
+/* Tramo de una cota: macizo o punteado, del color del texto que lo contiene. */
+.tramo-punteado {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(90deg, currentColor 0 7px, transparent 7px 12px);
+}
