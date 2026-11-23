@@ -2,6 +2,7 @@ package co.predia.inventario;
 
 import co.predia.comun.seguridad.SesionActual;
 import co.predia.comun.web.RecursoNoEncontradoException;
+import co.predia.inventario.foto.FotoInmuebleRepositorio;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,9 +35,11 @@ public class InmuebleController {
     private final InmuebleService servicio;
     private final BusquedaInmuebles busqueda;
     private final SesionActual sesion;
+    private final FotoInmuebleRepositorio fotos;
 
     public InmuebleController(InmuebleRepository repositorio, InmuebleService servicio, BusquedaInmuebles busqueda,
-                              SesionActual sesion) {
+                              SesionActual sesion, FotoInmuebleRepositorio fotos) {
+        this.fotos = fotos;
         this.repositorio = repositorio;
         this.servicio = servicio;
         this.busqueda = busqueda;
@@ -50,14 +53,16 @@ public class InmuebleController {
         List<Inmueble> inmuebles = estado == null
                 ? repositorio.findByInmobiliariaIdOrderByTituloAsc(tenant)
                 : repositorio.findByInmobiliariaIdAndEstadoOrderByTituloAsc(tenant, estado);
-        return inmuebles.stream().map(InmuebleDto::desde).toList();
+        var info = fotos.infoDe(tenant);
+        return inmuebles.stream().map((i) -> InmuebleDto.desde(i).conFoto(info.get(i.getId()))).toList();
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Detalle de un inmueble")
     public InmuebleDto detalle(@PathVariable Long id) {
-        return repositorio.findByIdAndInmobiliariaId(id, sesion.inmobiliariaId())
-                .map(InmuebleDto::desde)
+        Long tenant = sesion.inmobiliariaId();
+        return repositorio.findByIdAndInmobiliariaId(id, tenant)
+                .map((i) -> InmuebleDto.desde(i).conFoto(fotos.info(tenant, i.getId()).orElse(null)))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Inmueble", id));
     }
 
@@ -71,7 +76,8 @@ public class InmuebleController {
     @PutMapping("/{id}")
     @Operation(summary = "Edita un inmueble (incluido su estado)")
     public InmuebleDto actualizar(@PathVariable Long id, @Valid @RequestBody SolicitudInmueble solicitud) {
-        return InmuebleDto.desde(servicio.actualizar(sesion.inmobiliariaId(), id, solicitud));
+        Long tenant = sesion.inmobiliariaId();
+        return InmuebleDto.desde(servicio.actualizar(tenant, id, solicitud)).conFoto(fotos.info(tenant, id).orElse(null));
     }
 
     @PostMapping("/busqueda")

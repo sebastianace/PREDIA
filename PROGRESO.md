@@ -1,5 +1,33 @@
 # Progreso de Predia
 
+## Extra — Foto de portada de cada inmueble ✅ (23/11/2026)
+
+**Rama:** `feature/fotos-inmuebles` (sale de `feature/rediseno`; su PR apunta a la rama previa hasta que se fusione)
+
+El asesor puede subir una foto por inmueble; aparece en la cabecera de cada tarjeta del inventario y como miniatura en «Para ofrecer» del inicio. Sin foto, se sigue viendo el terreno generado.
+
+### Qué quedó
+- **Procesamiento en el servidor** (`ProcesadorImagen`): se decodifica lo que llega (así se rechaza cualquier archivo que no sea una imagen real, aunque se llame `.jpg`), se aplana sobre blanco, se reduce (por mitades, sin ampliar nunca) y se vuelve a codificar como JPEG: una copia **grande de 1600 px** y una **miniatura de 480 px**. Eso además elimina los metadatos (GPS, cámara). Tope de 50 megapíxeles decodificados y de 8 MB subidos. **No se conserva el archivo original.**
+- **Almacenamiento aparte** (`V6__fotos_inmueble.sql`): tabla `foto_inmueble` con las dos copias en `BYTEA`, el hash, las dimensiones y el encuadre. Se consulta con SQL explícito (`FotoInmuebleRepositorio`), como los vectores, para que listar inmuebles nunca cargue bytes. Siempre filtrada por inmobiliaria: la foto de otra responde 404.
+- **Endpoints** `/api/inmuebles/{id}/foto`: `GET` (`tam=miniatura` o grande; con `ETag` y caché privada, porque el hash cambia al subir otra), `PUT` multipart, `PATCH /foco` y `DELETE`. El inmueble (`InmuebleDto`) trae `foto: {version, focoX, focoY, ancho, alto}` o `null`.
+- **Cualquier formato y tamaño, en la interfaz:** el navegador lee la imagen (JPG, PNG, WebP, AVIF, HEIC en Safari…), respeta la orientación de las fotos de celular y la reduce a 1600 px antes de subirla, así que se sube un archivo liviano y funciona con lo que el navegador sepa abrir. El servidor acepta además JPEG, PNG, GIF y BMP directos.
+- **Se ve bien en cualquier proporción:** `object-fit: cover` con un **punto de interés** que elige el asesor (toca la imagen completa o usa los controles Horizontal y Vertical). Al lado se ve cómo quedará recortada en el inventario (5:2) y en el inicio (cuadrada), así una foto vertical, una panorámica o una cuadrada se ven bien en los dos sitios.
+- La foto va en el formulario del inmueble (alta y edición). Si el inmueble se guarda pero la foto falla, no se pierde nada: se abre la edición con el motivo.
+
+### Decisiones
+- **Una foto de portada por inmueble**, no una galería (no se pidió; sería la siguiente mejora).
+- **En la base de datos, no en disco:** una copia de seguridad de la base incluye las fotos, no hay volúmenes que administrar y el filtro por inmobiliaria es el mismo que en todo lo demás. Con muchas fotos conviene pasar a un almacenamiento de objetos.
+- Las fotos **sí se guardan**, a diferencia de los PDF de los clientes: son material comercial de la propia inmobiliaria.
+- El servidor no lee la orientación EXIF; lo hace el navegador al reducir. Un cliente de la API que suba fotos de celular directas puede verlas giradas.
+
+### Pruebas (186 en total; las 18 nuevas no llaman a OpenAI)
+- `ProcesadorImagenTest` (9): horizontal 4000×3000 → 1600×1200 y miniatura 480; vertical, cuadrada y panorámica; una imagen pequeña no se amplía; lo transparente queda sobre blanco; el resultado siempre es JPEG; rechaza texto, PDF y JPEG truncado aunque se llamen foto; rechaza una imagen de 64 megapíxeles; el hash cambia con otra imagen.
+- `FotosInmuebleApiTest` (9, PostgreSQL real): subir, reducir y listar; sin foto → `null`/404; PNG vertical; reemplazar cambia la versión y quitar la borra; cambiar solo el encuadre; `ETag`/304; archivo falso, vacío y de 9 MB → 422; **otra inmobiliaria no ve, sube, quita ni cambia la foto (404)**; sin sesión → 401.
+
+### Probado en vivo
+Subida con el flujo real del navegador (imágenes generadas en la página: una horizontal de 3600×2400 y una vertical de 2400×3600): se reducen, se elige el punto de interés, se guarda, y se ven en la cabecera del inventario y en la miniatura del inicio, también tras recargar. Las capturas del README usan **ilustraciones de ejemplo**, no fotos reales; las fotos de prueba se borraron de la base de datos. **No se probó con una foto real de celular ni con HEIC** (el navegador de pruebas no abre el selector de archivos del sistema).
+
+
 ## Extra — Rediseño visual: curvas de nivel y cifras acotadas ✅ (23/11/2026)
 
 **Rama:** `feature/rediseno` (sale de `feature/reduccion-credito`; su PR apunta a `develop` cuando se fusione la reducción)

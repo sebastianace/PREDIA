@@ -22,6 +22,15 @@ export interface EstadoSistema {
   aviso: string | null
 }
 
+/** La foto de portada de un inmueble: `version` cambia al subir otra, `focoX/focoY` es la parte que debe quedar visible. */
+export interface FotoInmueble {
+  version: string
+  focoX: number
+  focoY: number
+  ancho: number
+  alto: number
+}
+
 export type EstadoInmueble = 'DISPONIBLE' | 'SEPARADO' | 'ARRENDADO' | 'VENDIDO'
 
 export interface Inmueble {
@@ -46,6 +55,7 @@ export interface Inmueble {
   propiedadHorizontal: boolean
   descripcion: string
   estado: EstadoInmueble
+  foto: FotoInmueble | null
 }
 
 export type EstadoIndexacion = 'EN_COLA' | 'PROCESANDO' | 'INDEXADO' | 'ERROR'

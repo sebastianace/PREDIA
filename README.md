@@ -45,7 +45,8 @@ Capturas de la demo con los datos ficticios de Altos Inmobiliaria (sin `OPENAI_A
 | ![Ingreso](docs/capturas/login.png) **Ingreso:** las curvas de nivel se trazan al entrar. | ![Inicio](docs/capturas/inicio.png) **Inicio:** lo del día en tres cifras acotadas. |
 | ![Negocios](docs/capturas/negocios.png) **Negocios:** cada cierre con su cota de avance. | ![Cierre del negocio](docs/capturas/cierre-negocio.png) **Cierre del Apto 1102:** un tramo por documento; lo vencido, en rojo. |
 | ![Presupuesto](docs/capturas/cliente-presupuesto.png) **Presupuesto de Paola y Juan:** el tope de compra, con la regla que lo decidió. | ![Reducción de crédito](docs/capturas/reduccion-credito.png) **Reducción de crédito:** tres abonos comparados contra el crédito actual. |
-| ![Inventario](docs/capturas/inventario.png) **Inventario:** cada inmueble tiene su propio terreno. | ![Recordatorios](docs/capturas/recordatorios.png) **Recordatorios:** borrador para el propietario; solo sale si el asesor lo aprueba. |
+| ![Inventario](docs/capturas/inventario.png) **Inventario:** la foto de cada inmueble (aquí, ilustraciones de ejemplo) o, sin foto, su propio terreno. | ![Foto del inmueble](docs/capturas/foto-inmueble.png) **Subir la foto:** se toca lo importante y se ve cómo quedará en el inventario y en el inicio. |
+| ![Recordatorios](docs/capturas/recordatorios.png) **Recordatorios:** borrador para el propietario; solo sale si el asesor lo aprueba. | |
 
 También se usa desde el celular (el asesor la abre en las visitas):
 
@@ -166,7 +167,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Módulo | Qué hace |
 |---|---|
 | Expedientes (RAG) | Sube un PDF, lo indexa de forma asíncrona y responde preguntas citando documento, página y sección. *(Fases 2–3)* |
-| Inventario de inmuebles | Filtra con SQL lo no negociable y ordena por similitud con lo que pidió el cliente. *(Fase 4)* |
+| Inventario de inmuebles | Filtra con SQL lo no negociable y ordena por similitud con lo que pidió el cliente. Cada inmueble puede tener una **foto de portada**: se sube en cualquier formato y tamaño, se reduce, y el asesor elige qué parte debe quedar visible al recortarla. *(Fase 4 y extra)* |
 | Presupuesto del cliente | Calcula la cuota máxima y el tope de compra con reglas configurables por inmobiliaria. *(Fase 4)* |
 | Simulador de crédito | Cuota fija (sistema francés) con tasas por banco cargadas por el ADMIN. *(Fase 4)* |
 | Reducción de crédito | Para un cliente que ya tiene crédito hipotecario: compara hasta tres abonos extraordinarios (mensual, anual o único) que reducen el plazo o la cuota, con el ahorro en intereses y seguros, la tabla de amortización y un estudio imprimible. Basado en el simulador del autor, reescrito en Java con pruebas. *(Extra)* |
@@ -190,6 +191,7 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 
 ## Limitaciones conocidas
 
+- **Las fotos de los inmuebles sí se guardan** (a diferencia de los PDF): solo dos copias reducidas (1600 y 480 píxeles, JPEG) en PostgreSQL, sin metadatos ni el archivo original. Predia no administra derechos de imagen: sube fotos que la inmobiliaria pueda usar.
 - **No se conserva el PDF original.** Predia no puede mostrar ni verificar firmas, sellos, imágenes o tablas complejas del original. Si cambia la extracción o el OCR, hay que volver a subir el archivo; los embeddings, en cambio, se pueden regenerar desde el texto guardado.
 - **Dependencia del OCR:** la calidad de las páginas escaneadas depende de Tesseract y de la nitidez del documento.
 - Las vigencias de los documentos dependen de la fecha de expedición que confirma el asesor.

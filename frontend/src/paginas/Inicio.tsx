@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/cliente'
 import type { EstadoInmueble as Estado, Inmueble, ResumenDiario } from '../api/tipos'
 import { CifraAcotada } from '../componentes/Cota'
+import { FotoDeInmueble } from '../componentes/FotoInmueble'
 import { Terreno } from '../componentes/Terreno'
 import { formatoFecha, formatoPesos } from '../formato'
 import { useSesion } from '../sesion/Sesion'
@@ -63,8 +64,11 @@ export function Inicio() {
               .sort((a, b) => (a.precioVenta ?? a.canonArriendo ?? 0) - (b.precioVenta ?? b.canonArriendo ?? 0))
               .map((i) => (
                 <li key={i.id} className="flex items-center gap-4 py-3.5">
-                  <Terreno semilla={i.id * 31 + 7} ancho={120} alto={120} niveles={6} grosor={2.4}
-                    className="size-12 shrink-0 rounded-sm bg-white text-cobalto" />
+                  <div className="relative isolate size-14 shrink-0 overflow-hidden rounded-sm bg-white">
+                    <Terreno semilla={i.id * 31 + 7} ancho={120} alto={120} niveles={6} grosor={2.4}
+                      className="absolute inset-0 -z-20 size-full text-cobalto" />
+                    <FotoDeInmueble inmuebleId={i.id} foto={i.foto} tam="miniatura" titulo={i.titulo} />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium text-tinta">{i.titulo}</div>
                     <div className="truncate text-sm text-niebla">{i.barrio}, {i.ciudad}</div>
