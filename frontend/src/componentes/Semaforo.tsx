@@ -22,9 +22,25 @@ export const estiloRequisito: Record<EstadoRequisito, { nombre: string; clase: s
   NO_APLICA: { nombre: 'No aplica', clase: 'bg-papel text-niebla' },
 }
 
+/** El estado de un documento: texto con un punto, y «Vencido» como un sello (lo único que de verdad urge). */
 export function EstadoRequisitoChip({ estado }: { estado: EstadoRequisito }) {
   const e = estiloRequisito[estado]
-  return <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${e.clase}`}>{e.nombre}</span>
+  if (estado === 'VENCIDO') {
+    return (
+      <span className="shrink-0 -rotate-2 rounded-sm border-[1.5px] border-sello px-2 py-0.5 text-sm font-semibold text-sello">
+        {e.nombre}
+      </span>
+    )
+  }
+  const punto: Record<EstadoRequisito, string> = {
+    PENDIENTE: 'bg-niebla', SUGERIDO: 'bg-cobalto', RECIBIDO: 'bg-emerald-600', POR_VENCER: 'bg-ambar', VENCIDO: 'bg-sello', NO_APLICA: 'bg-linea',
+  }
+  return (
+    <span className="inline-flex shrink-0 items-center gap-2 text-sm text-grafito">
+      <span className={`size-2 rounded-full ${punto[estado]}`} aria-hidden="true" />
+      {e.nombre}
+    </span>
+  )
 }
 
 export function BarraAvance({ porcentaje }: { porcentaje: number }) {

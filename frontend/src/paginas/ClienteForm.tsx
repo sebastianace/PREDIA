@@ -95,7 +95,7 @@ export function ClienteForm() {
   return (
     <div className="mx-auto max-w-2xl">
       <Link to={edicion ? `/clientes/${id}` : '/clientes'} className="text-sm text-niebla hover:text-tinta">← Volver</Link>
-      <h1 className="ancha mt-2 text-[30px] font-semibold leading-tight md:text-4xl">
+      <h1 className="ancha mt-2 text-[32px] font-semibold leading-[1.05] md:text-5xl">
         {edicion ? 'Editar cliente' : 'Nuevo cliente'}
       </h1>
 

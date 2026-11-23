@@ -1,5 +1,30 @@
 # Progreso de Predia
 
+## Extra — Rediseño visual: curvas de nivel y cifras acotadas ✅ (23/11/2026)
+
+**Rama:** `feature/rediseno` (sale de `feature/reduccion-credito`; su PR apunta a `develop` cuando se fusione la reducción)
+
+El diseño anterior (barra lateral, tarjetas blancas y acento cobalto) se veía genérico. Se cambió la identidad por una idea propia del oficio: los mapas topográficos y sus **cotas**.
+
+### Qué quedó
+- **Curvas de nivel generadas** (`curvasDeNivel.ts` + `Terreno.tsx`): un campo de alturas suave al que se le trazan las líneas de igual altura (marching squares). La misma semilla da siempre el mismo terreno, así que **cada inmueble tiene el suyo** (miniaturas en el inicio y cabecera de cada tarjeta del inventario). Las curvas «maestras» (cada quinta) van más gruesas, como en un mapa. Se trazan una sola vez al entrar al login, al inicio y al detalle de un negocio, y respetan «reducir movimiento».
+- **Cota** (`Cota.tsx`): una línea de medida con topes y la medida al centro. `CifraAcotada` muestra los números importantes con su nombre y la razón que los decidió (tope de compra, cuota actual, avisos del día). `CotaAvance` dibuja el cierre del negocio con **un tramo por documento obligatorio**: macizo si está recibido, punteado si falta y rojo si venció. `CotaPorcentaje` es la versión pequeña de las listas.
+- **Sello** para lo vencido (en vez de una etiqueta de color) y estados del resto de documentos como texto con un punto.
+- **Pantallas rediseñadas:** ingreso, barra lateral, inicio, lista y detalle de negocios (la ficha de vende/compra/firma/asesor sale con líneas finas, no en tarjetas), presupuesto del cliente, reducción de crédito e inventario. Las demás heredan los colores nuevos, la tipografía y los títulos grandes.
+- **Colores y tipografía:** azul de plano `#0C2F73`, azul vivo `#2358D6` solo para lo que se toca, papel `#F0F3F9`, tinta `#070A12` y sello `#C8102E` solo para alertas. Archivo en sus extremos: muy ancha para titulares y cifras, estrecha (`.rotulo`) para las anotaciones.
+- Se retiró el plano de apartamento del ingreso y los estilos que solo él usaba.
+
+### Detalles que salieron al revisar
+- En celular, una columna de rejilla sin `minmax(0, …)` ensanchaba el inicio más allá de la pantalla; y una fila de recordatorios con texto largo hacía lo mismo en el detalle del negocio. Ambos se corrigieron y se midió el ancho de página (sin desborde) en inicio, negocios, inventario y cliente.
+- Un archivo `terreno.ts` junto a `Terreno.tsx` chocaba en macOS (no distingue mayúsculas): el auxiliar se llama `curvasDeNivel.ts`.
+- La cifra grande de la cuota de reducción se salía del panel con tres columnas; ahora ocupa su propia fila.
+
+### Lo que no se hizo
+- No hay pruebas automáticas de frontend (nunca las hubo): se verificó con `npm run build` y en el navegador, en escritorio y en ancho de celular.
+- Recordatorios, expedientes, tasas, requisitos, asistente y los formularios solo heredaron colores y títulos; no tienen terreno ni cotas propias.
+- El estudio imprimible mantiene su diseño sobrio en blanco; no se rehízo con terreno.
+
+
 ## Extra — Reducción de crédito (Ley 546 de 1999) ✅ (22/11/2026)
 
 **Rama:** `feature/reduccion-credito` (sale de `develop`, ya en la versión 1.0.0)

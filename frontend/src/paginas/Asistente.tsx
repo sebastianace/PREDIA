@@ -85,7 +85,7 @@ export function Asistente() {
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Asistente</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Asistente</h1>
           <p className="mt-1 text-niebla">
             Pregunta por expedientes, inmuebles, presupuestos, créditos y el cierre de un negocio. Las cifras salen de las
             reglas de Predia y todo se limita a tu inmobiliaria.
