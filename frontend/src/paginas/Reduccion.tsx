@@ -174,9 +174,11 @@ export function Reduccion() {
         <div className={calculando ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
           <section className="relative isolate mt-6 overflow-hidden rounded-panel bg-prusia p-5 text-white md:p-7" aria-label="Crédito actual">
             <Terreno semilla={sim.cuotasPendientes + 5} niveles={12} className="absolute inset-0 -z-10 size-full text-trazo opacity-40" />
-            <div className="grid gap-6 md:grid-cols-[1.3fr_1fr_1fr] md:gap-8">
-              <CifraAcotada tono="sobre-azul" grande etiqueta="Cuota actual" valor={formatoPesos(sim.actual.cuotaInicial)}
-                razon={`${formatoTasaEa(sim.tasaEa)} durante ${formatoMeses(sim.actual.cuotas)}`} />
+            <div className="grid gap-6 md:grid-cols-2 md:gap-x-10">
+              <div className="md:col-span-2">
+                <CifraAcotada tono="sobre-azul" grande etiqueta="Cuota actual" valor={formatoPesos(sim.actual.cuotaInicial)}
+                  razon={`${formatoTasaEa(sim.tasaEa)} durante ${formatoMeses(sim.actual.cuotas)}`} />
+              </div>
               <CifraAcotada tono="sobre-azul" etiqueta="Total a pagar" valor={formatoPesos(sim.actual.totalPagado)} razon="Sin abonos" />
               <CifraAcotada tono="sobre-azul" etiqueta="De ese total, intereses" valor={formatoPesos(sim.actual.totalIntereses)} />
             </div>

@@ -38,14 +38,14 @@ El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El
 
 ## Capturas
 
-Capturas de la demo con los datos ficticios de Altos Inmobiliaria (sin `OPENAI_API_KEY`, por eso se ve el aviso de modo manual).
+Capturas de la demo con los datos ficticios de Altos Inmobiliaria (sin `OPENAI_API_KEY`, por eso se ve el aviso de modo manual). La identidad visual parte de los mapas topográficos: azul de plano, curvas de nivel generadas y cifras «acotadas», con su medida y la regla de la que salen.
 
 | | |
 |---|---|
-| ![Inicio](docs/capturas/inicio.png) **Inicio:** inventario del día y qué ofrecer. | ![Negocios](docs/capturas/negocios.png) **Negocios:** semáforo y avance del cierre. |
-| ![Cierre del negocio](docs/capturas/cierre-negocio.png) **Cierre del Apto 1102:** qué documento falta, cuál venció y quién lo confirmó. | ![Presupuesto](docs/capturas/cliente-presupuesto.png) **Presupuesto de Paola y Juan:** tope de compra calculado en Java, con su explicación. |
-| ![Inventario](docs/capturas/inventario.png) **Inventario** de inmuebles. | ![Recordatorios](docs/capturas/recordatorios.png) **Recordatorios:** borrador para el propietario; solo sale si el asesor lo aprueba. |
-| ![Reducción de crédito](docs/capturas/reduccion-credito.png) **Reducción de crédito:** tres abonos comparados contra el crédito actual. | |
+| ![Ingreso](docs/capturas/login.png) **Ingreso:** las curvas de nivel se trazan al entrar. | ![Inicio](docs/capturas/inicio.png) **Inicio:** lo del día en tres cifras acotadas. |
+| ![Negocios](docs/capturas/negocios.png) **Negocios:** cada cierre con su cota de avance. | ![Cierre del negocio](docs/capturas/cierre-negocio.png) **Cierre del Apto 1102:** un tramo por documento; lo vencido, en rojo. |
+| ![Presupuesto](docs/capturas/cliente-presupuesto.png) **Presupuesto de Paola y Juan:** el tope de compra, con la regla que lo decidió. | ![Reducción de crédito](docs/capturas/reduccion-credito.png) **Reducción de crédito:** tres abonos comparados contra el crédito actual. |
+| ![Inventario](docs/capturas/inventario.png) **Inventario:** cada inmueble tiene su propio terreno. | ![Recordatorios](docs/capturas/recordatorios.png) **Recordatorios:** borrador para el propietario; solo sale si el asesor lo aprueba. |
 
 También se usa desde el celular (el asesor la abre en las visitas):
 
