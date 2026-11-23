@@ -18,7 +18,7 @@ export function Negocios() {
     <div className="mx-auto max-w-3xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Negocios</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Negocios</h1>
           <p className="mt-1 text-niebla">Qué le falta a cada vendedor para poder firmar.</p>
         </div>
         <Link to="/negocios/nuevo" className={`${claseBotonPrimario} shrink-0`}>Nuevo negocio</Link>

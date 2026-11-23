@@ -26,7 +26,7 @@ export function Requisitos() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Requisitos del vendedor</h1>
+      <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Requisitos del vendedor</h1>
       <p className="mt-1 text-niebla">
         Lista de referencia; confirma los requisitos con la notaría. Predia no da asesoría legal.
         {esAdmin ? ' Aquí puedes ajustarla.' : ' Solo el administrador puede modificarla.'}

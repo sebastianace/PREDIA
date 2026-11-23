@@ -31,7 +31,7 @@ export function Inventario() {
     <div className="mx-auto max-w-5xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Inventario</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Inventario</h1>
           <p className="mt-1 text-niebla">
             {inmuebles ? `${inmuebles.length} inmuebles de tu inmobiliaria` : 'Cargando inmuebles…'}
           </p>

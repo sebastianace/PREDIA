@@ -83,7 +83,7 @@ export function ClienteDetalle() {
       <Link to="/clientes" className="text-sm text-niebla hover:text-tinta">← Clientes</Link>
       <div className="mt-2 flex items-start justify-between gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">{cliente.nombre}</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">{cliente.nombre}</h1>
           <p className="mt-1 text-niebla">
             {cliente.intencion === 'COMPRAR' ? 'Quiere comprar' : 'Quiere arrendar'}
             {cliente.zonas.length > 0 && ` en ${cliente.zonas.join(', ')}`}

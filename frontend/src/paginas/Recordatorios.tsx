@@ -26,7 +26,7 @@ export function Recordatorios() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Recordatorios</h1>
+      <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Recordatorios</h1>
       <p className="mt-1 text-niebla">
         Mensajes para los propietarios con lo que les falta. Revisa el texto, edítalo si quieres y apruébalo para enviarlo.
       </p>

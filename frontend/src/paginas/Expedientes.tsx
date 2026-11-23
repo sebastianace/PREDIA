@@ -101,7 +101,7 @@ export function Expedientes() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Expedientes</h1>
+      <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Expedientes</h1>
       <p className="mt-1 text-niebla">Sube los documentos de un inmueble y pregúntale al asistente sobre ellos.</p>
 
       <label className="mb-1.5 mt-6 block text-sm font-medium text-tinta" htmlFor="inmueble">Inmueble</label>

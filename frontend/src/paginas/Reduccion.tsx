@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Cliente, EscenarioReduccion, FrecuenciaAbono, ModoReduccion, SimulacionReduccion } from '../api/tipos'
 import { Aviso, Campo, CampoPesos, claseBotonSecundario, claseInput } from '../componentes/Formulario'
+import { CifraAcotada } from '../componentes/Cota'
+import { Terreno } from '../componentes/Terreno'
 import { formatoMeses, formatoPesos, formatoPorcentaje, formatoTasaEa } from '../formato'
 import { useSesion } from '../sesion/Sesion'
 
@@ -114,7 +116,7 @@ export function Reduccion() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Reducción de crédito</h1>
+      <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Reducción de crédito</h1>
       <p className="mt-1 max-w-2xl text-niebla">
         Cuánto ahorra un cliente en intereses si abona a capital a su crédito hipotecario. La Ley 546 de 1999
         permite los abonos extraordinarios sin penalidad.
@@ -170,19 +172,13 @@ export function Reduccion() {
 
       {sim && (
         <div className={calculando ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <section className="mt-6 grid gap-4 rounded-panel bg-prusia p-5 text-white md:grid-cols-3 md:p-6" aria-label="Crédito actual">
-            <div>
-              <div className="text-sm text-white/65">Cuota actual</div>
-              <div className="ancha cifra mt-1 text-3xl font-semibold">{formatoPesos(sim.actual.cuotaInicial)}</div>
-              <div className="mt-1 text-xs text-white/55">{formatoTasaEa(sim.tasaEa)} · {formatoMeses(sim.actual.cuotas)}</div>
-            </div>
-            <div>
-              <div className="text-sm text-white/65">Total a pagar sin abonos</div>
-              <div className="ancha cifra mt-1 text-xl font-semibold">{formatoPesos(sim.actual.totalPagado)}</div>
-            </div>
-            <div>
-              <div className="text-sm text-white/65">De los cuales, intereses</div>
-              <div className="ancha cifra mt-1 text-xl font-semibold">{formatoPesos(sim.actual.totalIntereses)}</div>
+          <section className="relative isolate mt-6 overflow-hidden rounded-panel bg-prusia p-5 text-white md:p-7" aria-label="Crédito actual">
+            <Terreno semilla={sim.cuotasPendientes + 5} niveles={12} className="absolute inset-0 -z-10 size-full text-trazo opacity-40" />
+            <div className="grid gap-6 md:grid-cols-[1.3fr_1fr_1fr] md:gap-8">
+              <CifraAcotada tono="sobre-azul" grande etiqueta="Cuota actual" valor={formatoPesos(sim.actual.cuotaInicial)}
+                razon={`${formatoTasaEa(sim.tasaEa)} durante ${formatoMeses(sim.actual.cuotas)}`} />
+              <CifraAcotada tono="sobre-azul" etiqueta="Total a pagar" valor={formatoPesos(sim.actual.totalPagado)} razon="Sin abonos" />
+              <CifraAcotada tono="sobre-azul" etiqueta="De ese total, intereses" valor={formatoPesos(sim.actual.totalIntereses)} />
             </div>
           </section>
 
