@@ -51,7 +51,7 @@ export function Inicio() {
         </div>
       </header>
 
-      <div className="mt-10 grid gap-10 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="mt-10 grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <section aria-labelledby="titulo-ofrecer">
           <div className="flex items-baseline justify-between gap-4">
             <h2 id="titulo-ofrecer" className="ancha text-xl font-semibold">Para ofrecer</h2>

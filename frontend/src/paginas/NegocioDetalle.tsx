@@ -181,9 +181,9 @@ export function NegocioDetalle() {
         </div>
         <ul className="mt-4 space-y-2 text-sm">
           {recordatorios.slice(0, 5).map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-3 rounded-control border border-linea bg-white px-4 py-3">
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control border border-linea bg-white px-4 py-3">
               <span className="min-w-0 truncate text-grafito">{r.asunto}</span>
-              <span className="shrink-0 text-xs text-niebla">
+              <span className="text-xs text-niebla">
                 {r.estado === 'ENVIADO' ? `Enviado el ${formatoFechaHora(r.enviadoEn)}${r.aprobadoPor ? ` · aprobó ${r.aprobadoPor}` : ''}`
                   : r.estado === 'SUGERIDO' ? 'Por aprobar' : r.estado === 'DESCARTADO' ? 'Descartado' : r.estado === 'ERROR_ENVIO' ? 'Error al enviar' : r.estado}
               </span>
