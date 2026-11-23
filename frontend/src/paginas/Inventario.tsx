@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/cliente'
 import type { EstadoInmueble as Estado, Inmueble } from '../api/tipos'
 import { estilosEstado } from '../componentes/EstadoInmueble'
+import { FotoDeInmueble } from '../componentes/FotoInmueble'
 import { Terreno } from '../componentes/Terreno'
 import { claseBotonPrimario } from '../componentes/Formulario'
 import { Icono } from '../componentes/Iconos'
@@ -61,8 +62,9 @@ export function Inventario() {
           const fueraDeOferta = i.estado === 'VENDIDO' || i.estado === 'ARRENDADO'
           return (
             <li key={i.id} className="flex flex-col overflow-hidden rounded-panel border border-linea bg-white">
-              <div className={`relative isolate flex h-28 items-start justify-between gap-3 p-4 text-white ${fondoEstado[i.estado]}`}>
-                <Terreno semilla={i.id * 31 + 7} niveles={10} className="absolute inset-0 -z-10 size-full text-trazo opacity-70" />
+              <div className={`relative isolate flex h-40 items-start justify-between gap-3 overflow-hidden p-4 text-white ${fondoEstado[i.estado]}`}>
+                <Terreno semilla={i.id * 31 + 7} niveles={10} className="absolute inset-0 -z-20 size-full text-trazo opacity-70" />
+                <FotoDeInmueble inmuebleId={i.id} foto={i.foto} tam="grande" velo titulo={i.titulo} />
                 <span className="inline-flex items-center gap-2 text-sm font-medium">
                   <span className="size-2 rounded-full bg-white" aria-hidden="true" />
                   {estilosEstado[i.estado].nombre}

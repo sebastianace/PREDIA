@@ -38,3 +38,13 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
   if (respuesta.status === 204) return undefined as T
   return respuesta.json() as Promise<T>
 }
+
+/** Descarga un archivo binario (p. ej. una foto) con la sesión: un <img src> no puede enviar el JWT. */
+export async function apiBlob(ruta: string): Promise<Blob> {
+  const cabeceras = new Headers()
+  const t = token.leer()
+  if (t) cabeceras.set('Authorization', `Bearer ${t}`)
+  const respuesta = await fetch(`/api${ruta}`, { headers: cabeceras })
+  if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo cargar la imagen.')
+  return respuesta.blob()
+}
