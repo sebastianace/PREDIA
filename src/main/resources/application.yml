@@ -73,6 +73,18 @@ predia:
     # El PDF solo vive aquí mientras se indexa; se borra al terminar (ver ProcesadorIndexacion).
     directorio-temporal: ${EXPEDIENTES_TMP_DIR:${java.io.tmpdir}/predia/documentos}
     tamano-maximo-mb: 20
+  usuarios:
+    # Dirección pública de la interfaz: con ella se arman los enlaces de invitación que llegan por correo.
+    url-publica: ${PREDIA_URL_PUBLICA:http://localhost:5173}
+    remitente: ${PREDIA_CORREO_REMITENTE:notificaciones@predia.local}
+    # Primer administrador (solo si no existe ningún ADMIN): se crea sin contraseña y el enlace para crearla
+    # se escribe una vez en el log. Ninguna contraseña viaja en variables de entorno.
+    primer-admin:
+      email: ${PREDIA_ADMIN_EMAIL:}
+      nombre: ${PREDIA_ADMIN_NOMBRE:}
+      inmobiliaria: ${PREDIA_INMOBILIARIA_NOMBRE:}
+      nit: ${PREDIA_INMOBILIARIA_NIT:}
+      ciudad: ${PREDIA_INMOBILIARIA_CIUDAD:Bucaramanga}
   ocr:
     idioma: spa
     # macOS: brew install tesseract tesseract-lang (ver README). Linux: suele ser /usr/share/tesseract-ocr/*/tessdata.

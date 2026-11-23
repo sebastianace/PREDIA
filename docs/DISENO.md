@@ -344,7 +344,7 @@ export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
 - La columna `vector(1536)` está atada al modelo actual. Pasar a un proveedor local con otra dimensión requiere una migración y reindexar.
 - La lista de requisitos es de referencia; Predia no da asesoría legal.
 
-## 10. Fase 8 — Usuarios y portal del propietario (propuesta, pendiente de revisión)
+## 10. Fase 8 — Usuarios y portal del propietario (aprobada el 23/11/2026)
 
 **Objetivo.** Resolver dos cosas a la vez: (1) hoy no hay forma de crear usuarios ni el primer administrador, así que con la demo apagada nadie podría entrar; (2) el propietario que vende no puede ver qué le falta para firmar. El comprador (plan de pagos, ficha del inmueble) queda para la Fase 9.
 
@@ -388,9 +388,11 @@ Al arrancar, si **no existe ningún ADMIN** y están definidas `PREDIA_ADMIN_EMA
 | `GET /api/usuarios` | ADMIN | Personal de la inmobiliaria (no lista propietarios) |
 | `POST /api/usuarios` | ADMIN | Crea un ADMIN o ASESOR (`nombre, email, rol`) y le envía la invitación |
 | `PUT /api/usuarios/{id}` | ADMIN | Cambia rol o activa/desactiva. **No** puede desactivarse a sí mismo ni dejar la inmobiliaria sin ADMIN |
-| `POST /api/usuarios/{id}/invitacion` | ADMIN | Reenvía la invitación (la anterior deja de valer) |
+| `POST /api/usuarios/{id}/invitacion` | ADMIN | Reenvía la invitación (la anterior deja de valer). A un usuario ya activo le sirve para **elegir una contraseña nueva** si la olvidó |
 | `GET /api/propietarios/{id}/acceso` | ADMIN, ASESOR | Estado del acceso al portal: sin invitar, invitado (fecha), activo (último ingreso) |
-| `POST /api/propietarios/{id}/invitacion` | ADMIN, ASESOR | Crea (o reenvía) la invitación al portal. Exige que el propietario tenga correo |
+| `GET /api/propietarios/{id}/invitacion/vista-previa` | ADMIN, ASESOR | El correo que se enviará, para revisarlo antes |
+| `POST /api/propietarios/{id}/invitacion` | ADMIN, ASESOR | Crea (o reenvía) la invitación al portal y la envía por correo. Exige que el propietario tenga correo. Reenviarla también le sirve para elegir una contraseña nueva |
+| `PUT /api/propietarios/{id}/acceso` | ADMIN, ASESOR | Activa o desactiva el acceso del propietario al portal |
 | `GET /api/auth/invitaciones/{token}` | público | Valida el enlace y devuelve nombre e inmobiliaria (sin datos sensibles) |
 | `POST /api/auth/activar` | público | `token, password`: fija la contraseña, activa la cuenta y gasta el token |
 | `GET /api/portal/negocios` | PROPIETARIO | Sus negocios: inmueble, ciudad, estado, semáforo, avance, fecha de firma y contacto del asesor |
@@ -421,6 +423,12 @@ Al arrancar, si **no existe ningún ADMIN** y están definidas `PREDIA_ADMIN_EMA
 - Desactivar a un usuario invalida su token al instante (401). El ADMIN no puede desactivarse a sí mismo ni quitar al último ADMIN.
 - Primer administrador: sin ningún ADMIN y con las variables definidas se crea uno con invitación; si ya existe, no hace nada.
 
-### 10.8 Fuera de esta fase
+### 10.8 Decisiones de la revisión
 
-Portal del comprador y plan de pagos (Fase 9); «olvidé mi contraseña» (la tabla ya lo permite); línea de tiempo, agenda y avisos; que el propietario hable con el asistente.
+- Después de invitarlo, el propietario entra **cuando quiera** con su correo y contraseña; el enlace de 72 horas solo sirve para crear (o recuperar) la contraseña.
+- **Sigue entrando después de firmar**, para consultar lo que entregó. Su acceso solo termina si el asesor o el ADMIN lo desactivan.
+- «Olvidé mi contraseña» se resuelve en esta fase reenviando la invitación.
+
+### 10.9 Fuera de esta fase
+
+Portal del comprador y plan de pagos (Fase 9); un «olvidé mi contraseña» autónomo, sin pasar por el asesor; línea de tiempo, agenda y avisos; que el propietario hable con el asistente.
