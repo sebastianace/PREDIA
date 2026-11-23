@@ -10,6 +10,7 @@ import { Inicio } from './paginas/Inicio'
 import { NegocioDetalle } from './paginas/NegocioDetalle'
 import { NegocioNuevo } from './paginas/NegocioNuevo'
 import { Negocios } from './paginas/Negocios'
+import { Reduccion } from './paginas/Reduccion'
 import { Recordatorios } from './paginas/Recordatorios'
 import { Requisitos } from './paginas/Requisitos'
 import { Inventario } from './paginas/Inventario'
@@ -36,6 +37,7 @@ function Rutas() {
         <Route path="negocios" element={<Negocios />} />
         <Route path="negocios/nuevo" element={<NegocioNuevo />} />
         <Route path="negocios/:id" element={<NegocioDetalle />} />
+        <Route path="reduccion" element={<Reduccion />} />
         <Route path="recordatorios" element={<Recordatorios />} />
         <Route path="requisitos" element={<Requisitos />} />
         <Route path="expedientes" element={<Expedientes />} />

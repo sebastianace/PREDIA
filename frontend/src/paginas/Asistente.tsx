@@ -26,6 +26,7 @@ const nombreHerramienta: Record<string, string> = {
   buscarInmuebles: 'Inventario',
   calcularPresupuesto: 'Presupuesto',
   simularCredito: 'Simulador de crédito',
+  simularReduccionCredito: 'Reducción de crédito',
   estadoDocumentalNegocio: 'Estado del negocio',
   redactarRecordatorioPropietario: 'Recordatorio (borrador)',
 }

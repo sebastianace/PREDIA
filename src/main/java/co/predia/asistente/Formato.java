@@ -42,4 +42,18 @@ public final class Formato {
     public static String anios(int anios) {
         return anios == 1 ? "1 año" : anios + " años";
     }
+
+    /** 125 → «10 años 5 meses»: los meses los calcula Java y aquí solo se escriben. */
+    public static String plazo(int meses) {
+        if (meses <= 0) {
+            return "0 meses";
+        }
+        int anios = meses / 12;
+        int resto = meses % 12;
+        String m = resto == 1 ? "1 mes" : resto + " meses";
+        if (anios == 0) {
+            return m;
+        }
+        return resto == 0 ? anios(anios) : anios(anios) + " " + m;
+    }
 }

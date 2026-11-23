@@ -1,5 +1,32 @@
 # Progreso de Predia
 
+## Extra — Reducción de crédito (Ley 546 de 1999) ✅ (22/11/2026)
+
+**Rama:** `feature/reduccion-credito` (sale de `develop`, ya en la versión 1.0.0)
+
+Módulo extra a partir del «Simulador profesional de reducción hipotecaria» del autor (HTML + JavaScript). Se reescribió siguiendo las reglas del proyecto: las cifras salen de Java con pruebas, nunca del navegador ni del modelo.
+
+### Qué quedó
+- **`CalculadoraReduccion`** (Java puro, BigDecimal; reutiliza `tasaMensual` y `cuota` de `CalculadoraCredito`): abonos extraordinarios mensuales, anuales o únicos, que **reducen el plazo** (la cuota se mantiene) o **la cuota** (el plazo se mantiene; se recalcula después de cada abono). Cada mes se redondea al peso y la última cuota se ajusta, de modo que **los totales siempre son la suma de la tabla**. La Ley 546 permite el prepago sin penalidad; el modo «reducir la cuota» es nuevo respecto al simulador original, que solo reducía el plazo.
+- **`POST /api/reducciones/simular`** (`SimuladorReduccionService`): crédito actual + hasta 3 escenarios de abono, con ahorro en intereses y en seguros, cuotas reducidas, desembolso mensual e **ingreso necesario** según el porcentaje máximo de cuota que ya configura cada inmobiliaria (reemplaza el «cuota × 3» fijo del original). Con un cliente, indica si su ingreso alcanza; un cliente de otra inmobiliaria responde 404. La tasa va como fracción y una tasa mal escrita (11 en vez de 0,11) se rechaza en vez de simular un 1100 %.
+- **Pantalla «Reducción»** (menú «Más» en celular; enlace «Reducir su crédito» en el cliente): formulario, banner de la cuota actual, comparación de escenarios, tabla de amortización paginada por escenario y **estudio imprimible** con el nombre de la inmobiliaria y del asesor de la sesión. Recalcula al escribir (con una pequeña espera).
+- **Asistente:** séptima herramienta, `simularReduccionCredito` (un abono por llamada; la tasa en porcentaje se convierte a fracción en Java). Devuelve las cifras ya escritas, de modo que `GuardiaCifras` las respalda.
+
+### Qué se cambió del simulador original, y por qué
+- Los escenarios 2 y 3 salían del abono 1 por 1,417 y 1,929, y «# de veces pagada la deuda» de `meses × 0,63`: factores sin sustento. Ahora el asesor escribe los tres abonos y esa fila no existe.
+- El estudio decía «YMG Broker Financiero» fijo: ahora usa la inmobiliaria del usuario.
+- Los honorarios de éxito + IVA no se llevaron: son del negocio de un broker, no de una inmobiliaria.
+- No se guardan estudios en la base de datos (es una simulación sin estado).
+
+### Pruebas (168 en total; las 19 nuevas no llaman a OpenAI)
+- `CalculadoraReduccionTest` (11): **los valores de referencia salen de correr el simulador original con node** (cuota de `$1.495.708`; 123, 137 y 165 cuotas con abono mensual, anual y único; intereses dentro de unos pocos pesos por el redondeo mensual); invariantes en cada caso (capital + abonos = saldo, totales = suma de filas, saldo final cero); reducir cuota mantiene el plazo; reducir plazo ahorra más; abono mayor que el saldo; tasa 0; datos inválidos.
+- `ReduccionApiTest` (6, PostgreSQL real): escenarios con cifras de la calculadora, sin abonos, ingreso necesario y si lo cumple el cliente (`$6.852.360` = desembolso / 30 %), modo reducir cuota, cliente de otra inmobiliaria → 404, validaciones y sesión.
+- `AsistenteApiTest` (+2): la herramienta usa las cifras de la calculadora e interpreta bien el porcentaje; con una tasa absurda devuelve un error al modelo en vez de fallar.
+
+### Probado en vivo
+Backend y frontend de la rama en los puertos 8081 y 5174 (sin tocar la instancia que ya estaba corriendo): el endpoint con los datos de la demo, la pantalla en escritorio y en celular (sin desborde de página, sin errores de consola) y el marcado del estudio, que solo se ve al imprimir. **No se probó la impresión real** del navegador.
+
+
 ## Fase 7 — Pulido, guion de demo y pruebas finales ✅ (22/11/2026)
 
 **Rama:** `feature/pulido-final` (sale de `develop`, con las Fases 1–6 ya fusionadas)

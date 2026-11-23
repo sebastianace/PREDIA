@@ -88,7 +88,10 @@ export function ClienteDetalle() {
             {cliente.habitacionesMin > 0 && ` · ${cliente.habitacionesMin}+ habitaciones`}
           </p>
         </div>
-        <Link to={`/clientes/${cliente.id}/editar`} className={`${claseBotonSecundario} shrink-0`}>Editar</Link>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Link to={`/reduccion?cliente=${cliente.id}`} className={claseBotonSecundario}>Reducir su crédito</Link>
+          <Link to={`/clientes/${cliente.id}/editar`} className={claseBotonSecundario}>Editar</Link>
+        </div>
       </div>
 
       <dl className="mt-6 grid grid-cols-3 gap-4 border-y border-linea py-4 text-sm">
