@@ -22,6 +22,15 @@ export interface EstadoSistema {
   aviso: string | null
 }
 
+/** La foto de portada de un inmueble: `version` cambia al subir otra, `focoX/focoY` es la parte que debe quedar visible. */
+export interface FotoInmueble {
+  version: string
+  focoX: number
+  focoY: number
+  ancho: number
+  alto: number
+}
+
 export type EstadoInmueble = 'DISPONIBLE' | 'SEPARADO' | 'ARRENDADO' | 'VENDIDO'
 
 export interface Inmueble {
@@ -46,6 +55,7 @@ export interface Inmueble {
   propiedadHorizontal: boolean
   descripcion: string
   estado: EstadoInmueble
+  foto: FotoInmueble | null
 }
 
 export type EstadoIndexacion = 'EN_COLA' | 'PROCESANDO' | 'INDEXADO' | 'ERROR'
@@ -333,4 +343,54 @@ export interface RespuestaAsistente {
   recordatoriosCreados: number[]
   cifrasSinRespaldo: string[]
   aviso: string | null
+}
+
+export type ModoReduccion = 'REDUCIR_PLAZO' | 'REDUCIR_CUOTA'
+export type FrecuenciaAbono = 'MENSUAL' | 'ANUAL' | 'UNICO'
+
+export interface FilaAmortizacion {
+  mes: number
+  cuota: number
+  intereses: number
+  capital: number
+  abono: number
+  saldo: number
+  interesesAcumulados: number
+}
+
+/** El escenario «actual» (sin abono) trae null en los campos de ahorro; todo viene calculado del backend. */
+export interface EscenarioReduccion {
+  abono: number | null
+  cuotaInicial: number
+  cuotaFinal: number
+  cuotas: number
+  totalIntereses: number
+  totalAbonos: number
+  totalPagado: number
+  totalSeguro: number
+  desembolsoMensual: number
+  ahorroIntereses: number | null
+  ahorroSeguro: number | null
+  ahorroTotal: number | null
+  cuotasReducidas: number | null
+  ingresoRequerido: number | null
+  cumpleIngreso: boolean | null
+}
+
+export interface SimulacionReduccion {
+  clienteId: number | null
+  clienteNombre: string | null
+  banco: string | null
+  saldo: number
+  tasaEa: number
+  cuotasPendientes: number
+  seguroMensual: number
+  modo: ModoReduccion
+  frecuencia: FrecuenciaAbono
+  pctCuotaMaxIngreso: number
+  actual: EscenarioReduccion
+  escenarios: EscenarioReduccion[]
+  escenarioDeLaTabla: number
+  tabla: FilaAmortizacion[]
+  aviso: string
 }

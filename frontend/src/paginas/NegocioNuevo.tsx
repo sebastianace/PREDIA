@@ -73,7 +73,7 @@ export function NegocioNuevo() {
   return (
     <div className="mx-auto max-w-2xl">
       <Link to="/negocios" className="text-sm text-niebla hover:text-tinta">← Negocios</Link>
-      <h1 className="ancha mt-2 text-[30px] font-semibold leading-tight md:text-4xl">Nuevo negocio</h1>
+      <h1 className="ancha mt-2 text-[32px] font-semibold leading-[1.05] md:text-5xl">Nuevo negocio</h1>
 
       <form onSubmit={guardar} className="mt-6 space-y-5">
         <Campo etiqueta="Inmueble en venta">

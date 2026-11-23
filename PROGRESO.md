@@ -1,5 +1,85 @@
 # Progreso de Predia
 
+## Extra — Foto de portada de cada inmueble ✅ (23/11/2026)
+
+**Rama:** `feature/fotos-inmuebles` (sale de `feature/rediseno`; su PR apunta a la rama previa hasta que se fusione)
+
+El asesor puede subir una foto por inmueble; aparece en la cabecera de cada tarjeta del inventario y como miniatura en «Para ofrecer» del inicio. Sin foto, se sigue viendo el terreno generado.
+
+### Qué quedó
+- **Procesamiento en el servidor** (`ProcesadorImagen`): se decodifica lo que llega (así se rechaza cualquier archivo que no sea una imagen real, aunque se llame `.jpg`), se aplana sobre blanco, se reduce (por mitades, sin ampliar nunca) y se vuelve a codificar como JPEG: una copia **grande de 1600 px** y una **miniatura de 480 px**. Eso además elimina los metadatos (GPS, cámara). Tope de 50 megapíxeles decodificados y de 8 MB subidos. **No se conserva el archivo original.**
+- **Almacenamiento aparte** (`V6__fotos_inmueble.sql`): tabla `foto_inmueble` con las dos copias en `BYTEA`, el hash, las dimensiones y el encuadre. Se consulta con SQL explícito (`FotoInmuebleRepositorio`), como los vectores, para que listar inmuebles nunca cargue bytes. Siempre filtrada por inmobiliaria: la foto de otra responde 404.
+- **Endpoints** `/api/inmuebles/{id}/foto`: `GET` (`tam=miniatura` o grande; con `ETag` y caché privada, porque el hash cambia al subir otra), `PUT` multipart, `PATCH /foco` y `DELETE`. El inmueble (`InmuebleDto`) trae `foto: {version, focoX, focoY, ancho, alto}` o `null`.
+- **Cualquier formato y tamaño, en la interfaz:** el navegador lee la imagen (JPG, PNG, WebP, AVIF, HEIC en Safari…), respeta la orientación de las fotos de celular y la reduce a 1600 px antes de subirla, así que se sube un archivo liviano y funciona con lo que el navegador sepa abrir. El servidor acepta además JPEG, PNG, GIF y BMP directos.
+- **Se ve bien en cualquier proporción:** `object-fit: cover` con un **punto de interés** que elige el asesor (toca la imagen completa o usa los controles Horizontal y Vertical). Al lado se ve cómo quedará recortada en el inventario (5:2) y en el inicio (cuadrada), así una foto vertical, una panorámica o una cuadrada se ven bien en los dos sitios.
+- La foto va en el formulario del inmueble (alta y edición). Si el inmueble se guarda pero la foto falla, no se pierde nada: se abre la edición con el motivo.
+
+### Decisiones
+- **Una foto de portada por inmueble**, no una galería (no se pidió; sería la siguiente mejora).
+- **En la base de datos, no en disco:** una copia de seguridad de la base incluye las fotos, no hay volúmenes que administrar y el filtro por inmobiliaria es el mismo que en todo lo demás. Con muchas fotos conviene pasar a un almacenamiento de objetos.
+- Las fotos **sí se guardan**, a diferencia de los PDF de los clientes: son material comercial de la propia inmobiliaria.
+- El servidor no lee la orientación EXIF; lo hace el navegador al reducir. Un cliente de la API que suba fotos de celular directas puede verlas giradas.
+
+### Pruebas (186 en total; las 18 nuevas no llaman a OpenAI)
+- `ProcesadorImagenTest` (9): horizontal 4000×3000 → 1600×1200 y miniatura 480; vertical, cuadrada y panorámica; una imagen pequeña no se amplía; lo transparente queda sobre blanco; el resultado siempre es JPEG; rechaza texto, PDF y JPEG truncado aunque se llamen foto; rechaza una imagen de 64 megapíxeles; el hash cambia con otra imagen.
+- `FotosInmuebleApiTest` (9, PostgreSQL real): subir, reducir y listar; sin foto → `null`/404; PNG vertical; reemplazar cambia la versión y quitar la borra; cambiar solo el encuadre; `ETag`/304; archivo falso, vacío y de 9 MB → 422; **otra inmobiliaria no ve, sube, quita ni cambia la foto (404)**; sin sesión → 401.
+
+### Probado en vivo
+Subida con el flujo real del navegador (imágenes generadas en la página: una horizontal de 3600×2400 y una vertical de 2400×3600): se reducen, se elige el punto de interés, se guarda, y se ven en la cabecera del inventario y en la miniatura del inicio, también tras recargar. Las capturas del README usan **ilustraciones de ejemplo**, no fotos reales; las fotos de prueba se borraron de la base de datos. **No se probó con una foto real de celular ni con HEIC** (el navegador de pruebas no abre el selector de archivos del sistema).
+
+
+## Extra — Rediseño visual: curvas de nivel y cifras acotadas ✅ (23/11/2026)
+
+**Rama:** `feature/rediseno` (sale de `feature/reduccion-credito`; su PR apunta a `develop` cuando se fusione la reducción)
+
+El diseño anterior (barra lateral, tarjetas blancas y acento cobalto) se veía genérico. Se cambió la identidad por una idea propia del oficio: los mapas topográficos y sus **cotas**.
+
+### Qué quedó
+- **Curvas de nivel generadas** (`curvasDeNivel.ts` + `Terreno.tsx`): un campo de alturas suave al que se le trazan las líneas de igual altura (marching squares). La misma semilla da siempre el mismo terreno, así que **cada inmueble tiene el suyo** (miniaturas en el inicio y cabecera de cada tarjeta del inventario). Las curvas «maestras» (cada quinta) van más gruesas, como en un mapa. Se trazan una sola vez al entrar al login, al inicio y al detalle de un negocio, y respetan «reducir movimiento».
+- **Cota** (`Cota.tsx`): una línea de medida con topes y la medida al centro. `CifraAcotada` muestra los números importantes con su nombre y la razón que los decidió (tope de compra, cuota actual, avisos del día). `CotaAvance` dibuja el cierre del negocio con **un tramo por documento obligatorio**: macizo si está recibido, punteado si falta y rojo si venció. `CotaPorcentaje` es la versión pequeña de las listas.
+- **Sello** para lo vencido (en vez de una etiqueta de color) y estados del resto de documentos como texto con un punto.
+- **Pantallas rediseñadas:** ingreso, barra lateral, inicio, lista y detalle de negocios (la ficha de vende/compra/firma/asesor sale con líneas finas, no en tarjetas), presupuesto del cliente, reducción de crédito e inventario. Las demás heredan los colores nuevos, la tipografía y los títulos grandes.
+- **Colores y tipografía:** azul de plano `#0C2F73`, azul vivo `#2358D6` solo para lo que se toca, papel `#F0F3F9`, tinta `#070A12` y sello `#C8102E` solo para alertas. Archivo en sus extremos: muy ancha para titulares y cifras, estrecha (`.rotulo`) para las anotaciones.
+- Se retiró el plano de apartamento del ingreso y los estilos que solo él usaba.
+
+### Detalles que salieron al revisar
+- En celular, una columna de rejilla sin `minmax(0, …)` ensanchaba el inicio más allá de la pantalla; y una fila de recordatorios con texto largo hacía lo mismo en el detalle del negocio. Ambos se corrigieron y se midió el ancho de página (sin desborde) en inicio, negocios, inventario y cliente.
+- Un archivo `terreno.ts` junto a `Terreno.tsx` chocaba en macOS (no distingue mayúsculas): el auxiliar se llama `curvasDeNivel.ts`.
+- La cifra grande de la cuota de reducción se salía del panel con tres columnas; ahora ocupa su propia fila.
+
+### Lo que no se hizo
+- No hay pruebas automáticas de frontend (nunca las hubo): se verificó con `npm run build` y en el navegador, en escritorio y en ancho de celular.
+- Recordatorios, expedientes, tasas, requisitos, asistente y los formularios solo heredaron colores y títulos; no tienen terreno ni cotas propias.
+- El estudio imprimible mantiene su diseño sobrio en blanco; no se rehízo con terreno.
+
+
+## Extra — Reducción de crédito (Ley 546 de 1999) ✅ (22/11/2026)
+
+**Rama:** `feature/reduccion-credito` (sale de `develop`, ya en la versión 1.0.0)
+
+Módulo extra a partir del «Simulador profesional de reducción hipotecaria» del autor (HTML + JavaScript). Se reescribió siguiendo las reglas del proyecto: las cifras salen de Java con pruebas, nunca del navegador ni del modelo.
+
+### Qué quedó
+- **`CalculadoraReduccion`** (Java puro, BigDecimal; reutiliza `tasaMensual` y `cuota` de `CalculadoraCredito`): abonos extraordinarios mensuales, anuales o únicos, que **reducen el plazo** (la cuota se mantiene) o **la cuota** (el plazo se mantiene; se recalcula después de cada abono). Cada mes se redondea al peso y la última cuota se ajusta, de modo que **los totales siempre son la suma de la tabla**. La Ley 546 permite el prepago sin penalidad; el modo «reducir la cuota» es nuevo respecto al simulador original, que solo reducía el plazo.
+- **`POST /api/reducciones/simular`** (`SimuladorReduccionService`): crédito actual + hasta 3 escenarios de abono, con ahorro en intereses y en seguros, cuotas reducidas, desembolso mensual e **ingreso necesario** según el porcentaje máximo de cuota que ya configura cada inmobiliaria (reemplaza el «cuota × 3» fijo del original). Con un cliente, indica si su ingreso alcanza; un cliente de otra inmobiliaria responde 404. La tasa va como fracción y una tasa mal escrita (11 en vez de 0,11) se rechaza en vez de simular un 1100 %.
+- **Pantalla «Reducción»** (menú «Más» en celular; enlace «Reducir su crédito» en el cliente): formulario, banner de la cuota actual, comparación de escenarios, tabla de amortización paginada por escenario y **estudio imprimible** con el nombre de la inmobiliaria y del asesor de la sesión. Recalcula al escribir (con una pequeña espera).
+- **Asistente:** séptima herramienta, `simularReduccionCredito` (un abono por llamada; la tasa en porcentaje se convierte a fracción en Java). Devuelve las cifras ya escritas, de modo que `GuardiaCifras` las respalda.
+
+### Qué se cambió del simulador original, y por qué
+- Los escenarios 2 y 3 salían del abono 1 por 1,417 y 1,929, y «# de veces pagada la deuda» de `meses × 0,63`: factores sin sustento. Ahora el asesor escribe los tres abonos y esa fila no existe.
+- El estudio decía «YMG Broker Financiero» fijo: ahora usa la inmobiliaria del usuario.
+- Los honorarios de éxito + IVA no se llevaron: son del negocio de un broker, no de una inmobiliaria.
+- No se guardan estudios en la base de datos (es una simulación sin estado).
+
+### Pruebas (168 en total; las 19 nuevas no llaman a OpenAI)
+- `CalculadoraReduccionTest` (11): **los valores de referencia salen de correr el simulador original con node** (cuota de `$1.495.708`; 123, 137 y 165 cuotas con abono mensual, anual y único; intereses dentro de unos pocos pesos por el redondeo mensual); invariantes en cada caso (capital + abonos = saldo, totales = suma de filas, saldo final cero); reducir cuota mantiene el plazo; reducir plazo ahorra más; abono mayor que el saldo; tasa 0; datos inválidos.
+- `ReduccionApiTest` (6, PostgreSQL real): escenarios con cifras de la calculadora, sin abonos, ingreso necesario y si lo cumple el cliente (`$6.852.360` = desembolso / 30 %), modo reducir cuota, cliente de otra inmobiliaria → 404, validaciones y sesión.
+- `AsistenteApiTest` (+2): la herramienta usa las cifras de la calculadora e interpreta bien el porcentaje; con una tasa absurda devuelve un error al modelo en vez de fallar.
+
+### Probado en vivo
+Backend y frontend de la rama en los puertos 8081 y 5174 (sin tocar la instancia que ya estaba corriendo): el endpoint con los datos de la demo, la pantalla en escritorio y en celular (sin desborde de página, sin errores de consola) y el marcado del estudio, que solo se ve al imprimir. **No se probó la impresión real** del navegador.
+
+
 ## Fase 7 — Pulido, guion de demo y pruebas finales ✅ (22/11/2026)
 
 **Rama:** `feature/pulido-final` (sale de `develop`, con las Fases 1–6 ya fusionadas)

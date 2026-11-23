@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/cliente'
 import type { EstadoInmueble as Estado, Inmueble } from '../api/tipos'
-import { EstadoInmueble, estilosEstado } from '../componentes/EstadoInmueble'
+import { estilosEstado } from '../componentes/EstadoInmueble'
+import { FotoDeInmueble } from '../componentes/FotoInmueble'
+import { Terreno } from '../componentes/Terreno'
 import { claseBotonPrimario } from '../componentes/Formulario'
 import { Icono } from '../componentes/Iconos'
 import { formatoPesos } from '../formato'
 
 type Filtro = 'TODOS' | Estado
 const filtros: Filtro[] = ['TODOS', 'DISPONIBLE', 'SEPARADO', 'ARRENDADO', 'VENDIDO']
+const fondoEstado: Record<Estado, string> = {
+  DISPONIBLE: 'bg-prusia', SEPARADO: 'bg-prusia-claro', ARRENDADO: 'bg-prusia-claro', VENDIDO: 'bg-grafito',
+}
 const nombreFiltro = (f: Filtro) => (f === 'TODOS' ? 'Todos' : `${estilosEstado[f].nombre}s`)
 
 export function Inventario() {
@@ -27,7 +32,7 @@ export function Inventario() {
     <div className="mx-auto max-w-5xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Inventario</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Inventario</h1>
           <p className="mt-1 text-niebla">
             {inmuebles ? `${inmuebles.length} inmuebles de tu inmobiliaria` : 'Cargando inmuebles…'}
           </p>
@@ -56,16 +61,21 @@ export function Inventario() {
         {visibles.map((i) => {
           const fueraDeOferta = i.estado === 'VENDIDO' || i.estado === 'ARRENDADO'
           return (
-            <li key={i.id} className="flex flex-col rounded-panel border border-linea bg-white p-5">
-              <div className="flex items-center justify-between gap-3">
-                <EstadoInmueble estado={i.estado} />
-                <span className="flex items-center gap-3 text-xs text-niebla">
+            <li key={i.id} className="flex flex-col overflow-hidden rounded-panel border border-linea bg-white">
+              <div className={`relative isolate flex h-40 items-start justify-between gap-3 overflow-hidden p-4 text-white ${fondoEstado[i.estado]}`}>
+                <Terreno semilla={i.id * 31 + 7} niveles={10} className="absolute inset-0 -z-20 size-full text-trazo opacity-70" />
+                <FotoDeInmueble inmuebleId={i.id} foto={i.foto} tam="grande" velo titulo={i.titulo} />
+                <span className="inline-flex items-center gap-2 text-sm font-medium">
+                  <span className="size-2 rounded-full bg-white" aria-hidden="true" />
+                  {estilosEstado[i.estado].nombre}
+                </span>
+                <span className="flex items-center gap-3 text-xs text-trazo">
                   {i.codigo}
-                  <Link to={`/inventario/${i.id}/editar`} className="font-medium text-cobalto hover:text-cobalto-hondo">Editar</Link>
+                  <Link to={`/inventario/${i.id}/editar`} className="font-medium text-white hover:underline">Editar</Link>
                 </span>
               </div>
-
-              <h2 className="mt-3 text-lg font-semibold leading-snug">{i.titulo}</h2>
+              <div className="flex grow flex-col p-5">
+              <h2 className="ancha text-lg font-semibold leading-snug">{i.titulo}</h2>
               <p className="text-sm text-niebla">{i.barrio}, {i.ciudad}{i.estrato ? `, estrato ${i.estrato}` : ''}</p>
 
               <p className={`ancha cifra mt-4 text-[26px] font-semibold leading-none ${fueraDeOferta ? 'text-niebla' : 'text-tinta'}`}>
@@ -85,6 +95,7 @@ export function Inventario() {
                   {i.parqueaderos === 0 ? 'Sin parqueadero' : i.parqueaderos === 1 ? '1 parqueadero' : `${i.parqueaderos} parqueaderos`}
                 </li>
               </ul>
+              </div>
             </li>
           )
         })}

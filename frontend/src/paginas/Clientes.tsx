@@ -17,7 +17,7 @@ export function Clientes() {
     <div className="mx-auto max-w-3xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Clientes</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Clientes</h1>
           <p className="mt-1 text-niebla">Compradores con su presupuesto y su autorización de datos.</p>
         </div>
         <Link to="/clientes/nuevo" className={`${claseBotonPrimario} shrink-0`}>Nuevo cliente</Link>

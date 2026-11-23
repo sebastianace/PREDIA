@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { PlanoApartamento } from '../componentes/PlanoApartamento'
+import { Terreno } from '../componentes/Terreno'
 import { useSesion } from '../sesion/Sesion'
 
 const campo =
@@ -27,12 +27,22 @@ export function Login() {
 
   return (
     <div className="grid min-h-dvh bg-white md:grid-cols-[1.15fr_1fr]">
-      <section className="reticula relative flex flex-col justify-between px-6 pb-8 pt-7 text-white md:px-14 md:py-12">
+      <section className="relative isolate flex min-h-[19rem] flex-col justify-between overflow-hidden bg-prusia px-6 pb-8 pt-7 text-white md:min-h-0 md:px-14 md:py-12">
+        <Terreno semilla={959} trazar className="absolute inset-0 -z-20 size-full text-trazo" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-prusia via-prusia/70 to-transparent" aria-hidden="true" />
         <span className="ancha text-2xl font-bold tracking-tight">Predia</span>
-        <PlanoApartamento className="mx-auto my-5 w-full max-w-[250px] md:my-10 md:max-w-[460px]" />
-        <p className="max-w-md text-[15px] leading-relaxed text-white/80 md:text-lg">
-          Expedientes, inventario y cierres de negocio de tu inmobiliaria, a mano durante cada visita.
-        </p>
+        <div>
+          <div className="rotulo mb-4 flex items-center gap-3 text-sm text-trazo" aria-hidden="true">
+            <span className="h-px w-10 bg-trazo" />
+            Bucaramanga · 959 m sobre el nivel del mar
+          </div>
+          <h2 className="ancha max-w-xl text-[30px] text-white font-semibold leading-[1.05] md:text-[52px]">
+            Sabe qué le falta a cada negocio para firmar
+          </h2>
+          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/75 md:mt-6 md:text-lg">
+            Expedientes, inventario y cierres de negocio de tu inmobiliaria, a mano durante cada visita.
+          </p>
+        </div>
       </section>
 
       <section className="flex items-start justify-center px-6 py-10 md:items-center md:px-14">

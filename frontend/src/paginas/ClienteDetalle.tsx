@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Cliente, PresupuestoCliente, RespuestaBusqueda, ResultadoInmueble, Simulacion, Tasa } from '../api/tipos'
+import { CifraAcotada } from '../componentes/Cota'
+import { Terreno } from '../componentes/Terreno'
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
 import { formatoFechaHora, formatoPesos, formatoPorcentaje, formatoTasaEa } from '../formato'
 
@@ -81,14 +83,17 @@ export function ClienteDetalle() {
       <Link to="/clientes" className="text-sm text-niebla hover:text-tinta">← Clientes</Link>
       <div className="mt-2 flex items-start justify-between gap-4">
         <div>
-          <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">{cliente.nombre}</h1>
+          <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">{cliente.nombre}</h1>
           <p className="mt-1 text-niebla">
             {cliente.intencion === 'COMPRAR' ? 'Quiere comprar' : 'Quiere arrendar'}
             {cliente.zonas.length > 0 && ` en ${cliente.zonas.join(', ')}`}
             {cliente.habitacionesMin > 0 && ` · ${cliente.habitacionesMin}+ habitaciones`}
           </p>
         </div>
-        <Link to={`/clientes/${cliente.id}/editar`} className={`${claseBotonSecundario} shrink-0`}>Editar</Link>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Link to={`/reduccion?cliente=${cliente.id}`} className={claseBotonSecundario}>Reducir su crédito</Link>
+          <Link to={`/clientes/${cliente.id}/editar`} className={claseBotonSecundario}>Editar</Link>
+        </div>
       </div>
 
       <dl className="mt-6 grid grid-cols-3 gap-4 border-y border-linea py-4 text-sm">
@@ -130,23 +135,27 @@ export function ClienteDetalle() {
         {errorPresupuesto && <div className="mt-4"><Aviso tipo="error">{errorPresupuesto}</Aviso></div>}
 
         {presupuesto && p && (
-          <div className="mt-5 rounded-panel border border-linea bg-white p-5 md:p-6">
-            <div className="text-sm text-niebla">Puede comprar hasta</div>
-            <div className="ancha cifra text-[34px] font-semibold leading-tight text-tinta md:text-[40px]">
-              {formatoPesos(p.topeDeCompra)}
+          <div className="mt-5">
+            <div className="relative isolate overflow-hidden rounded-panel bg-prusia p-5 text-white md:p-7">
+              <Terreno semilla={cliente.id * 17 + 3} niveles={12} className="absolute inset-0 -z-10 size-full text-trazo opacity-40" />
+              <CifraAcotada tono="sobre-azul" grande etiqueta="Puede comprar hasta" valor={formatoPesos(p.topeDeCompra)}
+                razon={p.limitante === 'AHORRO'
+                  ? `Lo limita el ahorro: ${formatoPesos(cliente.ahorro)} es el ${formatoPorcentaje(presupuesto.pctCuotaInicial, 0)} de la cuota inicial.`
+                  : 'Lo limita la capacidad de pago: la cuota máxima no alcanza para financiar más.'} />
+              <dl className="mt-6 grid gap-x-8 text-sm sm:grid-cols-2">
+                {[
+                  [`Cuota máxima al mes (${formatoPorcentaje(presupuesto.pctCuotaMaximaIngreso, 0)} del ingreso)`, p.cuotaMaxima],
+                  ['Lo que soporta esa cuota', p.montoQueSoportaLaCuota],
+                  ['Tope por ahorro', p.topePorAhorro],
+                  ['Tope por capacidad de pago', p.topePorCapacidadDePago],
+                ].map(([k, v]) => (
+                  <div key={String(k)} className="flex justify-between gap-3 border-t border-white/25 py-2.5">
+                    <dt className="text-trazo">{k}</dt>
+                    <dd className="cifra font-medium">{formatoPesos(v as number)}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
-            <p className="mt-1 text-sm text-grafito">
-              {p.limitante === 'AHORRO'
-                ? `Lo limita el ahorro: ${formatoPesos(cliente.ahorro)} es el ${formatoPorcentaje(presupuesto.pctCuotaInicial, 0)} de la cuota inicial.`
-                : 'Lo limita la capacidad de pago: la cuota máxima no alcanza para financiar más.'}
-            </p>
-
-            <dl className="mt-5 grid gap-x-6 gap-y-3 border-t border-linea pt-4 text-sm sm:grid-cols-2">
-              <div className="flex justify-between gap-3"><dt className="text-niebla">Cuota máxima al mes ({formatoPorcentaje(presupuesto.pctCuotaMaximaIngreso, 0)} del ingreso)</dt><dd className="cifra font-medium text-tinta">{formatoPesos(p.cuotaMaxima)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-niebla">Lo que soporta esa cuota</dt><dd className="cifra font-medium text-tinta">{formatoPesos(p.montoQueSoportaLaCuota)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-niebla">Tope por ahorro</dt><dd className="cifra font-medium text-tinta">{formatoPesos(p.topePorAhorro)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-niebla">Tope por capacidad de pago</dt><dd className="cifra font-medium text-tinta">{formatoPesos(p.topePorCapacidadDePago)}</dd></div>
-            </dl>
 
             <p className="mt-4 text-xs text-niebla">
               Tasa usada: {presupuesto.tasa.banco}, {formatoTasaEa(presupuesto.tasa.tasaEa)}, vigente desde {presupuesto.tasa.vigenteDesde}

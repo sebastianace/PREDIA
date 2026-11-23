@@ -48,7 +48,7 @@ export function Tasas() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="ancha text-[30px] font-semibold leading-tight md:text-4xl">Tasas de crédito</h1>
+      <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">Tasas de crédito</h1>
       <p className="mt-1 text-niebla">
         Con estas tasas se calculan los presupuestos y las simulaciones. Las carga el administrador, con su fuente.
       </p>

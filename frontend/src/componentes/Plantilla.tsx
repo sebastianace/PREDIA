@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSesion } from '../sesion/Sesion'
 import { AvisoIa } from './AvisoIa'
+import { Terreno } from './Terreno'
 import { Icono, type NombreIcono } from './Iconos'
 
 // En escritorio van todas en la barra lateral; en celular, las principales abajo y el resto en "Más".
@@ -11,6 +12,7 @@ const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: 
   { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario', principal: true },
   { ruta: '/asistente', nombre: 'Asistente', icono: 'asistente', principal: true },
   { ruta: '/clientes', nombre: 'Clientes', icono: 'clientes', principal: false },
+  { ruta: '/reduccion', nombre: 'Reducción', icono: 'reduccion', principal: false },
   { ruta: '/recordatorios', nombre: 'Recordatorios', icono: 'recordatorios', principal: false },
   { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente', principal: false },
   { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas', principal: false },
@@ -31,7 +33,8 @@ export function Plantilla() {
   return (
     <div className="min-h-dvh md:flex">
       {/* Barra lateral en escritorio */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-prusia text-white md:flex">
+      <aside className="sticky top-0 isolate hidden h-dvh w-64 shrink-0 flex-col overflow-hidden bg-prusia text-white md:flex">
+        <Terreno semilla={959} ancho={400} alto={900} niveles={12} className="absolute inset-0 -z-10 size-full text-trazo opacity-[0.22]" />
         <div className="ancha px-7 pb-8 pt-8 text-2xl font-bold tracking-tight">Predia</div>
         <nav className="flex flex-1 flex-col gap-0.5 px-4" aria-label="Secciones">
           {secciones.map((s) => (
