@@ -42,13 +42,13 @@ public class CorreoInvitaciones {
     }
 
     /** El correo tal como se enviará; sin enlace, el texto lleva un marcador (para la vista previa). */
-    public Correo redactar(Rol rol, String nombre, String email, String inmobiliaria, String inmueble,
+    public Correo redactar(Rol rol, String nombre, String email, String inmobiliaria, String venta,
                            String nombreQuienInvita, String enlace, Instant expiraEn, boolean recuperar) {
         String link = enlace == null ? MARCADOR_ENLACE : enlace;
         String vence = expiraEn == null ? "en 72 horas" : "el " + FECHA.format(expiraEn);
         if (rol == Rol.PROPIETARIO) {
             String asunto = recuperar ? "Nueva contraseña para su portal de " + inmobiliaria
-                    : "Siga la venta de " + inmueble + " desde su portal";
+                    : "Siga " + venta + " desde su portal";
             String cuerpo = """
                     Hola, %s:
 
@@ -64,9 +64,9 @@ public class CorreoInvitaciones {
                     %s
                     %s""".formatted(nombre,
                     recuperar ? "Para elegir una contraseña nueva para su portal, abra este enlace:"
-                            : ("En su portal de %s puede ver qué documentos faltan para firmar la venta de %s, cuáles "
+                            : ("En su portal de %s puede ver qué documentos faltan para firmar %s, cuáles "
                             + "están por vencer y enviarlos directamente. Para crear su contraseña, abra este enlace:")
-                            .formatted(inmobiliaria, inmueble),
+                            .formatted(inmobiliaria, venta),
                     link, vence, nombreQuienInvita, inmobiliaria);
             return new Correo(email, asunto, cuerpo);
         }

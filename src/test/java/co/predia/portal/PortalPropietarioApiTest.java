@@ -170,6 +170,21 @@ class PortalPropietarioApiTest extends PruebaIntegracion {
                 .isEqualTo("RECIBIDO");
     }
 
+    @Test
+    void enviarSinArchivoOConUnTipoIncorrectoEsUnErrorDelClienteNoUn500() throws Exception {
+        Escenario e = escenario("SinArchivo");
+        String ruta = "/api/portal/negocios/" + e.negocio().getId() + "/requisitos/"
+                + requisitosNegocio.findByNegocioId(e.negocio().getId()).getFirst().getId() + "/documento";
+
+        mvc.perform(post(ruta).header("Authorization", bearer(e.usuario())))
+                .andExpect(status().is4xxClientError());
+        mvc.perform(multipart(ruta).param("otro", "x").header("Authorization", bearer(e.usuario())))
+                .andExpect(status().isBadRequest());
+        mvc.perform(multipart(ruta).file(new MockMultipartFile("archivo", "nota.txt", "text/plain", "hola".getBytes()))
+                        .header("Authorization", bearer(e.usuario())))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
     @Autowired co.predia.cierre.catalogo.RequisitoCatalogoRepository catalogo;
 
     private String catalogoCodigo(RequisitoNegocio r) {

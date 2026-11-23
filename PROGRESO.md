@@ -1,5 +1,29 @@
 # Progreso de Predia
 
+## Revisión del portal del vendedor y del acceso por rol ✅ (23/11/2026)
+
+**Rama:** `fix/revision-portal` (sale de `develop`)
+
+Revisión de punta a punta con la aplicación corriendo (API real, PostgreSQL, Mailpit): activación con enlace (válido, inválido, contraseñas que no coinciden), ingreso del vendedor por la página normal, un vendedor con dos ventas, uno sin ventas, una venta firmada, subidas con archivos malos, y una matriz de acceso de 15 rutas con asesor, administrador y vendedor (más sin sesión). El acceso salió como se esperaba. Lo que se encontró y se corrigió:
+
+- **Un `500` al enviar sin archivo** (o con una petición que no es multipart): ahora responde `400` («Falta un dato de la petición…») o `415`. Afectaba a cualquier subida, no solo al portal.
+- **El correo de invitación elegía una venta al azar:** con dos ventas, nombraba solo la más reciente. Ahora dice «sus ventas» (sin ventas, «su inmueble»; las canceladas no cuentan).
+- **Plural en la cota:** decía «4 recibido» y «8 pendiente»; ahora «4 recibidos», «8 pendientes».
+- **El portal en celular no decía de qué inmobiliaria era:** el nombre se ocultaba por debajo de 640 px; ahora se ve siempre.
+- **La foto del inmueble casi no se veía** en la cabecera del portal por la capa que protege la lectura del texto; se aligeró.
+- El mensaje del enlace inválido dejó de tutear: la página no sabe si habla con un propietario o con personal.
+
+### Pruebas (207 en total, +2)
+- `PortalPropietarioApiTest` (+1): enviar sin archivo o con un tipo incorrecto es un error del cliente (400/422), no un 500.
+- `UsuariosEInvitacionesApiTest` (+1): el correo nombra la venta con una, «sus ventas» con dos y «su inmueble» con ninguna.
+
+### Lo que se encontró y no se corrigió
+- **El comprador no tiene portal ni cuenta** (solo ADMIN, ASESOR y PROPIETARIO): es la Fase 9. Hoy el comprador es una ficha que administra el asesor.
+- **No hay límite de intentos en el ingreso**: se pueden probar contraseñas sin freno. Conviene agregarlo antes de producción.
+- **Swagger sigue público** (decisión pendiente para producción).
+- Una venta marcada FIRMADO con documentos pendientes muestra «Su venta ya se firmó» pero la cota sigue en 0 %: es coherente con los datos, pero se ve raro; en uso real una venta firmada tiene todo recibido.
+
+
 ## Fase 8 — Usuarios, invitaciones y portal del propietario ✅ (23/11/2026)
 
 **Rama:** `feature/usuarios-y-portal` (sale de `develop`; incluye la guía de pruebas de `docs/guia-de-pruebas`). Diseño aprobado en `docs/DISENO.md`, sección 10.

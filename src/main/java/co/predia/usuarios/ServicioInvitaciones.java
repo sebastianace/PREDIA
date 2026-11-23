@@ -113,7 +113,7 @@ public class ServicioInvitaciones {
     /** Un enlace inexistente, vencido o ya usado responden igual: no se revela cuál de los tres es. */
     private static RecursoNoEncontradoException invalido() {
         return new RecursoNoEncontradoException(
-                "Este enlace ya no es válido: venció o ya se usó. Pídele uno nuevo a tu inmobiliaria.");
+                "Este enlace ya no es válido: venció o ya se usó. Quien le invitó puede enviarle uno nuevo.");
     }
 
     static String hash(String token) {

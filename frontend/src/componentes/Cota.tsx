@@ -42,6 +42,14 @@ export function CifraAcotada({ etiqueta, valor, razon, tono = 'sobre-papel', gra
   )
 }
 
+/** «recibido» → «recibidos»; «por vencer» no cambia. */
+function plural(nombre: string, n: number): string {
+  if (n === 1) return nombre
+  if (nombre === 'por vencer') return nombre
+  if (nombre.startsWith('sugerido por')) return nombre.replace('sugerido', 'sugeridos')
+  return `${nombre}s`
+}
+
 const estiloTramo: Record<EstadoRequisito, { azul: string; papel: string; nombre: string }> = {
   RECIBIDO: { azul: 'tramo bg-white', papel: 'tramo bg-prusia', nombre: 'recibido' },
   POR_VENCER: { azul: 'tramo tramo-punteado text-[#ffd28a]', papel: 'tramo tramo-punteado text-ambar', nombre: 'por vencer' },
@@ -64,7 +72,7 @@ export function CotaAvance({ items, porcentaje, tono = 'sobre-azul' }: {
   const tramos = items.filter((i) => i.obligatorio && i.estado !== 'NO_APLICA')
   const resumen = Object.entries(
     tramos.reduce<Record<string, number>>((acc, i) => ({ ...acc, [i.estado]: (acc[i.estado] ?? 0) + 1 }), {}),
-  ).map(([e, n]) => `${n} ${estiloTramo[e as EstadoRequisito].nombre}`).join(', ')
+  ).map(([e, n]) => `${n} ${plural(estiloTramo[e as EstadoRequisito].nombre, n)}`).join(', ')
 
   return (
     <div className={azul ? 'text-trazo' : 'text-niebla'} role="img" aria-label={`Avance de documentos: ${porcentaje} %. ${resumen}`}>
