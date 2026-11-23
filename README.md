@@ -117,7 +117,7 @@ export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
    ```bash
    ./mvnw spring-boot:run
    ```
-   La API queda en <http://localhost:8080> y la documentación en <http://localhost:8080/swagger-ui.html>.
+   La API queda en <http://localhost:8080> (no tiene página principal: la aplicación es la del puerto 5173) y la documentación interactiva en <http://localhost:8080/swagger-ui.html>. Para probar los endpoints protegidos: en `POST /api/auth/login` entra con un usuario, copia el `token` de la respuesta, pulsa **Authorize** (arriba a la derecha) y pégalo sin la palabra «Bearer»; cada prueba sale con los permisos de ese rol.
 
 4. **Frontend:**
    ```bash

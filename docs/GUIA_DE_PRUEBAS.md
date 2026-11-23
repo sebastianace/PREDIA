@@ -330,13 +330,23 @@ Cualquier cliente de PostgreSQL sirve (TablePlus, DBeaver, pgAdmin o la extensi�
 
 ---
 
-## 19. Pruebas automáticas
+## 19. Swagger: probar la API directamente
+
+**Cómo probarlo:** abre <http://localhost:8080/swagger-ui.html> (no la raíz del puerto 8080, que responde 401 porque no es una página). En `POST /api/auth/login` pulsa «Try it out», entra con `laura@altos.test` y copia el `token`. Pulsa **Authorize**, pégalo (sin «Bearer») y prueba, por ejemplo, `GET /api/negocios`.
+
+**Qué deberías ver:** los endpoints protegidos llevan candado y salen con tu token; el login, la activación y la validación de una invitación no lo llevan. Con el token de un propietario, casi todo responde 403.
+
+**Qué explicar:** la API está documentada automáticamente (OpenAPI) y es la misma que usa la interfaz. El token se conserva al recargar solo en tu navegador.
+
+---
+
+## 20. Pruebas automáticas
 
 ```bash
 ./mvnw test
 ```
 
-Corre **203 pruebas** sobre un PostgreSQL con pgvector real (en un contenedor desechable) y **ninguna llama a OpenAI**. Cubren, entre otras cosas, que una inmobiliaria nunca ve datos de otra, que un propietario no puede salir de su portal, que la IA nunca deja un documento «recibido», que no se envía un correo sin aprobación, y que las cifras del crédito y del presupuesto coinciden con las fórmulas.
+Corre **205 pruebas** sobre un PostgreSQL con pgvector real (en un contenedor desechable) y **ninguna llama a OpenAI**. Cubren, entre otras cosas, que una inmobiliaria nunca ve datos de otra, que un propietario no puede salir de su portal, que la IA nunca deja un documento «recibido», que no se envía un correo sin aprobación, y que las cifras del crédito y del presupuesto coinciden con las fórmulas.
 
 ---
 
