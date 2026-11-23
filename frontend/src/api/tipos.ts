@@ -1,4 +1,4 @@
-export type Rol = 'ADMIN' | 'ASESOR'
+export type Rol = 'ADMIN' | 'ASESOR' | 'PROPIETARIO'
 
 export interface PerfilUsuario {
   id: number
@@ -251,6 +251,8 @@ export interface ItemDocumental {
   detalle: string
   venceEl: string | null
   estadoRegistrado: 'PENDIENTE' | 'SUGERIDO' | 'RECIBIDO' | 'NO_APLICA_MANUAL'
+  /** Quién dejó la sugerencia: la IA o el propietario desde su portal. */
+  sugeridoPor: 'IA' | 'PROPIETARIO' | null
   fechaExpedicion: string | null
   documentoId: number | null
   documentoNombre: string | null
@@ -395,4 +397,95 @@ export interface SimulacionReduccion {
   escenarioDeLaTabla: number
   tabla: FilaAmortizacion[]
   aviso: string
+}
+
+// ---------------------------------------------------------------- usuarios, invitaciones y portal del propietario
+
+export type EstadoAcceso = 'SIN_INVITAR' | 'INVITADO' | 'ACTIVO' | 'DESACTIVADO'
+
+export interface UsuarioPersonal {
+  id: number
+  nombre: string
+  email: string
+  rol: Rol
+  estado: EstadoAcceso
+  ultimoIngreso: string | null
+  invitacionVence: string | null
+  esUstedMismo: boolean
+}
+
+/** `enlace` es personal y vence en 72 horas: sirve para compartirlo por otro medio si el correo no llega. */
+export interface UsuarioInvitado {
+  usuario: UsuarioPersonal
+  correoEnviado: boolean
+  enlace: string
+}
+
+export interface AccesoPortal {
+  estado: EstadoAcceso
+  email: string | null
+  invitadoEn: string | null
+  invitacionVence: string | null
+  ultimoIngreso: string | null
+}
+
+export interface InvitacionPortal {
+  acceso: AccesoPortal
+  correoEnviado: boolean
+  enlace: string
+}
+
+export interface CorreoVistaPrevia {
+  para: string
+  asunto: string
+  cuerpo: string
+}
+
+export interface VistaInvitacion {
+  nombre: string
+  inmobiliaria: string
+  rol: Rol
+  yaTieneCuenta: boolean
+}
+
+export interface NegocioPortal {
+  id: number
+  inmuebleId: number
+  inmueble: string
+  barrio: string
+  ciudad: string
+  estado: 'ABIERTO' | 'FIRMADO' | 'CANCELADO'
+  listoParaFirmar: boolean
+  semaforo: string
+  faltan: number
+  porcentajeAvance: number
+  fechaFirma: string | null
+  asesorNombre: string | null
+  asesorEmail: string | null
+  foto: FotoInmueble | null
+}
+
+export interface DocumentoPortal {
+  id: number
+  nombre: string
+  descripcion: string
+  obligatorio: boolean
+  estado: EstadoRequisito
+  detalle: string
+  venceEl: string | null
+  enviadoPorUsted: boolean
+  documentoNombre: string | null
+  puedeEnviar: boolean
+}
+
+export interface DetallePortal {
+  negocio: NegocioPortal
+  documentos: DocumentoPortal[]
+  aviso: string
+}
+
+export interface RecordatorioPortal {
+  asunto: string
+  cuerpo: string
+  enviadoEn: string
 }

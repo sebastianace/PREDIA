@@ -6,7 +6,7 @@ import { Terreno } from './Terreno'
 import { Icono, type NombreIcono } from './Iconos'
 
 // En escritorio van todas en la barra lateral; en celular, las principales abajo y el resto en "Más".
-const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: boolean }[] = [
+const todas: { ruta: string; nombre: string; icono: NombreIcono; principal: boolean; soloAdmin?: boolean }[] = [
   { ruta: '/', nombre: 'Inicio', icono: 'inicio', principal: true },
   { ruta: '/negocios', nombre: 'Negocios', icono: 'negocios', principal: true },
   { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario', principal: true },
@@ -17,6 +17,7 @@ const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: 
   { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente', principal: false },
   { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas', principal: false },
   { ruta: '/requisitos', nombre: 'Requisitos', icono: 'requisitos', principal: false },
+  { ruta: '/usuarios', nombre: 'Usuarios', icono: 'clientes', principal: false, soloAdmin: true },
 ]
 
 const iniciales = (nombre = '') =>
@@ -24,6 +25,7 @@ const iniciales = (nombre = '') =>
 
 export function Plantilla() {
   const { usuario, cerrar } = useSesion()
+  const secciones = todas.filter((s) => !s.soloAdmin || usuario?.rol === 'ADMIN')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [masAbierto, setMasAbierto] = useState(false)
   const { pathname } = useLocation()

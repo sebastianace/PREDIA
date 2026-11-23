@@ -7,6 +7,8 @@ interface ValorSesion {
   sistema: EstadoSistema | null
   cargando: boolean
   iniciar: (email: string, password: string) => Promise<void>
+  /** Para cuando la sesión llega por otra vía (al activar la cuenta con el enlace de invitación). */
+  entrarCon: (r: RespuestaLogin) => Promise<void>
   cerrar: () => void
 }
 
@@ -23,7 +25,9 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     setSistema(null)
   }, [])
 
-  const cargarSistema = () => api<EstadoSistema>('/sistema/estado').then(setSistema).catch(() => setSistema(null))
+  // El estado de la IA es del personal; el propietario no lo necesita (y su rol no puede consultarlo).
+  const cargarSistema = (rol?: string) => rol === 'PROPIETARIO' ? Promise.resolve(setSistema(null))
+    : api<EstadoSistema>('/sistema/estado').then(setSistema).catch(() => setSistema(null))
 
   useEffect(() => {
     if (!token.leer()) {
@@ -33,7 +37,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     api<PerfilUsuario>('/auth/yo')
       .then((u) => {
         setUsuario(u)
-        return cargarSistema()
+        return cargarSistema(u.rol)
       })
       .catch(() => token.borrar())
       .finally(() => setCargando(false))
@@ -46,13 +50,17 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   const iniciar = async (email: string, password: string) => {
     const r = await api<RespuestaLogin>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+    await entrarCon(r)
+  }
+
+  const entrarCon = async (r: RespuestaLogin) => {
     token.guardar(r.token)
     setUsuario(r.usuario)
-    await cargarSistema()
+    await cargarSistema(r.usuario.rol)
   }
 
   return (
-    <ContextoSesion.Provider value={{ usuario, sistema, cargando, iniciar, cerrar }}>{children}</ContextoSesion.Provider>
+    <ContextoSesion.Provider value={{ usuario, sistema, cargando, iniciar, entrarCon, cerrar }}>{children}</ContextoSesion.Provider>
   )
 }
 

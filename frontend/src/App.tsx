@@ -1,5 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Plantilla } from './componentes/Plantilla'
+import { Activar } from './paginas/Activar'
+import { Portal } from './paginas/Portal'
+import { Usuarios } from './paginas/Usuarios'
 import { Asistente } from './paginas/Asistente'
 import { ClienteDetalle } from './paginas/ClienteDetalle'
 import { ClienteForm } from './paginas/ClienteForm'
@@ -20,8 +23,20 @@ import { ProveedorSesion, useSesion } from './sesion/Sesion'
 
 function Rutas() {
   const { usuario, cargando } = useSesion()
+  const { pathname } = useLocation()
+  // El enlace de invitación es público: se abre con o sin sesión.
+  if (pathname === '/activar') return <Activar />
   if (cargando) return <div className="p-6 text-stone-500">Cargando…</div>
   if (!usuario) return <Login />
+  // El propietario solo tiene su portal; el resto de rutas lo devuelven a él.
+  if (usuario.rol === 'PROPIETARIO') {
+    return (
+      <Routes>
+        <Route path="/portal" element={<Portal />} />
+        <Route path="*" element={<Navigate to="/portal" replace />} />
+      </Routes>
+    )
+  }
   return (
     <Routes>
       <Route element={<Plantilla />}>
@@ -42,6 +57,7 @@ function Rutas() {
         <Route path="requisitos" element={<Requisitos />} />
         <Route path="expedientes" element={<Expedientes />} />
         <Route path="tasas" element={<Tasas />} />
+        {usuario.rol === 'ADMIN' && <Route path="usuarios" element={<Usuarios />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
