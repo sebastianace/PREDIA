@@ -58,6 +58,8 @@ spring:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    # El token pegado en «Authorize» se conserva al recargar la página (solo en tu navegador).
+    persist-authorization: true
 
 predia:
   jwt:

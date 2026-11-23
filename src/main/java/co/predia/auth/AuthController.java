@@ -10,6 +10,7 @@ import co.predia.inmobiliaria.Usuario;
 import co.predia.inmobiliaria.UsuarioRepository;
 import co.predia.usuarios.ServicioInvitaciones;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -49,6 +50,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @SecurityRequirements   // público: no lleva candado en Swagger
     @Operation(summary = "Inicia sesión y devuelve un JWT")
     public RespuestaLogin login(@Valid @RequestBody SolicitudLogin solicitud) {
         Usuario usuario = usuarios.findByEmailIgnoreCaseAndActivoTrue(solicitud.email().trim())
@@ -62,12 +64,14 @@ public class AuthController {
     }
 
     @GetMapping("/invitaciones/{token}")
+    @SecurityRequirements   // público: no lleva candado en Swagger
     @Operation(summary = "Valida un enlace de invitación (público): devuelve a quién y de qué inmobiliaria")
     public ServicioInvitaciones.Vista invitacion(@PathVariable String token) {
         return invitaciones.ver(token);
     }
 
     @PostMapping("/activar")
+    @SecurityRequirements   // público: no lleva candado en Swagger
     @Operation(summary = "Crea (o recupera) la contraseña con un enlace de invitación y deja la cuenta activa")
     public RespuestaLogin activar(@Valid @RequestBody SolicitudActivacion s) {
         Usuario usuario = invitaciones.activar(s.token(), s.password());
