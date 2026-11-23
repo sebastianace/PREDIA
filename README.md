@@ -180,6 +180,8 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 
 ## Guion de demo
 
+Para probar cada sección a fondo (qué hacer, qué deberías ver y qué explicar), y para consultar la base de datos, está la [guía de pruebas](docs/GUIA_DE_PRUEBAS.md). Este es el recorrido corto:
+
 Recorrido de unos 8 minutos. Requiere `docker compose up -d`, `./mvnw spring-boot:run` y `npm run dev`; los pasos 2 y 8 necesitan `OPENAI_API_KEY` (sin ella, Predia sigue funcionando en modo manual: la búsqueda es por texto y el recordatorio sale de una plantilla). Entra como `laura@altos.test`.
 
 1. **Inicio.** Muestra el inventario del día y los inmuebles para ofrecer.
