@@ -1,5 +1,7 @@
 package co.predia.cierre.reglas;
 
+import co.predia.cierre.negocio.OrigenSugerencia;
+
 import co.predia.cierre.negocio.EstadoRegistrado;
 
 import java.time.Instant;
@@ -18,7 +20,8 @@ public record EstadoDocumental(
             Long id, Long requisitoId, String codigo, String nombre, String descripcion, boolean obligatorio,
             EstadoRequisito estado, String detalle, LocalDate venceEl, EstadoRegistrado estadoRegistrado,
             LocalDate fechaExpedicion, Long documentoId, String documentoNombre, String recibidoPor,
-            Instant recibidoEn, String nota, boolean requiereFecha, List<String> palabrasClave) {
+            Instant recibidoEn, String nota, boolean requiereFecha, List<String> palabrasClave,
+            OrigenSugerencia sugeridoPor) {
 
         /** Lo que hay que pedirle al propietario: obligatorio y todavía no entregado (o ya no vigente). */
         public boolean faltaParaElPropietario() {
