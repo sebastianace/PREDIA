@@ -96,6 +96,8 @@ export interface RespuestaConsulta {
   citas: Cita[]
   sinEvidencia: boolean
   modoManual: boolean
+  /** Algo que afecta la búsqueda, p. ej. fragmentos indexados con otro modelo de embeddings. */
+  aviso: string | null
 }
 
 export type Intencion = 'COMPRAR' | 'ARRENDAR'
