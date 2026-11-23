@@ -78,3 +78,17 @@ export function CotaAvance({ items, porcentaje, tono = 'sobre-azul' }: {
     </div>
   )
 }
+
+/** La misma cota en pequeño, para las listas: lo recibido, macizo; lo que falta, punteado. */
+export function CotaPorcentaje({ porcentaje, className = '' }: { porcentaje: number; className?: string }) {
+  return (
+    <div className={`flex h-3 items-center text-niebla ${className}`} role="img" aria-label={`Avance de documentos: ${porcentaje} %`}>
+      <span className="h-3 w-px bg-current" aria-hidden="true" />
+      <div className="relative h-[5px] flex-1">
+        <div className="absolute inset-y-0 left-0 bg-prusia" style={{ width: `${porcentaje}%` }} />
+        <div className="tramo-punteado absolute inset-y-0 right-0 text-niebla/60" style={{ width: `${100 - porcentaje}%` }} />
+      </div>
+      <span className="h-3 w-px bg-current" aria-hidden="true" />
+    </div>
+  )
+}
