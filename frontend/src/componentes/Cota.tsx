@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import type { EstadoRequisito, ItemDocumental } from '../api/tipos'
+import type { EstadoRequisito } from '../api/tipos'
+
+/** Lo mínimo para dibujar un tramo: sirve para el estado documental del asesor y para el del portal. */
+type Tramo = { id: number; nombre: string; obligatorio: boolean; estado: EstadoRequisito }
 
 type Tono = 'sobre-azul' | 'sobre-papel'
 
@@ -53,7 +56,7 @@ const estiloTramo: Record<EstadoRequisito, { azul: string; papel: string; nombre
  * macizo; lo que falta, punteado, y lo vencido, en rojo. Se lee de un vistazo cuántos faltan y cuáles.
  */
 export function CotaAvance({ items, porcentaje, tono = 'sobre-azul' }: {
-  items: ItemDocumental[]
+  items: Tramo[]
   porcentaje: number
   tono?: Tono
 }) {

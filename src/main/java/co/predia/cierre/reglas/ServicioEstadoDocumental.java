@@ -110,7 +110,9 @@ public class ServicioEstadoDocumental {
                     e.venceEl(), fila.getEstadoRegistrado(), fila.getFechaExpedicion(), fila.getDocumentoId(),
                     buscar(nombresDocumento, fila.getDocumentoId()), buscar(nombresUsuario, fila.getRecibidoPor()),
                     fila.getRecibidoEn(), fila.getNota(),
-                    r.getReglaVigencia() != co.predia.cierre.catalogo.ReglaVigencia.NINGUNA, r.getPalabrasClave()));
+                    r.getReglaVigencia() != co.predia.cierre.catalogo.ReglaVigencia.NINGUNA, r.getPalabrasClave(),
+                    fila.getEstadoRegistrado() == co.predia.cierre.negocio.EstadoRegistrado.SUGERIDO
+                            ? fila.getSugeridoPor() : null));
         }
 
         var semaforo = MotorReglasCierre.semaforo(evaluaciones);

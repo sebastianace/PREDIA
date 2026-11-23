@@ -343,3 +343,92 @@ export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
 - No hay antivirus (ClamAV): se valida el tipo, la estructura y el tamaño.
 - La columna `vector(1536)` está atada al modelo actual. Pasar a un proveedor local con otra dimensión requiere una migración y reindexar.
 - La lista de requisitos es de referencia; Predia no da asesoría legal.
+
+## 10. Fase 8 — Usuarios y portal del propietario (aprobada el 23/11/2026)
+
+**Objetivo.** Resolver dos cosas a la vez: (1) hoy no hay forma de crear usuarios ni el primer administrador, así que con la demo apagada nadie podría entrar; (2) el propietario que vende no puede ver qué le falta para firmar. El comprador (plan de pagos, ficha del inmueble) queda para la Fase 9.
+
+### 10.1 Roles
+
+| Rol | Quién es | Qué puede hacer |
+|---|---|---|
+| `ADMIN` | Personal de la inmobiliaria | Todo lo del asesor + tasas, parámetros, catálogo de requisitos, regenerar vectores y **gestionar usuarios** |
+| `ASESOR` | Personal de la inmobiliaria | El trabajo diario, e **invitar al propietario** de sus negocios al portal |
+| `PROPIETARIO` (nuevo) | El vendedor de un inmueble | **Solo el portal**: sus negocios, sus documentos y sus recordatorios |
+
+El propietario **no** ve nada del resto de la inmobiliaria: ni otros negocios, ni clientes, ni expedientes, ni el asistente, ni el nombre del comprador (es un dato personal de otra persona).
+
+### 10.2 Modelo de datos (`V7__usuarios_y_portal.sql`)
+
+- **`usuario`** (cambios):
+  - `rol` admite `PROPIETARIO`.
+  - `propietario_id BIGINT NULL REFERENCES propietario(id)`, con `CHECK ((rol = 'PROPIETARIO') = (propietario_id IS NOT NULL))`: un usuario propietario siempre apunta a su ficha y uno del personal nunca.
+  - `password_hash` pasa a **NULL** mientras el usuario no active su cuenta, con `CHECK (NOT activo OR password_hash IS NOT NULL)`.
+  - `creado_por BIGINT NULL REFERENCES usuario(id)`, `ultimo_ingreso TIMESTAMPTZ NULL`.
+- **`invitacion_acceso`** (nueva): `id, inmobiliaria_id, usuario_id, token_hash VARCHAR(64) UNIQUE, expira_en, usada_en NULL, creada_por NULL, creada_en`. Solo se guarda el **SHA-256 del token**; el token en claro va únicamente en el enlace. Vale **72 horas** y **un solo uso**. Sirve para el personal, para el propietario y, más adelante, para «olvidé mi contraseña».
+- **`requisito_negocio`**: `sugerido_por VARCHAR(12) NULL CHECK (sugerido_por IN ('IA', 'PROPIETARIO'))`, para que el asesor sepa si una sugerencia la hizo la IA o la subió el propietario.
+
+### 10.3 Seguridad
+
+- **El cambio más importante:** hoy `/api/**` solo exige sesión. Pasa a exigir **`ADMIN` o `ASESOR`**, y el portal vive aparte en **`/api/portal/**` con `PROPIETARIO`**. Así un propietario con sesión no puede llamar a ningún endpoint del personal aunque conozca la URL (403), y el personal no entra al portal.
+- En el portal, todo se busca por `negocio.propietario_id = <el del usuario>` además de la inmobiliaria: un negocio de otro propietario, aunque sea de la misma inmobiliaria, responde **404**.
+- El JWT del propietario lleva el claim `propietario_id`; `UsuarioActual` lo expone. Nunca sale de un parámetro.
+- **Desactivar a alguien corta su sesión de inmediato:** un filtro comprueba en cada petición que el usuario siga activo (una consulta por id). Sin esto, un token robado o de alguien despedido seguiría valiendo hasta 8 horas.
+- Contraseñas: mínimo 10 caracteres, BCrypt (como hoy).
+- Sin registro abierto: **solo se entra por invitación**.
+
+### 10.4 Primer administrador
+
+Al arrancar, si **no existe ningún ADMIN** y están definidas `PREDIA_ADMIN_EMAIL`, `PREDIA_ADMIN_NOMBRE` y `PREDIA_INMOBILIARIA_NOMBRE`, Predia crea la inmobiliaria y ese administrador **sin contraseña**, y escribe **una sola vez en el log** el enlace de activación (72 h). Así no hay ninguna contraseña en variables de entorno. Con la demo encendida no hace falta: `DatosDemo` sigue creando a `admin@altos.test` y `laura@altos.test`.
+
+### 10.5 Endpoints
+
+| Método y ruta | Quién | Qué hace |
+|---|---|---|
+| `GET /api/usuarios` | ADMIN | Personal de la inmobiliaria (no lista propietarios) |
+| `POST /api/usuarios` | ADMIN | Crea un ADMIN o ASESOR (`nombre, email, rol`) y le envía la invitación |
+| `PUT /api/usuarios/{id}` | ADMIN | Cambia rol o activa/desactiva. **No** puede desactivarse a sí mismo ni dejar la inmobiliaria sin ADMIN |
+| `POST /api/usuarios/{id}/invitacion` | ADMIN | Reenvía la invitación (la anterior deja de valer). A un usuario ya activo le sirve para **elegir una contraseña nueva** si la olvidó |
+| `GET /api/propietarios/{id}/acceso` | ADMIN, ASESOR | Estado del acceso al portal: sin invitar, invitado (fecha), activo (último ingreso) |
+| `GET /api/propietarios/{id}/invitacion/vista-previa` | ADMIN, ASESOR | El correo que se enviará, para revisarlo antes |
+| `POST /api/propietarios/{id}/invitacion` | ADMIN, ASESOR | Crea (o reenvía) la invitación al portal y la envía por correo. Exige que el propietario tenga correo. Reenviarla también le sirve para elegir una contraseña nueva |
+| `PUT /api/propietarios/{id}/acceso` | ADMIN, ASESOR | Activa o desactiva el acceso del propietario al portal |
+| `GET /api/auth/invitaciones/{token}` | público | Valida el enlace y devuelve nombre e inmobiliaria (sin datos sensibles) |
+| `POST /api/auth/activar` | público | `token, password`: fija la contraseña, activa la cuenta y gasta el token |
+| `GET /api/portal/negocios` | PROPIETARIO | Sus negocios: inmueble, ciudad, estado, semáforo, avance, fecha de firma y contacto del asesor |
+| `GET /api/portal/negocios/{id}` | PROPIETARIO | Su estado documental: cada documento con su estado, la frase ya escrita en Java, cuándo vence y **cómo conseguirlo** (la descripción del catálogo). Sin notas internas del asesor |
+| `POST /api/portal/negocios/{id}/requisitos/{rid}/documento` | PROPIETARIO | Sube el PDF de ese documento: se indexa como cualquier otro y el requisito queda **SUGERIDO por el propietario**, nunca RECIBIDO |
+| `GET /api/portal/negocios/{id}/recordatorios` | PROPIETARIO | Los recordatorios que de verdad se le **enviaron** (no los borradores) |
+| `GET /api/portal/negocios/{id}/foto` | PROPIETARIO | La foto del inmueble, si tiene |
+
+**Gobernanza:** el envío de una invitación es una acción explícita del asesor (pulsa «Enviar invitación» después de ver el correo). Lo que sube el propietario queda sugerido hasta que el asesor lo confirma, con el mismo flujo de hoy. El portal no usa IA en esta fase.
+
+### 10.6 Pantallas
+
+- **Usuarios** (en «Más», solo para el ADMIN): lista del personal con rol, estado y último ingreso; «Nuevo usuario»; cambiar rol; desactivar o reactivar; reenviar invitación.
+- **Activar cuenta** (`/activar?token=…`, pública): saludo con el nombre y la inmobiliaria, elegir contraseña dos veces. Si el enlace venció o ya se usó, lo dice y pide uno nuevo al asesor.
+- **Detalle del negocio** (asesor): junto a «Vende», el estado del portal del propietario y el botón **«Invitar al portal»**, que muestra el correo antes de enviarlo. En los documentos, la etiqueta **«Lo envió el propietario»** en las sugerencias que vienen del portal.
+- **Portal del propietario** (`/portal`, con su propia plantilla, pensada primero para celular):
+  - Cabecera con la foto del inmueble (o su terreno), el nombre y **«Te faltan 2 documentos para firmar»**, con la misma cota de avance.
+  - La lista de documentos: lo recibido, lo que falta y lo vencido (con sello), qué significa cada uno, cómo conseguirlo y el botón **«Subir»** en lo que falta.
+  - Los recordatorios que le enviaron y el contacto de su asesor.
+- Al iniciar sesión, un propietario va directo a `/portal`; el personal, al inicio de siempre.
+
+### 10.7 Pruebas previstas
+
+- **Matriz de acceso:** un PROPIETARIO recibe 403 en `/api/negocios`, `/api/clientes`, `/api/inmuebles`, `/api/documentos`, `/api/consultas`, `/api/asistente`, `/api/usuarios`…; el personal recibe 403 en `/api/portal/**`; un ASESOR recibe 403 en `/api/usuarios`.
+- Un propietario no ve el negocio de otro propietario de la misma inmobiliaria (404), ni de otra inmobiliaria (404), ni el nombre del comprador.
+- Lo que sube el propietario queda SUGERIDO con `sugerido_por = PROPIETARIO`, nunca RECIBIDO, y no se envía ningún correo.
+- Invitación: el token se guarda como hash, vence a las 72 h, sirve una sola vez, y reenviar anula la anterior. Activar fija la contraseña y permite iniciar sesión.
+- Desactivar a un usuario invalida su token al instante (401). El ADMIN no puede desactivarse a sí mismo ni quitar al último ADMIN.
+- Primer administrador: sin ningún ADMIN y con las variables definidas se crea uno con invitación; si ya existe, no hace nada.
+
+### 10.8 Decisiones de la revisión
+
+- Después de invitarlo, el propietario entra **cuando quiera** con su correo y contraseña; el enlace de 72 horas solo sirve para crear (o recuperar) la contraseña.
+- **Sigue entrando después de firmar**, para consultar lo que entregó. Su acceso solo termina si el asesor o el ADMIN lo desactivan.
+- «Olvidé mi contraseña» se resuelve en esta fase reenviando la invitación.
+
+### 10.9 Fuera de esta fase
+
+Portal del comprador y plan de pagos (Fase 9); un «olvidé mi contraseña» autónomo, sin pasar por el asesor; línea de tiempo, agenda y avisos; que el propietario hable con el asistente.

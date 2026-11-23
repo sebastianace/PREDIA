@@ -1,5 +1,38 @@
 # Progreso de Predia
 
+## Fase 8 — Usuarios, invitaciones y portal del propietario ✅ (23/11/2026)
+
+**Rama:** `feature/usuarios-y-portal` (sale de `develop`; incluye la guía de pruebas de `docs/guia-de-pruebas`). Diseño aprobado en `docs/DISENO.md`, sección 10.
+
+### Por qué
+No había forma de crear usuarios: los dos de la demo los sembraba `DatosDemo`, así que con la demo apagada nadie podía entrar. Y el propietario que vende no tenía cómo ver qué le faltaba para firmar.
+
+### Qué quedó
+- **Tres roles.** ADMIN y ASESOR (el personal) y el nuevo **PROPIETARIO**, que solo tiene su portal.
+- **Seguridad separada por rol:** `/api/**` pasó de «cualquiera con sesión» a **solo ADMIN o ASESOR**; el portal vive en `/api/portal/**` y es **solo del PROPIETARIO**; `/api/usuarios/**` es solo del ADMIN. Dentro del portal todo se filtra por el propietario del token: el negocio de otro propietario (aunque sea de la misma inmobiliaria) responde 404.
+- **Desactivar corta la sesión al instante:** en cada petición se comprueba que el usuario siga activo y con el mismo rol (antes, un token valía hasta que vencía, 8 horas).
+- **Invitaciones** (`invitacion_acceso`, migración V7): enlace de **un solo uso** que vence a las **72 horas**; en la base solo queda su SHA-256; crear uno nuevo anula el anterior. Sirve para crear la cuenta y, reenviándolo, para elegir una contraseña nueva. Quien invita recibe además el enlace para compartirlo por otro medio si el correo no llega.
+- **Usuarios** (pantalla del ADMIN): crear e invitar, cambiar el rol, desactivar y reactivar, reenviar la invitación. No puede quitarse su propio acceso ni dejar la inmobiliaria sin ADMIN.
+- **Primer administrador:** si no existe ningún ADMIN y están `PREDIA_ADMIN_*`, se crea la inmobiliaria y su administrador **sin contraseña**, y el enlace para crearla se escribe una vez en el log.
+- **Invitar al propietario** desde el negocio: el asesor ve el correo tal como saldrá (al propietario se le trata de «usted») y solo se envía cuando lo confirma. También puede desactivar su acceso.
+- **Portal del propietario** (pensado para celular): la foto o el terreno del inmueble, «Le faltan N documentos para firmar», la cota de avance, la firma prevista y el contacto de su asesor; cada documento con su estado, la frase escrita en Java, **cómo conseguirlo** (la descripción del catálogo) y **Enviar documento**; los recordatorios que de verdad se le enviaron. No ve al comprador ni notas internas.
+- **Lo que envía el propietario queda en revisión** (`requisito_negocio.sugerido_por = PROPIETARIO`), nunca recibido: el asesor lo ve como «Enviado por el propietario» y lo confirma. La IA no pisa lo que él eligió.
+- Sigue entrando **después de firmar**; su acceso solo termina si lo desactivan.
+
+### Pruebas (203 en total; las 14 nuevas no llaman a OpenAI)
+- `PortalPropietarioApiTest` (7): ve su venta y sus documentos pero **no al comprador**; otro propietario (misma u otra inmobiliaria) recibe 404; lo enviado queda SUGERIDO por el propietario, nunca RECIBIDO, y **no sale ningún correo**; no puede reemplazar un documento recibido y vigente; solo ve recordatorios enviados (no borradores); desactivarlo corta su sesión; y la **matriz de acceso**: el propietario recibe 403 en negocios, clientes, inmuebles, documentos, consultas, asistente, usuarios, tasas…, y el personal 403 en el portal.
+- `UsuariosEInvitacionesApiTest` (4): invitación → enlace → contraseña → login (el token no se guarda en claro y no sirve dos veces); enlace reemplazado o vencido no sirve; reenviar recupera la contraseña; reglas del ADMIN (no quitarse su acceso, no repetir correo, no crear propietarios desde ahí, desactivar o cambiar el rol corta la sesión, un usuario ajeno es 404); el asesor invita al propietario, que entra a su portal.
+- `PrimerAdministradorTest` (3, unitaria): crea inmobiliaria y ADMIN sin contraseña; con un ADMIN existente no hace nada; sin variables solo avisa.
+
+### Probado en vivo (API real, PostgreSQL, Mailpit)
+Laura invitó a Jorge desde el 1102 (el correo llegó a Mailpit con su nombre y el inmueble), Jorge abrió el enlace, creó su contraseña y entró a su portal; envió el paz y salvo y quedó «En revisión»; Laura lo vio como «Enviado por el propietario» y el último ingreso de Jorge; con su sesión, Jorge recibió 403 en negocios, clientes, documentos y usuarios. Revisado en escritorio y en celular (sin desborde). **Un error encontrado al probar:** el documento enviado por el propietario decía «Sugerido por la IA»; ahora dice «En revisión» en el portal y «Enviado por el propietario» para el asesor. La base de desarrollo quedó como estaba (sin la cuenta de Jorge ni el documento de prueba).
+
+### Lo que no se hizo
+- El portal del comprador con el plan de pagos (Fase 9).
+- Un «olvidé mi contraseña» autónomo (hoy lo resuelve el asesor o el ADMIN reenviando el enlace).
+- No se probó con un servidor SMTP real (solo Mailpit).
+
+
 ## Corrección — Modelo de embeddings y HTTPS ✅ (23/11/2026)
 
 **Rama:** `fix/modelo-embeddings-y-https` (sale de `develop`)

@@ -6,6 +6,7 @@ import type { Documento, EstadoDocumental, HipotecaVigente, ItemDocumental, Nego
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
 import { CotaAvance } from '../componentes/Cota'
 import { EstadoRequisitoChip } from '../componentes/Semaforo'
+import { AccesoPortalPropietario } from '../componentes/AccesoPortalPropietario'
 import { Terreno } from '../componentes/Terreno'
 import { formatoFecha, formatoFechaHora } from '../formato'
 
@@ -164,6 +165,8 @@ export function NegocioDetalle() {
         </ul>
       </section>
 
+      <AccesoPortalPropietario propietarioId={negocio.propietarioId} nombre={negocio.propietarioNombre} />
+
       <section className="mt-10" aria-labelledby="titulo-recordatorios">
         <h2 id="titulo-recordatorios" className="text-lg font-semibold">Recordatorios al propietario</h2>
         <p className="mt-1 text-sm text-niebla">
@@ -257,12 +260,18 @@ function FilaRequisito({ item, negocioId, documentos, abierto, onAbrir, onCambio
             {!item.obligatorio && <span className="ml-2 text-xs font-normal text-niebla">(recomendado)</span>}
           </div>
           <p className="mt-0.5 text-sm text-grafito">{item.detalle}</p>
+          {item.estado === 'SUGERIDO' && item.sugeridoPor === 'PROPIETARIO' && (
+            <p className="mt-1 inline-block border-l-2 border-cobalto bg-cobalto-suave px-2 py-0.5 text-xs text-prusia">
+              Lo envió el propietario desde su portal: revísalo y confírmalo
+            </p>
+          )}
           {item.documentoNombre && <p className="mt-0.5 text-xs text-niebla">Documento: {item.documentoNombre}</p>}
           {item.recibidoPor && item.estadoRegistrado === 'RECIBIDO' && (
             <p className="mt-0.5 text-xs text-niebla">Lo confirmó {item.recibidoPor}.</p>
           )}
         </div>
-        <EstadoRequisitoChip estado={item.estado} />
+        <EstadoRequisitoChip estado={item.estado}
+          etiqueta={item.estado === 'SUGERIDO' && item.sugeridoPor === 'PROPIETARIO' ? 'Enviado por el propietario' : undefined} />
       </div>
 
       {!noAplicaPorReglas && (

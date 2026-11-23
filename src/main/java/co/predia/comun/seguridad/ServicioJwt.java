@@ -20,6 +20,7 @@ public class ServicioJwt {
     static final String CLAIM_ROL = "rol";
     static final String CLAIM_NOMBRE = "nombre";
     static final String CLAIM_EMAIL = "email";
+    static final String CLAIM_PROPIETARIO = "propietario_id";
 
     private final JwtEncoder codificador;
     private final PropiedadesJwt propiedades;
@@ -32,7 +33,7 @@ public class ServicioJwt {
     public TokenEmitido emitir(Usuario usuario) {
         Instant ahora = Instant.now();
         Instant expira = ahora.plus(Duration.ofHours(propiedades.horasValidez()));
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder constructor = JwtClaimsSet.builder()
                 .issuer(EMISOR)
                 .subject(usuario.getId().toString())
                 .issuedAt(ahora)
@@ -40,8 +41,12 @@ public class ServicioJwt {
                 .claim(CLAIM_INMOBILIARIA, usuario.getInmobiliariaId())
                 .claim(CLAIM_ROL, usuario.getRol().name())
                 .claim(CLAIM_NOMBRE, usuario.getNombre())
-                .claim(CLAIM_EMAIL, usuario.getEmail())
-                .build();
+                .claim(CLAIM_EMAIL, usuario.getEmail());
+        if (usuario.getPropietarioId() != null) {
+            // El portal filtra por este claim: el propietario solo ve sus propios negocios.
+            constructor.claim(CLAIM_PROPIETARIO, usuario.getPropietarioId());
+        }
+        JwtClaimsSet claims = constructor.build();
         JwsHeader cabecera = JwsHeader.with(MacAlgorithm.HS256).build();
         String token = codificador.encode(JwtEncoderParameters.from(cabecera, claims)).getTokenValue();
         return new TokenEmitido(token, expira);
