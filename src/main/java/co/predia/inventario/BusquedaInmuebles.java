@@ -62,9 +62,13 @@ public class BusquedaInmuebles {
 
         if (!descripcion.isEmpty() && estadoIa.disponible()) {
             try {
+                // Un vector de otro modelo no se puede comparar con el de la descripción: se recalcula como si faltara.
+                List<Object> argsPendientes = new ArrayList<>(filtro.argumentos());
+                argsPendientes.add(estadoIa.modeloEmbeddings());
                 List<Long> sinVector = jdbc.queryForList(
-                        "SELECT id FROM inmueble WHERE " + filtro.where() + " AND embedding IS NULL", Long.class,
-                        filtro.argumentos().toArray());
+                        "SELECT id FROM inmueble WHERE " + filtro.where()
+                                + " AND (embedding IS NULL OR embedding_modelo IS DISTINCT FROM ?)", Long.class,
+                        argsPendientes.toArray());
                 embeddings.asegurar(inmobiliariaId, sinVector);
                 String vector = InmuebleEmbeddings.aTextoVector(proveedor.generar(List.of(descripcion)).get(0));
 
