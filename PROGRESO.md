@@ -1,5 +1,28 @@
 # Progreso de Predia
 
+## Corrección — Modelo de embeddings y HTTPS ✅ (23/11/2026)
+
+**Rama:** `fix/modelo-embeddings-y-https` (sale de `develop`)
+
+Salió de auditar el proyecto contra `Requerimientos.md` (el punto 11 del flujo de consulta pide embeddings «con el mismo modelo utilizado para el índice consultado», y el 3 pide el envío cifrado por HTTPS).
+
+### Qué quedó
+- **La búsqueda vectorial solo compara contra fragmentos indexados con el mismo modelo** que vectoriza la pregunta (`f.embedding_modelo = ?`). Antes el modelo se guardaba por fragmento pero no se comparaba: cambiar `OPENAI_EMBEDDING_MODEL` habría mezclado vectores incompatibles y dado resultados sin sentido, sin avisar.
+- **Aviso, no silencio:** la respuesta de la consulta trae `aviso` con cuántos fragmentos quedaron fuera de la búsqueda por significado (siguen encontrándose por palabras); se muestra en Expedientes y lo recibe el asistente.
+- **Regeneración sin volver a subir PDF:** `POST /api/documentos/regenerar-vectores` (solo ADMIN, en `ConfiguracionSeguridad`) recalcula, desde el texto guardado, los vectores de otro modelo y los que quedaron sin vector (modo manual). Trabaja por tandas de 300 y devuelve `regenerados`, `pendientes` y el modelo; se repite hasta que `pendientes` sea 0. Solo toca la inmobiliaria del ADMIN, exige IA (503 si no) y, si el proveedor falla a mitad, conserva lo ya regenerado (502).
+- **Inmuebles:** un vector de otro modelo cuenta como pendiente y se recalcula solo en la siguiente búsqueda.
+- **HTTPS:** [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) explica cómo ponerlo detrás de un proxy con certificado (Caddy, con su `Caddyfile`), con `SERVER_FORWARD_HEADERS_STRATEGY=framework`, y cómo comprobarlo. **La guía no se probó en un servidor real.** El README apunta a ella.
+
+### Pruebas (189 en total; las 3 nuevas no llaman a OpenAI)
+- `ConsultaRagApiTest` (+2): con el mismo modelo la búsqueda por vector encuentra el fragmento; al cambiar de modelo ya no aparece y se avisa («1 fragmento»); el asesor no puede regenerar (403) y el ADMIN sí, tras lo cual se encuentra de nuevo y desaparece el aviso; regenerar solo toca la inmobiliaria propia (la ajena queda con su modelo) y sin IA responde 503.
+- `InventarioBusquedaIaTest` (+1): al cambiar el modelo, los vectores de inmuebles se recalculan en vez de mezclarse.
+- Las dos pruebas existentes de la consulta que insertaban fragmentos con el modelo `pruebas` ahora fijan ese modelo en el simulador de IA.
+
+### Lo que no se hizo
+- **El escaneo de archivos (antivirus)** que pide el punto 4 sigue sin implementarse: se valida el tipo, la estructura y el tamaño, y está documentado como limitación. Se puede agregar ClamAV como servicio opcional.
+- No hay botón en la interfaz para regenerar los vectores: se llama al endpoint (Swagger) como ADMIN.
+
+
 ## Extra — Foto de portada de cada inmueble ✅ (23/11/2026)
 
 **Rama:** `feature/fotos-inmuebles` (sale de `feature/rediseno`; su PR apunta a la rama previa hasta que se fusione)

@@ -47,6 +47,7 @@ class ConsultaRagApiTest extends PruebaIntegracion {
     void conEvidenciaRelevanteRespondeYDescartaCitasInvalidas() throws Exception {
         when(estadoIa.disponible()).thenReturn(true);
         when(estadoIa.modeloChat()).thenReturn("modelo-de-pruebas");
+        when(estadoIa.modeloEmbeddings()).thenReturn("pruebas");
         when(embeddingModel.embed(anyList())).thenReturn(List.of(vector(0)));
         when(chatModel.call(any(Prompt.class))).thenReturn(respuestaDe(
                 "El canon es de $1.800.000 mensuales [1]. También se menciona en [9], que no existe."));
@@ -128,6 +129,7 @@ class ConsultaRagApiTest extends PruebaIntegracion {
     void unaInmobiliariaNuncaVeFragmentosDeOtra() throws Exception {
         when(estadoIa.disponible()).thenReturn(true);
         when(estadoIa.modeloChat()).thenReturn("modelo-de-pruebas");
+        when(estadoIa.modeloEmbeddings()).thenReturn("pruebas");
         when(embeddingModel.embed(anyList())).thenReturn(List.of(vector(0)));
         when(chatModel.call(any(Prompt.class))).thenReturn(respuestaDe("Respuesta con evidencia [1]."));
 
@@ -170,6 +172,85 @@ class ConsultaRagApiTest extends PruebaIntegracion {
                                        subido_por, estado_indexacion)
                 VALUES (?, ?, ?, ?, 1000, ?, 'INDEXADO') RETURNING id
                 """, Long.class, inmobiliaria.getId(), inmueble.getId(), nombre, hash, usuario.getId());
+    }
+
+    @Test
+    void conOtroModeloDeEmbeddingsLosVectoresViejosNoSeComparanYSePuedenRegenerar() throws Exception {
+        when(estadoIa.disponible()).thenReturn(true);
+        when(estadoIa.modeloChat()).thenReturn("modelo-de-pruebas");
+        when(estadoIa.modeloEmbeddings()).thenReturn("pruebas");
+        when(embeddingModel.embed(anyList())).thenReturn(List.of(vector(0)));
+        when(chatModel.call(any(Prompt.class))).thenReturn(respuestaDe("La renta es de $1.800.000 [1]."));
+
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Inmobiliaria Cambio De Modelo");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        Usuario admin = crearUsuario(inmobiliaria, Rol.ADMIN);
+        Inmueble inmueble = crearInmueble(inmobiliaria, "RAG-M1");
+        Long documentoId = crearDocumento(inmobiliaria, inmueble, asesor, "contrato.pdf");
+        insertarFragmento(inmobiliaria, documentoId, inmueble, 0, null,
+                "Se acuerda un pago periodico por el uso del inmueble.", vector(0));
+        String pregunta = "{\"pregunta\": \"¿Cuánto vale la renta?\"}";   // sin palabras en común con el texto
+
+        // Mismo modelo: la búsqueda vectorial lo encuentra.
+        mvc.perform(post("/api/consultas").header("Authorization", bearer(asesor))
+                        .contentType(MediaType.APPLICATION_JSON).content(pregunta))
+                .andExpect(jsonPath("$.sinEvidencia").value(false))
+                .andExpect(jsonPath("$.aviso").value(org.hamcrest.Matchers.nullValue()));
+
+        // Se cambia de modelo: ese vector ya no es comparable. No se mezcla en silencio: no aparece y se avisa.
+        when(estadoIa.modeloEmbeddings()).thenReturn("modelo-nuevo");
+        mvc.perform(post("/api/consultas").header("Authorization", bearer(asesor))
+                        .contentType(MediaType.APPLICATION_JSON).content(pregunta))
+                .andExpect(jsonPath("$.sinEvidencia").value(true))
+                .andExpect(jsonPath("$.aviso", org.hamcrest.Matchers.containsString("1 fragmento")))
+                .andExpect(jsonPath("$.aviso", org.hamcrest.Matchers.containsString("modelo-nuevo")));
+
+        // El asesor no puede regenerar; el administrador sí, desde el texto guardado y sin volver a subir ningún PDF.
+        mvc.perform(post("/api/documentos/regenerar-vectores").header("Authorization", bearer(asesor)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/documentos/regenerar-vectores").header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.regenerados").value(1))
+                .andExpect(jsonPath("$.pendientes").value(0))
+                .andExpect(jsonPath("$.modelo").value("modelo-nuevo"));
+        assertThat(jdbc.queryForObject("SELECT embedding_modelo FROM fragmento WHERE documento_id = ?", String.class,
+                documentoId)).isEqualTo("modelo-nuevo");
+
+        mvc.perform(post("/api/consultas").header("Authorization", bearer(asesor))
+                        .contentType(MediaType.APPLICATION_JSON).content(pregunta))
+                .andExpect(jsonPath("$.sinEvidencia").value(false))
+                .andExpect(jsonPath("$.aviso").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void regenerarLosVectoresSoloTocaLosFragmentosDeLaPropiaInmobiliariaYExigeIa() throws Exception {
+        when(estadoIa.disponible()).thenReturn(true);
+        when(estadoIa.modeloEmbeddings()).thenReturn("modelo-nuevo");
+        when(embeddingModel.embed(anyList())).thenReturn(List.of(vector(3)));
+
+        Inmobiliaria propia = crearInmobiliaria("Regeneracion Propia");
+        Inmobiliaria ajena = crearInmobiliaria("Regeneracion Ajena");
+        Usuario adminPropio = crearUsuario(propia, Rol.ADMIN);
+        Usuario asesorAjeno = crearUsuario(ajena, Rol.ASESOR);
+        Inmueble inmueblePropio = crearInmueble(propia, "RAG-R1");
+        Inmueble inmuebleAjeno = crearInmueble(ajena, "RAG-R2");
+        Long docPropio = crearDocumento(propia, inmueblePropio, adminPropio, "propio.pdf");
+        Long docAjeno = crearDocumento(ajena, inmuebleAjeno, asesorAjeno, "ajeno.pdf");
+        insertarFragmento(propia, docPropio, inmueblePropio, 0, null, "Texto propio.", vector(0));
+        insertarFragmento(ajena, docAjeno, inmuebleAjeno, 0, null, "Texto ajeno.", vector(0));
+
+        mvc.perform(post("/api/documentos/regenerar-vectores").header("Authorization", bearer(adminPropio)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.regenerados").value(1));
+
+        assertThat(jdbc.queryForObject("SELECT embedding_modelo FROM fragmento WHERE documento_id = ?", String.class,
+                docPropio)).isEqualTo("modelo-nuevo");
+        assertThat(jdbc.queryForObject("SELECT embedding_modelo FROM fragmento WHERE documento_id = ?", String.class,
+                docAjeno)).isEqualTo("pruebas");
+
+        // Sin IA no hay con qué regenerar: 503 y no se toca nada.
+        when(estadoIa.disponible()).thenReturn(false);
+        mvc.perform(post("/api/documentos/regenerar-vectores").header("Authorization", bearer(adminPropio)))
+                .andExpect(status().isServiceUnavailable());
     }
 
     private void insertarFragmento(Inmobiliaria inmobiliaria, Long documentoId, Inmueble inmueble, int orden,

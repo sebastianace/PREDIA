@@ -35,10 +35,15 @@ public class BusquedaHibrida {
         this.jdbc = jdbc;
     }
 
+    /**
+     * @param modeloEmbeddings el modelo con el que se calculó {@code embeddingPregunta}: la búsqueda vectorial solo
+     *                         compara contra fragmentos indexados con ese mismo modelo.
+     */
     public ResultadoHibrido buscar(Long inmobiliariaId, String rol, Long inmuebleId, String pregunta,
-                                   float[] embeddingPregunta) {
-        List<EvidenciaFragmento> porVector =
-                embeddingPregunta == null ? List.of() : buscarVectorial(inmobiliariaId, rol, inmuebleId, embeddingPregunta);
+                                   String modeloEmbeddings, float[] embeddingPregunta) {
+        boolean conVector = embeddingPregunta != null && modeloEmbeddings != null;
+        List<EvidenciaFragmento> porVector = conVector
+                ? buscarVectorial(inmobiliariaId, rol, inmuebleId, modeloEmbeddings, embeddingPregunta) : List.of();
         List<EvidenciaFragmento> porTexto = buscarTextual(inmobiliariaId, rol, inmuebleId, pregunta);
 
         Map<Long, EvidenciaFragmento> porId = new LinkedHashMap<>();
@@ -66,20 +71,31 @@ public class BusquedaHibrida {
         }
 
         double mejorSimilitud = porVector.isEmpty() ? 0 : porVector.get(0).similitudVectorial();
-        return new ResultadoHibrido(elegidos, mejorSimilitud, !porTexto.isEmpty());
+        int conOtroModelo = conVector ? contarConOtroModelo(inmobiliariaId, rol, inmuebleId, modeloEmbeddings) : 0;
+        return new ResultadoHibrido(elegidos, mejorSimilitud, !porTexto.isEmpty(), conOtroModelo);
+    }
+
+    private int contarConOtroModelo(Long inmobiliariaId, String rol, Long inmuebleId, String modelo) {
+        Integer total = jdbc.queryForObject("""
+                SELECT count(*) FROM fragmento f
+                WHERE f.inmobiliaria_id = ? AND ? = ANY(f.roles_permitidos)
+                  AND (?::bigint IS NULL OR f.inmueble_id = ?)
+                  AND f.embedding IS NOT NULL AND f.embedding_modelo IS DISTINCT FROM ?
+                """, Integer.class, inmobiliariaId, rol, inmuebleId, inmuebleId, modelo);
+        return total == null ? 0 : total;
     }
 
     private List<EvidenciaFragmento> buscarVectorial(Long inmobiliariaId, String rol, Long inmuebleId,
-                                                      float[] embedding) {
+                                                      String modelo, float[] embedding) {
         String vector = aTextoVector(embedding);
         RowMapper<EvidenciaFragmento> mapeador = (rs, i) -> new EvidenciaFragmento(rs.getLong("id"),
                 rs.getLong("documento_id"), rs.getString("nombre_archivo"), rs.getInt("pagina_inicio"),
                 rs.getInt("pagina_fin"), rs.getString("seccion"), rs.getString("texto"),
                 1 - rs.getDouble("distancia"));
         String sqlConSimilitud = SQL_BASE.replace("SELECT f.id,", "SELECT f.id, (f.embedding <=> ?::vector) AS distancia,")
-                + " AND f.embedding IS NOT NULL ORDER BY f.embedding <=> ?::vector LIMIT ?";
-        return jdbc.query(sqlConSimilitud, mapeador, vector, inmobiliariaId, rol, inmuebleId, inmuebleId, vector,
-                TOP_POR_LISTA);
+                + " AND f.embedding IS NOT NULL AND f.embedding_modelo = ? ORDER BY f.embedding <=> ?::vector LIMIT ?";
+        return jdbc.query(sqlConSimilitud, mapeador, vector, inmobiliariaId, rol, inmuebleId, inmuebleId, modelo,
+                vector, TOP_POR_LISTA);
     }
 
     private List<EvidenciaFragmento> buscarTextual(Long inmobiliariaId, String rol, Long inmuebleId,

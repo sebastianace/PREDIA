@@ -66,18 +66,21 @@ public class MotorRag {
         boolean iaDisponible = estadoIa.disponible();
         float[] embeddingPregunta = iaDisponible ? proveedorEmbeddings.generar(List.of(pregunta)).get(0) : null;
 
+        // La pregunta se vectoriza con el modelo actual y solo se compara con fragmentos indexados con ese mismo modelo.
+        String modelo = iaDisponible ? proveedorEmbeddings.modelo() : null;
         ResultadoHibrido resultado = busqueda.buscar(usuario.inmobiliariaId(), usuario.rol().name(), inmuebleId,
-                pregunta, embeddingPregunta);
+                pregunta, modelo, embeddingPregunta);
+        String aviso = avisoVectoresAntiguos(resultado, modelo);
 
         if (resultado.evidencias().isEmpty() || !hayEvidenciaSuficiente(usuario.inmobiliariaId(), resultado)) {
             guardar(usuario, inmuebleId, pregunta, null, resultado.evidencias(), true, !iaDisponible);
-            return new RespuestaConsulta(SIN_EVIDENCIA, List.of(), true, !iaDisponible);
+            return new RespuestaConsulta(SIN_EVIDENCIA, List.of(), true, !iaDisponible, aviso);
         }
 
         if (!iaDisponible) {
             List<Cita> citas = numerarTodas(resultado.evidencias());
             guardar(usuario, inmuebleId, pregunta, null, resultado.evidencias(), false, true);
-            return new RespuestaConsulta(null, citas, false, true);
+            return new RespuestaConsulta(null, citas, false, true, aviso);
         }
 
         String respuesta;
@@ -94,7 +97,17 @@ public class MotorRag {
         }
 
         guardar(usuario, inmuebleId, pregunta, respuesta, resultado.evidencias(), false, false);
-        return new RespuestaConsulta(respuesta, citas, false, false);
+        return new RespuestaConsulta(respuesta, citas, false, false, aviso);
+    }
+
+    private static String avisoVectoresAntiguos(ResultadoHibrido resultado, String modelo) {
+        int n = resultado.fragmentosConOtroModelo();
+        if (n == 0) {
+            return null;
+        }
+        return "%d fragmento%s se indexó con otro modelo de embeddings y no entra en la búsqueda por significado "
+                .formatted(n, n == 1 ? "" : "s") + "(solo se encuentra por palabras). Un administrador puede regenerar los "
+                + "vectores con el modelo actual (" + modelo + ").";
     }
 
     private boolean hayEvidenciaSuficiente(Long inmobiliariaId, ResultadoHibrido resultado) {

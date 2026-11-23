@@ -152,6 +152,10 @@ Con Docker Desktop abierto y el `.env` listo, el script levanta PostgreSQL, Mail
 | `MAIL_HOST`, `MAIL_PORT`, `MAILPIT_UI_PORT` | SMTP de desarrollo (Mailpit) | `localhost`, `1026`, `8026` |
 | `DEMO_HABILITADA`, `DEMO_PASSWORD` | Siembra de los datos ficticios | `true`, — |
 
+## Producción y HTTPS
+
+Predia no termina TLS: en producción va detrás de un proxy inverso con certificado (por ejemplo Caddy, que lo obtiene y renueva solo) que cifra el envío de los PDF y de la sesión. La guía paso a paso, con el `Caddyfile`, está en [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md). La guía no se ha probado en un servidor real. En desarrollo todo va por `http://localhost`.
+
 ## Pruebas
 
 ```bash
@@ -197,6 +201,7 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 - Las vigencias de los documentos dependen de la fecha de expedición que confirma el asesor.
 - No hay antivirus: se valida el tipo, la estructura y el tamaño del archivo.
 - La columna de vectores es de 1536 dimensiones. Cambiar a un proveedor de embeddings con otra dimensión exige una migración y reindexar.
+- **Cambiar de modelo de embeddings** (`OPENAI_EMBEDDING_MODEL`) no mezcla vectores: la búsqueda solo compara contra fragmentos indexados con el mismo modelo, y avisa cuántos quedaron fuera. Un ADMIN los regenera desde el texto guardado con `POST /api/documentos/regenerar-vectores` (por tandas de 300; se repite hasta que `pendientes` sea 0), sin volver a subir los PDF. Los inmuebles se recalculan solos en la siguiente búsqueda.
 - La lista de documentos para el cierre es de referencia. **Predia no da asesoría legal**: confirma los requisitos con la notaría.
 - Las tasas de crédito son de ejemplo; la simulación no es una aprobación del banco.
 - **Reducción de crédito:** supone cuota fija, intereses calculados sobre el saldo de cada mes y el abono aplicado en la misma cuota, con cada valor redondeado al peso. Cada banco puede aplicar los abonos con pequeñas diferencias; el estudio es una estimación, no una oferta.

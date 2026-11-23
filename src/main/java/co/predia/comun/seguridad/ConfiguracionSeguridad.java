@@ -47,6 +47,7 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(HttpMethod.PUT, "/api/tasas/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/tasas/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/requisitos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/documentos/regenerar-vectores").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o

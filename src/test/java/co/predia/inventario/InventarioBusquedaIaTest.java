@@ -98,6 +98,32 @@ class InventarioBusquedaIaTest extends PruebaIntegracion {
     }
 
     @Test
+    void siCambiaElModeloLosVectoresDeInmueblesViejosSeRecalculanEnVezDeMezclarse() throws Exception {
+        simularIa();
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Inventario IA Cambio De Modelo");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        Inmueble perros = crear(inmobiliaria, "MOD-PERROS", "260000000", "Casa con patio amplio, ideal para perros.");
+        Inmueble otro = crear(inmobiliaria, "MOD-OTRO", "180000000", "Apartamento minimalista.");
+        String busqueda = """
+                {"operacion": "VENTA", "precioMax": 300000000, "descripcion": "espacio para mis perros"}""";
+
+        mvc.perform(post("/api/inmuebles/busqueda").header("Authorization", bearer(asesor))
+                .contentType(MediaType.APPLICATION_JSON).content(busqueda)).andExpect(status().isOk());
+        assertThat(jdbc.queryForList("SELECT DISTINCT embedding_modelo FROM inmueble WHERE inmobiliaria_id = ?",
+                String.class, inmobiliaria.getId())).containsExactly("embeddings-de-pruebas");
+
+        // Cambia el modelo: los vectores guardados ya no se pueden comparar con el de la descripción.
+        when(estadoIa.modeloEmbeddings()).thenReturn("embeddings-nuevos");
+        mvc.perform(post("/api/inmuebles/busqueda").header("Authorization", bearer(asesor))
+                        .contentType(MediaType.APPLICATION_JSON).content(busqueda))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultados[0].inmueble.codigo").value("MOD-PERROS"))
+                .andExpect(jsonPath("$.resultados[0].coincidenciaPct").value(100));
+        assertThat(jdbc.queryForList("SELECT DISTINCT embedding_modelo FROM inmueble WHERE inmobiliaria_id = ?",
+                String.class, inmobiliaria.getId())).containsExactly("embeddings-nuevos");
+    }
+
+    @Test
     void alCrearUnInmuebleConIaQuedaVectorizadoYLaBusquedaCompletaLosQueFaltan() throws Exception {
         simularIa();
         Inmobiliaria inmobiliaria = crearInmobiliaria("Inventario IA Vectores");
