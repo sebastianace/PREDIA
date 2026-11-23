@@ -1,5 +1,6 @@
 package co.predia.usuarios;
 
+import co.predia.cierre.negocio.EstadoNegocio;
 import co.predia.cierre.negocio.Negocio;
 import co.predia.cierre.negocio.NegocioRepository;
 import co.predia.cierre.negocio.Propietario;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -142,10 +144,17 @@ public class ServicioAccesoPortal {
         return inmobiliarias.findById(asesor.inmobiliariaId()).map(i -> i.getNombre()).orElse("Predia");
     }
 
-    /** El inmueble del negocio más reciente del propietario, para que el correo diga de qué venta se trata. */
+    /**
+     * De qué venta trata el correo: «la venta de Apto 1102» con una sola venta, «sus ventas» con varias (no se elige
+     * una al azar) y «la venta de su inmueble» si todavía no tiene ninguna. Las canceladas no cuentan.
+     */
     private String inmueble(UsuarioActual asesor, Propietario p) {
-        return negocios.findByInmobiliariaIdAndPropietarioIdOrderByCreadoEnDesc(asesor.inmobiliariaId(), p.getId())
-                .stream().findFirst().map(Negocio::getInmuebleId)
+        List<Negocio> ventas = negocios.findByInmobiliariaIdAndPropietarioIdOrderByCreadoEnDesc(asesor.inmobiliariaId(),
+                p.getId()).stream().filter(n -> n.getEstado() != EstadoNegocio.CANCELADO).toList();
+        if (ventas.size() > 1) {
+            return "sus ventas";
+        }
+        return "la venta de " + ventas.stream().findFirst().map(Negocio::getInmuebleId)
                 .flatMap(id -> inmuebles.findByIdAndInmobiliariaId(id, asesor.inmobiliariaId()))
                 .map(i -> i.getTitulo()).orElse("su inmueble");
     }

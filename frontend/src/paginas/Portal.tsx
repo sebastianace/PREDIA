@@ -54,9 +54,9 @@ export function Portal() {
   return (
     <div className="min-h-dvh bg-papel">
       <header className="sticky top-0 z-20 flex items-center justify-between gap-3 bg-prusia px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white md:px-8">
-        <div className="min-w-0">
-          <span className="ancha text-xl font-bold tracking-tight">Predia</span>
-          <span className="ml-3 hidden text-sm text-trazo sm:inline">{usuario?.inmobiliaria}</span>
+        <div className="flex min-w-0 items-baseline">
+          <span className="ancha shrink-0 text-xl font-bold tracking-tight">Predia</span>
+          <span className="ml-2 truncate text-sm text-trazo sm:ml-3">{usuario?.inmobiliaria}</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
           <span className="hidden truncate text-white/80 sm:inline">{usuario?.nombre}</span>
@@ -91,7 +91,7 @@ export function Portal() {
             <section className="relative isolate overflow-hidden rounded-panel bg-prusia px-5 pb-6 pt-5 text-white md:px-8 md:pb-8 md:pt-7" aria-label="Su venta">
               <Terreno semilla={n.inmuebleId * 31 + 7} trazar niveles={12} className="absolute inset-0 -z-20 size-full text-trazo opacity-40" />
               <FotoDeInmueble inmuebleId={n.inmuebleId} foto={n.foto} tam="grande" titulo={n.inmueble} base={`/portal/negocios/${n.id}/foto`} />
-              {n.foto && <div className="absolute inset-0 -z-10 bg-gradient-to-t from-prusia via-prusia/85 to-prusia/30" aria-hidden="true" />}
+              {n.foto && <div className="absolute inset-0 -z-10 bg-gradient-to-t from-prusia/95 via-prusia/70 to-prusia/25" aria-hidden="true" />}
               <p className="rotulo text-sm text-trazo">Venta de</p>
               <h1 className="ancha mt-1 text-[30px] font-semibold leading-[1.05] text-white md:text-5xl">{n.inmueble}</h1>
               <p className="mt-1 text-white/75">{n.barrio}, {n.ciudad}</p>

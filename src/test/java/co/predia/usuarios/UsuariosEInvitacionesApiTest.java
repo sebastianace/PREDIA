@@ -186,6 +186,29 @@ class UsuariosEInvitacionesApiTest extends PruebaIntegracion {
     }
 
     @Test
+    void elCorreoDelPropietarioConVariasVentasNoEligeUnaAlAzar() throws Exception {
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Usuarios Varias Ventas");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        Propietario p = crearPropietario(inmobiliaria, asesor, "Con Dos Ventas", correoNuevo(), TipoPersona.NATURAL,
+                EstadoCivil.SOLTERO);
+        String ruta = "/api/propietarios/" + p.getId() + "/invitacion/vista-previa";
+
+        // Sin ventas: no inventa un inmueble.
+        mvc.perform(get(ruta).header("Authorization", bearer(asesor)))
+                .andExpect(jsonPath("$.asunto").value("Siga la venta de su inmueble desde su portal"));
+        // Con una sola, la nombra.
+        Inmueble uno = crearInmueble(inmobiliaria, "VV-1");
+        crearNegocio(inmobiliaria, asesor, uno, p, hoy().plusDays(10));
+        mvc.perform(get(ruta).header("Authorization", bearer(asesor)))
+                .andExpect(jsonPath("$.asunto", org.hamcrest.Matchers.containsString(uno.getTitulo())));
+        // Con dos, habla de «sus ventas» en lugar de nombrar solo la más reciente.
+        crearNegocio(inmobiliaria, asesor, crearInmueble(inmobiliaria, "VV-2"), p, hoy().plusDays(12));
+        mvc.perform(get(ruta).header("Authorization", bearer(asesor)))
+                .andExpect(jsonPath("$.asunto").value("Siga sus ventas desde su portal"))
+                .andExpect(jsonPath("$.cuerpo", org.hamcrest.Matchers.containsString("firmar sus ventas")));
+    }
+
+    @Test
     void elAsesorInvitaAlPropietarioQueEntraASuPortal() throws Exception {
         Inmobiliaria inmobiliaria = crearInmobiliaria("Usuarios Propietario");
         Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
