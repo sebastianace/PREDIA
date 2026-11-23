@@ -24,6 +24,22 @@ export DEMO_HABILITADA=false                        # sin los datos ficticios
 java -jar target/predia-1.1.0.jar                   # tras ./mvnw -DskipTests package
 ```
 
+### El primer administrador
+
+Con la demo apagada no existe ningún usuario. Antes del primer arranque define:
+
+```bash
+export PREDIA_URL_PUBLICA=https://predia.tu-dominio.com
+export PREDIA_ADMIN_EMAIL=administracion@tu-inmobiliaria.co
+export PREDIA_ADMIN_NOMBRE="Nombre del administrador"
+export PREDIA_INMOBILIARIA_NOMBRE="Tu Inmobiliaria"
+export PREDIA_INMOBILIARIA_NIT=900123456
+```
+
+Al arrancar, Predia crea la inmobiliaria y ese administrador **sin contraseña**, y escribe **una sola vez** en el log el enlace para crearla (vale 72 horas). Después, desde **Usuarios**, ese administrador invita al resto del personal. Si ya existe un ADMIN, no hace nada. Ninguna contraseña viaja en variables de entorno.
+
+Para que las invitaciones lleguen por correo hay que apuntar `MAIL_HOST`/`MAIL_PORT` a un servidor SMTP real y configurar sus credenciales y TLS con las propiedades `spring.mail.*` de Spring Boot (no se probó con un proveedor real). Si el correo falla, quien invita puede copiar el enlace desde la pantalla.
+
 Variables obligatorias en producción: `JWT_SECRET` (largo y aleatorio), `DB_*` y, si se usa IA, `OPENAI_API_KEY`. No expongas el puerto 8080 ni el de PostgreSQL a internet: solo el proxy.
 
 ## 3. Proxy con certificado automático (Caddy)

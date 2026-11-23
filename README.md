@@ -30,6 +30,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 5 | Cierre del negocio: documentos del vendedor y recordatorios | ✅ Listo |
 | 6 | Asistente con herramientas (tool calling) | ✅ Listo |
 | 7 | Pulido, guion de demo y pruebas finales | ✅ Listo |
+| 8 | Usuarios, invitaciones y portal del propietario | ✅ Listo |
 | Extra | Reducción de crédito con abonos extraordinarios (Ley 546 de 1999) | ✅ Listo |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
@@ -132,6 +133,16 @@ Con Docker Desktop abierto y el `.env` listo, el script levanta PostgreSQL, Mail
 ./arrancar.sh
 ```
 
+### Roles
+
+| Rol | Quién es | Qué puede hacer |
+|---|---|---|
+| ADMIN | Personal de la inmobiliaria | Todo, y además: usuarios, tasas, parámetros, catálogo de requisitos y regenerar vectores |
+| ASESOR | Personal de la inmobiliaria | El trabajo diario, e invitar al propietario al portal |
+| PROPIETARIO | El vendedor de un inmueble | Solo su portal (`/portal`): su venta, sus documentos y los recordatorios que se le enviaron |
+
+Nadie se registra solo: se entra por invitación. Desactivar a alguien cierra su sesión al instante.
+
 ### Usuarios de la demo
 
 | Usuario | Rol | Contraseña |
@@ -151,6 +162,8 @@ Con Docker Desktop abierto y el `.env` listo, el script levanta PostgreSQL, Mail
 | `OPENAI_EMBEDDING_MODEL` | Modelo de embeddings (1536 dimensiones) | `text-embedding-3-small` |
 | `MAIL_HOST`, `MAIL_PORT`, `MAILPIT_UI_PORT` | SMTP de desarrollo (Mailpit) | `localhost`, `1026`, `8026` |
 | `DEMO_HABILITADA`, `DEMO_PASSWORD` | Siembra de los datos ficticios | `true`, — |
+| `PREDIA_URL_PUBLICA` | Dirección de la interfaz, para los enlaces de invitación | `http://localhost:5173` |
+| `PREDIA_ADMIN_EMAIL`, `PREDIA_ADMIN_NOMBRE`, `PREDIA_INMOBILIARIA_NOMBRE`, `PREDIA_INMOBILIARIA_NIT` | Primer administrador de una instalación nueva (ver [DESPLIEGUE.md](docs/DESPLIEGUE.md)) | vacías |
 
 ## Producción y HTTPS
 
@@ -177,6 +190,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Reducción de crédito | Para un cliente que ya tiene crédito hipotecario: compara hasta tres abonos extraordinarios (mensual, anual o único) que reducen el plazo o la cuota, con el ahorro en intereses y seguros, la tabla de amortización y un estudio imprimible. Basado en el simulador del autor, reescrito en Java con pruebas. *(Extra)* |
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
 | Asistente con herramientas | Chat que elige entre siete herramientas (expedientes, inventario, presupuesto, crédito, reducción de crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
+| Usuarios y portal del propietario | El ADMIN crea al personal y el asesor invita al propietario que vende. Cada persona recibe un enlace de un solo uso (72 h) para crear su contraseña y después entra cuando quiera. El propietario solo ve **su portal**: cuánto le falta para firmar, qué documentos vencieron, cómo conseguirlos, y puede enviarlos; lo que envía queda en revisión hasta que el asesor lo confirma. *(Fase 8)* |
 
 ## Guion de demo
 
@@ -197,6 +211,7 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 
 ## Limitaciones conocidas
 
+- **Invitaciones por correo:** en desarrollo llegan a Mailpit; en producción hay que configurar un servidor SMTP real (no se probó con uno). Si el correo no sale, quien invita puede copiar el enlace y compartirlo por otro medio.
 - **Las fotos de los inmuebles sí se guardan** (a diferencia de los PDF): solo dos copias reducidas (1600 y 480 píxeles, JPEG) en PostgreSQL, sin metadatos ni el archivo original. Predia no administra derechos de imagen: sube fotos que la inmobiliaria pueda usar.
 - **No se conserva el PDF original.** Predia no puede mostrar ni verificar firmas, sellos, imágenes o tablas complejas del original. Si cambia la extracción o el OCR, hay que volver a subir el archivo; los embeddings, en cambio, se pueden regenerar desde el texto guardado.
 - **Dependencia del OCR:** la calidad de las páginas escaneadas depende de Tesseract y de la nitidez del documento.

@@ -19,18 +19,17 @@ Cada sección tiene: **para qué sirve**, **cómo probarla**, **qué deberías v
 
 ### Quién entra a Predia
 
-Predia es una herramienta **para el personal de la inmobiliaria**, no para sus clientes. Hay dos roles:
+Hay tres roles. Nadie se registra solo: **se entra por invitación**.
 
 | Usuario | Rol | Qué puede hacer |
 |---|---|---|
-| `admin@altos.test` | ADMIN | Todo, y además cargar tasas de crédito, ajustar el catálogo de requisitos y regenerar vectores |
-| `laura@altos.test` | ASESOR | El trabajo diario: inventario, clientes, negocios, expedientes, recordatorios, asistente |
+| `admin@altos.test` | ADMIN | Todo, y además usuarios, tasas, catálogo de requisitos y regenerar vectores |
+| `laura@altos.test` | ASESOR | El trabajo diario, e invitar al propietario a su portal |
+| El propietario que vende (Jorge, en la demo) | PROPIETARIO | Solo su portal: su venta, sus documentos y sus recordatorios |
 
-La contraseña de los dos es el valor de `DEMO_PASSWORD` en tu `.env`.
+La contraseña del ADMIN y de Laura es el valor de `DEMO_PASSWORD` en tu `.env`. Jorge no tiene cuenta hasta que lo invitas (sección 15).
 
-Los **clientes** (por ejemplo «Paola y Juan») y los **propietarios** (Jorge Ramírez Pardo) **no inician sesión**: son registros que el asesor crea y administra. Por eso no hay una pantalla para que un cliente entre.
-
-> Hoy tampoco hay una pantalla para crear usuarios de la inmobiliaria: los dos de la demo los crea `DatosDemo` al arrancar. Para producción hace falta (ver la sección 16).
+Los **compradores** (por ejemplo «Paola y Juan») todavía no tienen portal: son registros que el asesor administra. Su portal, con el plan de pagos, sería la siguiente fase.
 
 ---
 
@@ -142,7 +141,7 @@ Este es el **requerimiento base** del profesor.
 - Si no hay evidencia suficiente, responde «no lo sé» **sin llamar al modelo**. Las citas se arman desde los metadatos, no desde lo que escribió el modelo, y las que el modelo invente se descartan.
 - Limitación: sin el PDF original no se pueden verificar firmas, sellos o tablas; si cambia el OCR, hay que volver a subirlo.
 
-Para mostrarlo en la base de datos, ver la sección 15.
+Para mostrarlo en la base de datos, ver la sección 17.
 
 ---
 
@@ -196,7 +195,43 @@ curl -X DELETE http://localhost:8026/api/v1/messages
 
 ---
 
-## 14. Asistente (necesita IA)
+## 14. Usuarios (solo ADMIN)
+
+**Cómo probarlo:**
+1. Entra como `admin@altos.test` → *Más → Usuarios*.
+2. Crea un asesor con un correo inventado (por ejemplo `carlos@altos.test`) → **Crear e invitar**.
+3. Abre Mailpit (<http://localhost:8026>): llegó «Te invitaron a Predia…». Abre el enlace **en otra ventana privada** (o cierra sesión antes), elige una contraseña y entras como ese asesor.
+4. De vuelta como ADMIN: cámbiale el rol, **Desactivar** (su sesión se cierra al instante: recarga la otra ventana) y **Reactivar**.
+
+**Qué explicar:**
+- El enlace sirve **una sola vez** y vence a las **72 horas**; en la base solo queda su huella SHA-256, nunca el enlace.
+- **Desactivar corta la sesión de inmediato**: en cada petición Predia comprueba que el usuario siga activo y con el mismo rol.
+- El ADMIN no puede quitarse su propio acceso ni dejar la inmobiliaria sin administrador.
+- Si alguien olvida la contraseña, **Nueva contraseña** le envía otro enlace.
+
+---
+
+## 15. Portal del propietario
+
+**Cómo probarlo:**
+1. Como Laura, *Negocios → Apto 1102* → baja hasta **Portal del propietario** → **Invitar al portal**. Lee el correo tal como le llegará a Jorge → **Enviar invitación**.
+2. En Mailpit abre el correo «Siga la venta de Apto 1102 Cañaveral…» y abre el enlace en una **ventana privada**. Jorge crea su contraseña y entra directo a su portal.
+3. En el portal: la foto (o el terreno) del inmueble, «Le faltan 2 documentos para firmar», la misma cota, y cada documento con qué significa y cómo conseguirlo.
+4. En «Paz y salvo de administración» → **Enviar documento** → `demo/pdfs/paz-y-salvo-administracion.pdf` → **Enviar**. Queda **«En revisión»**.
+5. Vuelve a la ventana de Laura y recarga el negocio: el documento aparece **«Enviado por el propietario»**, para que ella lo confirme.
+6. Pruébalo en el celular (o con la ventana angosta): el portal está pensado para eso.
+
+**Qué explicar:**
+- El propietario **no puede salir de su portal**: si intenta abrir cualquier otra parte de la API recibe 403, y si prueba con el número de otro negocio, 404. Hay una prueba automática que recorre esa lista.
+- No ve el nombre del comprador ni nada del resto de la inmobiliaria.
+- Lo que envía **nunca queda «recibido»**: queda en revisión hasta que el asesor lo confirma. Es el mismo principio que con la IA.
+- Después de crear su contraseña entra **cuando quiera** con su correo, incluso después de firmar. Su acceso solo termina si el asesor lo desactiva.
+
+**Para dejarlo como estaba:** en el negocio, **Reabrir** el paz y salvo; **Desactivar acceso** de Jorge (o bórralo en la base: `DELETE FROM usuario WHERE rol = 'PROPIETARIO';`) y limpia Mailpit.
+
+---
+
+## 16. Asistente (necesita IA)
 
 **Cómo probarlo:** *Asistente* → pregunta:
 - «¿Qué le falta al dueño del apto 1102 de Cañaveral para firmar?»
@@ -214,7 +249,7 @@ curl -X DELETE http://localhost:8026/api/v1/messages
 
 ---
 
-## 15. Ver la base de datos
+## 17. Ver la base de datos
 
 Predia usa PostgreSQL con pgvector en Docker (puerto **5434**).
 
@@ -231,7 +266,10 @@ Consultas útiles (escribe `\q` para salir):
 \dt
 
 -- Los usuarios que pueden entrar (la contraseña está cifrada con BCrypt; nunca se guarda en claro)
-SELECT id, nombre, email, rol, activo FROM usuario;
+SELECT id, nombre, email, rol, activo, propietario_id, ultimo_ingreso FROM usuario;
+
+-- Las invitaciones: solo la huella del enlace, cuándo vence y si ya se usó
+SELECT usuario_id, left(token_hash, 12) AS huella, expira_en, usada_en FROM invitacion_acceso;
 
 -- Los clientes (compradores) y los propietarios: no inician sesión
 SELECT id, nombre, ingreso_familiar, ahorro FROM cliente;
@@ -267,7 +305,7 @@ Cualquier cliente de PostgreSQL sirve (TablePlus, DBeaver, pgAdmin o la extensi�
 
 ---
 
-## 16. La carpeta `demo/` y los datos de demostración
+## 18. La carpeta `demo/` y los datos de demostración
 
 - **`demo/pdfs/`** son cinco PDF **ficticios** para subir a mano durante la demo. Predia no los carga solos:
 
@@ -286,19 +324,19 @@ Cualquier cliente de PostgreSQL sirve (TablePlus, DBeaver, pgAdmin o la extensi�
 ### Para producción
 
 - `DEMO_HABILITADA=false`: no se siembra nada ficticio. La carpeta `demo/` puede quedarse en el repositorio (no se usa sola).
-- **Falta una forma de crear el primer administrador y los usuarios**: con la demo apagada, hoy nadie podría entrar. Es lo primero que habría que agregar.
+- **El primer administrador** se crea con las variables `PREDIA_ADMIN_*` (ver [DESPLIEGUE.md](DESPLIEGUE.md)); después él invita al resto desde *Usuarios*.
 - Un `JWT_SECRET` largo y aleatorio, otra contraseña de base de datos, y HTTPS (ver [DESPLIEGUE.md](DESPLIEGUE.md)).
 - Copias de seguridad de PostgreSQL: ahí están los fragmentos, los vectores y las fotos.
 
 ---
 
-## 17. Pruebas automáticas
+## 19. Pruebas automáticas
 
 ```bash
 ./mvnw test
 ```
 
-Corre **189 pruebas** sobre un PostgreSQL con pgvector real (en un contenedor desechable) y **ninguna llama a OpenAI**. Cubren, entre otras cosas, que una inmobiliaria nunca ve datos de otra, que la IA nunca deja un documento «recibido», que no se envía un correo sin aprobación, y que las cifras del crédito y del presupuesto coinciden con las fórmulas.
+Corre **203 pruebas** sobre un PostgreSQL con pgvector real (en un contenedor desechable) y **ninguna llama a OpenAI**. Cubren, entre otras cosas, que una inmobiliaria nunca ve datos de otra, que un propietario no puede salir de su portal, que la IA nunca deja un documento «recibido», que no se envía un correo sin aprobación, y que las cifras del crédito y del presupuesto coinciden con las fórmulas.
 
 ---
 
@@ -309,5 +347,6 @@ Corre **189 pruebas** sobre un PostgreSQL con pgvector real (en un contenedor de
 3. **Cierre del 1102:** la cota, el sello de vencido, subir el paz y salvo y confirmarlo (2 min).
 4. **Presupuesto → búsqueda → simulación** de Paola y Juan (2 min).
 5. **Recordatorio** aprobado y visto en Mailpit (1 min).
-6. **Asistente** con una pregunta, si hay IA (1 min).
-7. Si preguntan por la base de datos: la consulta de `documento` y `fragmento` de la sección 15.
+6. **Portal del propietario:** invitar a Jorge y verlo desde el celular (1 min).
+7. **Asistente** con una pregunta, si hay IA (1 min).
+8. Si preguntan por la base de datos: la consulta de `documento` y `fragmento` de la sección 17.
