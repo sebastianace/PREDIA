@@ -19,17 +19,16 @@ Cada sección tiene: **para qué sirve**, **cómo probarla**, **qué deberías v
 
 ### Quién entra a Predia
 
-Hay tres roles. Nadie se registra solo: **se entra por invitación**.
+Hay cuatro roles. Nadie se registra solo: **se entra por invitación**.
 
 | Usuario | Rol | Qué puede hacer |
 |---|---|---|
 | `admin@altos.test` | ADMIN | Todo, y además usuarios, tasas, catálogo de requisitos y regenerar vectores |
-| `laura@altos.test` | ASESOR | El trabajo diario, e invitar al propietario a su portal |
+| `laura@altos.test` | ASESOR | El trabajo diario, e invitar al propietario y al comprador a su portal |
 | El propietario que vende (Jorge, en la demo) | PROPIETARIO | Solo su portal: su venta, sus documentos y sus recordatorios |
+| El cliente que compra (Paola y Juan, en la demo) | COMPRADOR | Solo su portal: su presupuesto, los inmuebles que Laura le comparte y el simulador de compra |
 
-La contraseña del ADMIN y de Laura es el valor de `DEMO_PASSWORD` en tu `.env`. Jorge no tiene cuenta hasta que lo invitas (sección 15).
-
-Los **compradores** (por ejemplo «Paola y Juan») todavía no tienen portal: son registros que el asesor administra. Su portal, con el plan de pagos, sería la siguiente fase.
+La contraseña del ADMIN y de Laura es el valor de `DEMO_PASSWORD` en tu `.env`. Jorge y Paola y Juan no tienen cuenta hasta que los invitas (secciones 15 y 15b).
 
 ---
 
@@ -228,6 +227,27 @@ curl -X DELETE http://localhost:8026/api/v1/messages
 - Después de crear su contraseña entra **cuando quiera** con su correo, incluso después de firmar. Su acceso solo termina si el asesor lo desactiva.
 
 **Para dejarlo como estaba:** en el negocio, **Reabrir** el paz y salvo; **Desactivar acceso** de Jorge (o bórralo en la base: `DELETE FROM usuario WHERE rol = 'PROPIETARIO';`) y limpia Mailpit.
+
+---
+
+## 15b. Portal del comprador
+
+**Cómo probarlo:**
+1. Como Laura, *Clientes → Paola y Juan* → **Buscar inmuebles dentro del presupuesto** → en el Apto 1102 y en el Provenza pulsa **Compartir con el cliente** (puedes agregar una nota) → **Compartir**. Aparecen en **Compartidos con el cliente**.
+2. En *Inventario → Apto 1102 → Editar*, agrega una **foto** y un **plano** (cualquier imagen sirve) y guarda.
+3. Más abajo, en **Acceso del cliente** → **Invitar al portal** → revisa el correo → **Enviar invitación**. Abre el enlace de Mailpit en una **ventana privada**, crea la contraseña y entra.
+4. El comprador ve su **tope de compra con la razón** («lo limita su ahorro»), y las tarjetas de los inmuebles con la nota de Laura. Pulsa **Me interesa**.
+5. Entra a **Ver y simular** en el 1102: foto, plano (**Ver plano completo**), datos y **Simule su compra**. Con el ahorro de la demo la cuota inicial es la mínima ($90.000.000) y la cuota mensual sale de **$2.223.109** (29,6 % del ingreso). En el Provenza el deslizador de la cuota inicial va de $80.400.000 a $90.000.000: al moverlo cambia la cuota.
+6. **Quiero más información** → escribe un mensaje. Vuelve a la ventana de Laura: en el Inicio aparece «1 mensaje de compradores por atender»; ábrelo y **Marca como atendido**. En la ficha del cliente se ve «Le interesa» junto al inmueble.
+7. Pruébalo en el celular (o con la ventana angosta).
+
+**Qué explicar:**
+- El comprador **solo ve lo que Laura le compartió**; un inmueble no compartido responde 404, y tampoco ve el código interno, la dirección exacta ni nada del propietario.
+- **Las cifras las calcula el servidor**, no el navegador ni la IA: es la misma calculadora de crédito de toda la aplicación. Si el ahorro no alcanza la cuota inicial mínima, el simulador usa la mínima y dice cuánto falta.
+- «Quiero más información» **no envía ningún correo**: es un aviso para el asesor, que decide cómo responder.
+- Hay una prueba automática con la matriz de acceso de los cuatro roles.
+
+**Para dejarlo como estaba:** en la ficha del cliente, **Dejar de compartir** los dos inmuebles; en la base, `DELETE FROM solicitud_comprador;` y `DELETE FROM usuario WHERE rol = 'COMPRADOR';` (antes `DELETE FROM invitacion_acceso WHERE usuario_id IN (SELECT id FROM usuario WHERE rol = 'COMPRADOR');`); quita la foto y el plano del 1102 y limpia Mailpit.
 
 ---
 

@@ -21,6 +21,7 @@ public class ServicioJwt {
     static final String CLAIM_NOMBRE = "nombre";
     static final String CLAIM_EMAIL = "email";
     static final String CLAIM_PROPIETARIO = "propietario_id";
+    static final String CLAIM_CLIENTE = "cliente_id";
 
     private final JwtEncoder codificador;
     private final PropiedadesJwt propiedades;
@@ -45,6 +46,10 @@ public class ServicioJwt {
         if (usuario.getPropietarioId() != null) {
             // El portal filtra por este claim: el propietario solo ve sus propios negocios.
             constructor.claim(CLAIM_PROPIETARIO, usuario.getPropietarioId());
+        }
+        if (usuario.getClienteId() != null) {
+            // El portal del comprador filtra por este claim: solo ve lo que se le compartió a su ficha.
+            constructor.claim(CLAIM_CLIENTE, usuario.getClienteId());
         }
         JwtClaimsSet claims = constructor.build();
         JwsHeader cabecera = JwsHeader.with(MacAlgorithm.HS256).build();

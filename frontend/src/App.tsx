@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { Plantilla } from './componentes/Plantilla'
 import { Activar } from './paginas/Activar'
 import { Portal } from './paginas/Portal'
+import { Comprador } from './paginas/Comprador'
+import { CompradorInmueble } from './paginas/CompradorInmueble'
 import { Usuarios } from './paginas/Usuarios'
 import { Asistente } from './paginas/Asistente'
 import { ClienteDetalle } from './paginas/ClienteDetalle'
@@ -16,6 +18,7 @@ import { Negocios } from './paginas/Negocios'
 import { Reduccion } from './paginas/Reduccion'
 import { Recordatorios } from './paginas/Recordatorios'
 import { Requisitos } from './paginas/Requisitos'
+import { Solicitudes } from './paginas/Solicitudes'
 import { Inventario } from './paginas/Inventario'
 import { Login } from './paginas/Login'
 import { Tasas } from './paginas/Tasas'
@@ -37,6 +40,16 @@ function Rutas() {
       </Routes>
     )
   }
+  // El comprador solo ve lo que su asesor le compartió.
+  if (usuario.rol === 'COMPRADOR') {
+    return (
+      <Routes>
+        <Route path="/comprador" element={<Comprador />} />
+        <Route path="/comprador/inmuebles/:id" element={<CompradorInmueble />} />
+        <Route path="*" element={<Navigate to="/comprador" replace />} />
+      </Routes>
+    )
+  }
   return (
     <Routes>
       <Route element={<Plantilla />}>
@@ -54,6 +67,7 @@ function Rutas() {
         <Route path="negocios/:id" element={<NegocioDetalle />} />
         <Route path="reduccion" element={<Reduccion />} />
         <Route path="recordatorios" element={<Recordatorios />} />
+        <Route path="solicitudes" element={<Solicitudes />} />
         <Route path="requisitos" element={<Requisitos />} />
         <Route path="expedientes" element={<Expedientes />} />
         <Route path="tasas" element={<Tasas />} />

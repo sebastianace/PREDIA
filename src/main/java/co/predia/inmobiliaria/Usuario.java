@@ -45,6 +45,9 @@ public class Usuario {
     @Column(name = "propietario_id")
     private Long propietarioId;
 
+    @Column(name = "cliente_id")
+    private Long clienteId;
+
     @Column(name = "creado_por")
     private Long creadoPor;
 
@@ -61,6 +64,14 @@ public class Usuario {
         u.activo = false;
         u.propietarioId = propietarioId;
         u.creadoPor = creadoPor;
+        return u;
+    }
+
+    /** Un comprador invitado: su cuenta apunta a su ficha de cliente. */
+    public static Usuario invitadoComprador(Long inmobiliariaId, String nombre, String email, Long clienteId,
+                                            Long creadoPor) {
+        Usuario u = Usuario.invitado(inmobiliariaId, nombre, email, Rol.COMPRADOR, null, creadoPor);
+        u.clienteId = clienteId;
         return u;
     }
 
@@ -104,6 +115,7 @@ public class Usuario {
     public Rol getRol() { return rol; }
     public boolean isActivo() { return activo; }
     public Long getPropietarioId() { return propietarioId; }
+    public Long getClienteId() { return clienteId; }
     public Long getCreadoPor() { return creadoPor; }
     public Instant getUltimoIngreso() { return ultimoIngreso; }
     public boolean tieneContrasena() { return passwordHash != null; }

@@ -50,6 +50,7 @@ public class ConfiguracionSeguridad {
                         .requestMatchers("/api/auth/yo").authenticated()
                         // El portal es solo del propietario, y el propietario solo tiene el portal.
                         .requestMatchers("/api/portal/**").hasRole("PROPIETARIO")
+                        .requestMatchers("/api/comprador/**").hasRole("COMPRADOR")
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()

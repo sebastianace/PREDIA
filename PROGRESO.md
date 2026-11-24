@@ -1,5 +1,37 @@
 # Progreso de Predia
 
+## Fase 9 — Portal del comprador ✅ (24/11/2026)
+
+**Rama:** `feature/portal-comprador` (sale de `develop`). Diseño aprobado en `docs/DISENO.md`, sección 11, y boceto aprobado antes de programar las pantallas.
+
+### Por qué
+El comprador era solo una ficha que administraba el asesor. Ahora tiene su propia cuenta para ver su presupuesto, los inmuebles que el asesor le comparte y simular su compra.
+
+### Qué quedó
+- **Cuarto rol, COMPRADOR** (migración V8: `usuario.cliente_id`, `inmueble_compartido`, `solicitud_comprador`, `plano_inmueble`). `/api/comprador/**` es solo suyo; el personal no entra y él no entra a nada del personal ni del portal del propietario. El JWT lleva `cliente_id`; desactivarlo corta su sesión al instante, igual que al propietario.
+- **El asesor decide qué ve:** «Compartir con el cliente» desde los resultados de la búsqueda (con una nota opcional) y «Compartidos con el cliente» en su ficha, con el interés que marcó y «Dejar de compartir». Un inmueble no compartido (o compartido a otro cliente) responde 404.
+- **Acceso del cliente:** el mismo componente de invitación del propietario (vista previa del correo, enlace de un solo uso a 72 h, desactivar). Un correo solo puede tener un rol.
+- **Inicio del comprador:** su tope de compra como cifra acotada con su razón (ahorro o capacidad de pago), cuota máxima, tasa usada y las tarjetas de inmuebles con «Me interesa» / «No me interesa».
+- **Ficha del inmueble:** foto, **plano** (con visor a pantalla completa y ampliación), datos clave, nota del asesor y **«Simule su compra»**: cuota inicial y plazo; las cifras las calcula el servidor (`CalculadoraCompra` + `SimuladorCreditoService`), con una pequeña espera al mover los controles. La cuota inicial mínima es el porcentaje de la inmobiliaria (más bajo en VIS) y la máxima, su ahorro sin pasar del precio.
+- **Privacidad:** el comprador no ve el código interno, la dirección exacta ni nada del propietario.
+- **«Quiero más información»:** un mensaje al asesor (máximo 5 sin atender). No envía correos: aparece en el inicio del asesor («N mensajes de compradores por atender») y en `/solicitudes`, donde lo marca como atendido.
+- **Plano del inmueble** (`PUT/GET/DELETE /api/inmuebles/{id}/plano`): se guarda reducido a 2.000 px (calidad alta, nunca el original) y se sube desde el formulario del inmueble.
+- Un método HTTP no permitido ahora responde `405` (antes, `500`).
+- **Pulido tras revisar el diseño en vivo:** si un inmueble compartido cuesta más que el tope de compra del cliente, la tarjeta y la ficha muestran «Supera en $X lo que hoy puede comprar» (el valor lo calcula `CalculadoraCompra.excedenteSobreTope`; solo informa, la decisión es del asesor); el simulador muestra un esqueleto mientras llegan las cifras y las deja atenuadas mientras se recalculan; y se quitó el doble punto de «a. m..» en la tarjeta de acceso.
+
+### Pruebas (228 en total, +21; no llaman a OpenAI)
+- `CalculadoraCompraTest` (8, unitaria): mínima = porcentaje del precio redondeado hacia arriba; máxima = ahorro sin pasar del precio menos un peso; qué falta si el ahorro no alcanza; sin ahorro o sin precio; validación del rango; el excedente sobre el tope solo existe si el precio lo pasa.
+- `PortalCompradorApiTest` (13): solo ve lo compartido y sin código ni dirección; 404 para lo no compartido, lo de otro cliente (misma o distinta inmobiliaria) y su foto y simulación; la simulación respeta el rango y el plazo; un inmueble vendido se ve pero no se simula; interés y mensajes llegan al asesor sin enviar correos; tope de 5 mensajes; dejar de compartir cierra la puerta; plano solo si se comparte; invitar exige correo y no usa uno ya ocupado por otro rol; desactivar corta la sesión; perfil con tope y asesor; el excedente sobre el tope llega calculado en la lista y la ficha; y la **matriz de acceso** de los cuatro roles.
+
+### Probado en vivo (API real, PostgreSQL, Mailpit)
+Laura invitó a «Paola y Juan», el enlace llegó a Mailpit, activaron la cuenta y entraron a su portal: tope de $300.000.000 («lo limita su ahorro»), dos inmuebles compartidos, simulación del 1102 con cuota de **$2.223.109 (29,6 % del ingreso)**, la misma cifra de la demo; el deslizador de cuota inicial del Provenza va de $80.400.000 a $90.000.000; plano, visor, «Me interesa» y mensaje al asesor; en celular (375 px) sin desborde. **Error encontrado al probar:** abrir un enlace de invitación con una sesión vencida guardada en el navegador daba «Debes iniciar sesión» (el token vencido se enviaba también a las rutas públicas); ahora no se envía en el ingreso, la activación ni la invitación. La base de desarrollo quedó como estaba (sin la cuenta, lo compartido, los mensajes, la foto y el plano de prueba) y Mailpit, limpio.
+
+### Lo que no se hizo
+- El plan de pagos por cuotas durante la construcción (separación, cuota inicial en N cuotas, saldo final): era solo un ejemplo de la captura.
+- El comprador no puede cambiar su contraseña por su cuenta (lo resuelve el asesor reenviando el enlace).
+- El plano se guarda como JPEG: las líneas muy finas pueden suavizarse.
+- Sigue pendiente un límite de intentos en el ingreso y proteger o apagar Swagger en producción.
+
 ## Revisión del portal del vendedor y del acceso por rol ✅ (23/11/2026)
 
 **Rama:** `fix/revision-portal` (sale de `develop`)

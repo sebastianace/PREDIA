@@ -23,4 +23,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     List<Usuario> findByInmobiliariaIdAndRolInOrderByNombreAsc(Long inmobiliariaId, java.util.Collection<Rol> roles);
 
     Optional<Usuario> findByInmobiliariaIdAndPropietarioId(Long inmobiliariaId, Long propietarioId);
+
+    Optional<Usuario> findByInmobiliariaIdAndClienteId(Long inmobiliariaId, Long clienteId);
 }
