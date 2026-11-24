@@ -84,7 +84,7 @@ export function AccesoPortalPropietario({ propietarioId, clienteId, nombre }:
         <p className="font-medium text-tinta">{textoEstado[acceso.estado]}</p>
         <p className="mt-0.5 text-sm text-niebla">
           {acceso.estado === 'INVITADO' && acceso.invitacionVence && `El enlace vence el ${formatoFechaHora(acceso.invitacionVence)}.`}
-          {acceso.estado === 'ACTIVO' && (acceso.ultimoIngreso ? `Último ingreso: ${formatoFechaHora(acceso.ultimoIngreso)}.` : 'Aún no ha entrado.')}
+          {acceso.estado === 'ACTIVO' && (acceso.ultimoIngreso ? `Último ingreso: ${formatoFechaHora(acceso.ultimoIngreso)}` : 'Aún no ha entrado.')}
           {acceso.estado === 'SIN_INVITAR' && !acceso.email && 'Para invitarlo, primero agrega su correo.'}
         </p>
 
