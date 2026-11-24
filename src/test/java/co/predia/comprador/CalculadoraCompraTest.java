@@ -66,6 +66,17 @@ class CalculadoraCompraTest {
     }
 
     @Test
+    void elExcedenteSobreElTopeSoloExisteSiElPrecioLoPasa() {
+        assertThat(CalculadoraCompra.excedenteSobreTope(n("330000000"), n("300000000"))).isEqualByComparingTo("30000000");
+        assertThat(CalculadoraCompra.excedenteSobreTope(n("300000001"), n("300000000"))).isEqualByComparingTo("1");
+        assertThat(CalculadoraCompra.excedenteSobreTope(n("300000000"), n("300000000"))).isNull();
+        assertThat(CalculadoraCompra.excedenteSobreTope(n("268000000"), n("300000000"))).isNull();
+        // Sin tope (no hay tasa cargada) o sin precio no hay nada que avisar.
+        assertThat(CalculadoraCompra.excedenteSobreTope(n("330000000"), null)).isNull();
+        assertThat(CalculadoraCompra.excedenteSobreTope(null, n("300000000"))).isNull();
+    }
+
+    @Test
     void validarRechazaLoQueQuedaFueraDelRango() {
         CalculadoraCompra.Rango r = CalculadoraCompra.rango(n("300000000"), n("0.30"), n("120000000"));
 

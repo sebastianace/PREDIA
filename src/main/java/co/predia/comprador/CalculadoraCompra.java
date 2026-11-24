@@ -31,6 +31,17 @@ public final class CalculadoraCompra {
                 alcanza ? BigDecimal.ZERO : minima.subtract(ahorroSeguro).max(BigDecimal.ZERO));
     }
 
+    /**
+     * Cuánto pasa el precio del tope de compra del cliente, en pesos; {@code null} si no lo pasa, si no hay tope
+     * (la inmobiliaria no tiene tasa cargada) o si no hay precio. Solo avisa: la decisión sigue siendo del asesor.
+     */
+    public static BigDecimal excedenteSobreTope(BigDecimal precio, BigDecimal topeDeCompra) {
+        if (precio == null || topeDeCompra == null || precio.compareTo(topeDeCompra) <= 0) {
+            return null;
+        }
+        return precio.subtract(topeDeCompra).setScale(0, RoundingMode.UP);
+    }
+
     /** Verifica que la cuota inicial elegida esté dentro del rango. */
     public static void validar(Rango rango, BigDecimal cuotaInicial) {
         if (cuotaInicial == null || cuotaInicial.compareTo(rango.minima()) < 0) {

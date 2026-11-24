@@ -52,7 +52,8 @@ public class ServicioComprador {
 
     public record InmuebleResumen(Long id, String titulo, String barrio, String ciudad, BigDecimal precio,
                                   BigDecimal areaM2, short habitaciones, short banos, short parqueaderos,
-                                  boolean disponible, String nota, InmuebleCompartido.Interes interes, FotoInfo foto) {
+                                  boolean disponible, String nota, InmuebleCompartido.Interes interes, FotoInfo foto,
+                                  BigDecimal excedenteSobreTope) {
     }
 
     public record FichaComprador(Long id, String titulo, String tipo, String barrio, String ciudad, Short estrato,
@@ -60,7 +61,7 @@ public class ServicioComprador {
                                  boolean aceptaMascotas, boolean propiedadHorizontal, boolean esVis,
                                  BigDecimal valorAdministracion, BigDecimal precio, String descripcion,
                                  boolean disponible, String nota, InmuebleCompartido.Interes interes, FotoInfo foto,
-                                 String planoVersion, Controles simulador) {
+                                 String planoVersion, Controles simulador, BigDecimal excedenteSobreTope) {
     }
 
     public record SolicitudDto(Long id, Long inmuebleId, String inmuebleTitulo, String mensaje, Instant creadaEn,
@@ -108,8 +109,9 @@ public class ServicioComprador {
     @Transactional(readOnly = true)
     public List<InmuebleResumen> inmuebles(UsuarioActual comprador) {
         Cliente c = cliente(comprador);
+        BigDecimal tope = tope(c);
         return compartidos.findByInmobiliariaIdAndClienteIdOrderByCompartidoEnDesc(c.getInmobiliariaId(), c.getId())
-                .stream().map(s -> resumen(s, inmueble(c, s.getInmuebleId()))).toList();
+                .stream().map(s -> resumen(s, inmueble(c, s.getInmuebleId()), tope)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -124,7 +126,8 @@ public class ServicioComprador {
                 i.isAceptaMascotas(), i.isPropiedadHorizontal(), i.isEsVis(), i.getValorAdministracion(),
                 i.getPrecioVenta(), i.getDescripcion(), disponible, s.getNota(), s.getInteres(),
                 fotos.info(c.getInmobiliariaId(), i.getId()).orElse(null),
-                planos.version(c.getInmobiliariaId(), i.getId()).orElse(null), controles);
+                planos.version(c.getInmobiliariaId(), i.getId()).orElse(null), controles,
+                CalculadoraCompra.excedenteSobreTope(i.getPrecioVenta(), tope(c)));
     }
 
     @Transactional(readOnly = true)
@@ -193,10 +196,17 @@ public class ServicioComprador {
         }
     }
 
-    private InmuebleResumen resumen(InmuebleCompartido s, Inmueble i) {
+    /** El tope de compra del cliente, o {@code null} si todavía no se puede calcular. */
+    private BigDecimal tope(Cliente c) {
+        PresupuestoComprador p = presupuesto(c);
+        return p == null ? null : p.topeDeCompra();
+    }
+
+    private InmuebleResumen resumen(InmuebleCompartido s, Inmueble i, BigDecimal tope) {
         return new InmuebleResumen(i.getId(), i.getTitulo(), i.getBarrio(), i.getCiudad(), i.getPrecioVenta(),
                 i.getAreaM2(), i.getHabitaciones(), i.getBanos(), i.getParqueaderos(), disponible(i), s.getNota(),
-                s.getInteres(), fotos.info(i.getInmobiliariaId(), i.getId()).orElse(null));
+                s.getInteres(), fotos.info(i.getInmobiliariaId(), i.getId()).orElse(null),
+                CalculadoraCompra.excedenteSobreTope(i.getPrecioVenta(), tope));
     }
 
     private SolicitudDto dto(SolicitudComprador s, Cliente c) {

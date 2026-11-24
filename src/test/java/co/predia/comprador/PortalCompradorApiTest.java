@@ -280,6 +280,31 @@ class PortalCompradorApiTest extends PruebaIntegracion {
     }
 
     @Test
+    void unInmuebleQueSuperaElTopeLlevaElExcedenteCalculadoPorElServidor() throws Exception {
+        Escenario e = escenario("Tope");
+        compartir(e, "Para mirar");
+        String perfil = mvc.perform(get("/api/comprador/perfil").header("Authorization", bearer(e.comprador())))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        BigDecimal tope = new BigDecimal(com.jayway.jsonpath.JsonPath.read(perfil, "$.presupuesto.topeDeCompra").toString());
+
+        // Dentro del tope no hay aviso, ni en la lista ni en la ficha.
+        e.inmueble().setPrecioVenta(tope.subtract(BigDecimal.valueOf(1_000_000)));
+        inmuebles.save(e.inmueble());
+        mvc.perform(get("/api/comprador/inmuebles").header("Authorization", bearer(e.comprador())))
+                .andExpect(jsonPath("$[0].excedenteSobreTope").doesNotExist());
+        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId()).header("Authorization", bearer(e.comprador())))
+                .andExpect(jsonPath("$.excedenteSobreTope").doesNotExist());
+
+        // Pasado el tope, el servidor dice por cuánto.
+        e.inmueble().setPrecioVenta(tope.add(BigDecimal.valueOf(30_000_000)));
+        inmuebles.save(e.inmueble());
+        mvc.perform(get("/api/comprador/inmuebles").header("Authorization", bearer(e.comprador())))
+                .andExpect(jsonPath("$[0].excedenteSobreTope").value(30_000_000));
+        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId()).header("Authorization", bearer(e.comprador())))
+                .andExpect(jsonPath("$.excedenteSobreTope").value(30_000_000));
+    }
+
+    @Test
     void elPerfilExplicaElTopeDeCompraYNombraAlAsesor() throws Exception {
         Escenario e = escenario("Perfil");
         mvc.perform(get("/api/comprador/perfil").header("Authorization", bearer(e.comprador())))
