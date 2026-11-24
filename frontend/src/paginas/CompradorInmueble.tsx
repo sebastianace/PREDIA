@@ -164,7 +164,7 @@ export function CompradorInmueble() {
                       {errorSim && <Aviso tipo="error">{errorSim}</Aviso>}
                       {sim && (
                         <>
-                          <CifraAcotada tono="sobre-azul" grande etiqueta="Cuota mensual" valor={formatoPesos(sim.cuotaMensual)}
+                          <CifraAcotada tono="sobre-azul" etiqueta="Cuota mensual" valor={formatoPesos(sim.cuotaMensual)}
                             razon={sim.porcentajeSobreIngreso != null ? `Es el ${formatoPorcentaje(sim.porcentajeSobreIngreso)} de su ingreso.` : undefined} />
                           <p className={`mt-3 text-sm font-medium ${sim.cumpleCuotaMaxima ? 'text-[#9be7b5]' : 'text-[#ffd28a]'}`}>{sim.veredicto}</p>
                           <dl className="mt-4 text-sm">

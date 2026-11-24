@@ -14,9 +14,13 @@ export const token = {
   borrar: () => localStorage.removeItem(CLAVE_TOKEN),
 }
 
+// Estas rutas son públicas: si el navegador guarda una sesión vencida y se enviara, el servidor respondería 401 aunque
+// el enlace de invitación o las credenciales fueran válidos.
+const esRutaPublica = (ruta: string) => ruta === '/auth/login' || ruta === '/auth/activar' || ruta.startsWith('/auth/invitaciones/')
+
 export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
   const cabeceras = new Headers(opciones.headers)
-  const t = token.leer()
+  const t = esRutaPublica(ruta) ? null : token.leer()
   if (t) cabeceras.set('Authorization', `Bearer ${t}`)
   if (opciones.body && !(opciones.body instanceof FormData)) cabeceras.set('Content-Type', 'application/json')
 
