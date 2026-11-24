@@ -432,3 +432,99 @@ Al arrancar, si **no existe ningún ADMIN** y están definidas `PREDIA_ADMIN_EMA
 ### 10.9 Fuera de esta fase
 
 Portal del comprador y plan de pagos (Fase 9); un «olvidé mi contraseña» autónomo, sin pasar por el asesor; línea de tiempo, agenda y avisos; que el propietario hable con el asistente.
+
+## 11. Fase 9 — Portal del comprador (propuesta, pendiente de revisión)
+
+**Objetivo.** Que el comprador (por ejemplo «Paola y Juan») pueda ver los inmuebles que su asesor le compartió, con una ficha clara (foto, plano, datos) y un **simulador de compra** que le diga qué le cuesta y si le alcanza. El comprador **no navega el inventario**: solo ve lo que el asesor decide mostrarle. Entra por invitación, como el propietario.
+
+Alcance aprobado el 24/11/2026: ficha con plano, simulador, inmuebles compartidos, «me interesa» y contacto. La línea de tiempo de la compra, la agenda de visitas y los comentarios tras la visita quedan para la Fase 10.
+
+### 11.1 Roles
+
+Se agrega **`COMPRADOR`**, atado a su ficha de `cliente`. El comprador no ve a otros clientes, ni al propietario (ni sus datos ni sus documentos), ni el inventario completo, ni el asistente.
+
+| Rol | Entra a |
+|---|---|
+| ADMIN, ASESOR | La aplicación de trabajo (`/api/**`) |
+| PROPIETARIO | Su portal (`/api/portal/**`) |
+| COMPRADOR (nuevo) | Su portal (`/api/comprador/**`) |
+
+El asesor del comprador es quien registró su autorización de datos (`cliente.autorizacion_registrada_por`); a ese asesor le llegan sus solicitudes (el ADMIN ve todas). Un correo solo puede tener un rol: quien sea a la vez vendedor y comprador necesitaría dos correos (límite documentado).
+
+### 11.2 Modelo de datos (`V8__portal_comprador.sql`)
+
+- **`usuario`**: el `rol` admite `COMPRADOR`; `cliente_id BIGINT NULL REFERENCES cliente(id) ON DELETE CASCADE` con `CHECK ((rol = 'COMPRADOR') = (cliente_id IS NOT NULL))` e índice único parcial. **Borrar un cliente borra también su cuenta y todo lo que compartió** (privacidad: el botón «Eliminar cliente y sus datos» ya existe).
+- **`inmueble_compartido`**: `id, inmobiliaria_id, cliente_id, inmueble_id, nota VARCHAR(500) NULL, compartido_por, compartido_en, interes VARCHAR(14) NULL CHECK (interes IN ('ME_INTERESA','NO_ME_INTERESA')), interes_en NULL`, único por `(cliente_id, inmueble_id)`, con `ON DELETE CASCADE` hacia cliente e inmueble. Es **la lista blanca**: lo que no esté aquí, el comprador no lo ve.
+- **`solicitud_comprador`**: `id, inmobiliaria_id, cliente_id, inmueble_id NULL, mensaje VARCHAR(1000), creada_en, atendida_en NULL, atendida_por NULL`. Es el «Quiero más información»: un aviso al asesor, **nunca un correo ni una respuesta automática**.
+- **`plano_inmueble`**: `inmueble_id PK, inmobiliaria_id, imagen BYTEA, ancho, alto, hash, subido_por, actualizada_en`. Una sola copia (no hay miniatura) de hasta 2.000 px, que se muestra **completa, sin recortar** (un plano no admite recorte). Reutiliza `ProcesadorImagen` con otro tamaño y mayor calidad de JPEG; las líneas muy finas pueden perder algo de nitidez y está dicho en las limitaciones.
+
+### 11.3 Seguridad
+
+- `/api/comprador/**` solo `COMPRADOR`; el resto de `/api/**` sigue siendo solo del personal, y `/api/portal/**` solo del propietario. Cada rol recibe 403 en las rutas de los demás.
+- El JWT lleva el claim `cliente_id`; `UsuarioActual` expone `clienteId`. Nunca sale de un parámetro. Se mantiene la comprobación por petición de que el usuario siga activo y con el mismo rol.
+- Todo se busca por `inmueble_compartido(cliente_id = el del token)` dentro de su inmobiliaria: un inmueble no compartido, o compartido a otro cliente, responde **404**.
+- **Qué no sale en la ficha del comprador:** el código interno, la **dirección exacta** (muestra barrio y ciudad; la dirección se da en la visita), el propietario y cualquier dato del negocio.
+- Si un inmueble compartido pasa a vendido o arrendado, sigue en su lista con la etiqueta «Ya no está disponible» y el simulador se desactiva (la API responde 422).
+- Solicitudes: máximo 5 sin atender por comprador, para evitar abuso.
+- Sin registro abierto: solo por invitación, igual que el propietario (enlace de un solo uso, 72 h; reenviarlo recupera la contraseña). Exige que el cliente tenga correo y la autorización de datos registrada.
+
+### 11.4 El simulador de compra
+
+Reutiliza `SimuladorCreditoService`, `CalculadoraCredito` y `CalculadoraPresupuesto`; **ningún número lo calcula el navegador ni la IA**. Solo se agrega el rango de la cuota inicial en una clase pura nueva con pruebas (`CalculadoraCompra`).
+
+- **Entradas:** `cuotaInicial` y `plazoAnios`.
+- **Rango de la cuota inicial:** de la **mínima** (30 % del precio, 20 % si es VIS: los porcentajes de la inmobiliaria) hasta lo que el comprador **tiene ahorrado** (nunca más que el precio menos un peso). Si su ahorro no alcanza la mínima, el simulador usa la mínima y lo dice: «Te faltan $X para la cuota inicial mínima».
+- **Salidas:** monto a financiar, cuota mensual, total a pagar, intereses, qué porcentaje de su ingreso es la cuota, su cuota máxima y un veredicto en palabras escritas en Java: «Está dentro de tu cuota máxima» o «La supera por $X al mes». Más la tasa usada, con la marca de «tasa de ejemplo» y el aviso de que la aprobación es del banco.
+- No se inventan gastos de escrituración ni impuestos: si la inmobiliaria quiere sumarlos, será un parámetro suyo en una fase posterior.
+
+### 11.5 Endpoints
+
+**Del comprador** (`/api/comprador/**`, solo `COMPRADOR`):
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/comprador/perfil` | Su nombre, su asesor (nombre y correo) y su presupuesto: tope de compra, cuota máxima y de dónde salen, con la tasa usada |
+| `GET /api/comprador/inmuebles` | Los inmuebles compartidos: título, barrio, ciudad, precio, datos clave, foto, nota del asesor, su interés y si sigue disponible |
+| `GET /api/comprador/inmuebles/{id}` | La ficha completa, el rango del simulador y si hay plano |
+| `GET /api/comprador/inmuebles/{id}/foto` y `/plano` | Las imágenes (miniatura o grande, con la sesión) |
+| `POST /api/comprador/inmuebles/{id}/simulacion` | `cuotaInicial, plazoAnios` → la simulación calculada en Java |
+| `PUT /api/comprador/inmuebles/{id}/interes` | `ME_INTERESA`, `NO_ME_INTERESA` o `null` (quitarlo) |
+| `POST /api/comprador/solicitudes` | `inmuebleId?, mensaje` → un aviso al asesor |
+| `GET /api/comprador/solicitudes` | Sus solicitudes y si ya las atendieron |
+
+**Del personal** (ADMIN, ASESOR):
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/clientes/{id}/acceso`, `GET …/invitacion/vista-previa`, `POST …/invitacion`, `PUT …/acceso` | Lo mismo que para el propietario: estado del acceso, ver el correo antes de enviarlo, invitar, activar o desactivar |
+| `POST /api/clientes/{id}/inmuebles-compartidos` | `inmuebleId, nota?` → comparte un inmueble **disponible y en venta** |
+| `GET /api/clientes/{id}/inmuebles-compartidos` | Lo compartido, con el interés que marcó el comprador |
+| `DELETE /api/clientes/{id}/inmuebles-compartidos/{inmuebleId}` | Deja de compartirlo |
+| `PUT / GET / DELETE /api/inmuebles/{id}/plano` | Sube, consulta o quita el plano |
+| `GET /api/solicitudes`, `PUT /api/solicitudes/{id}/atender` | Las solicitudes de sus compradores (el ADMIN ve todas) |
+
+El resumen diario suma **solicitudes por atender**.
+
+### 11.6 Pantallas
+
+- **Ficha del inmueble** (`/comprador/inmuebles/:id`), de dos columnas en escritorio y apilada en celular:
+  - *Izquierda:* foto grande, plano (completo, con su propio visor), precio, fila de datos clave (área, habitaciones, baños, parqueaderos, estrato, administración), descripción y lo que incluye (mascotas, propiedad horizontal, VIS), con la nota del asesor.
+  - *Derecha, «Simula tu compra»:* controles deslizantes de cuota inicial y plazo; las cifras se piden al servidor al soltar (con una pequeña espera) y se muestran como **cifras acotadas** (cuota mensual, monto a financiar, intereses) junto al veredicto; botón **«Quiero más información»**, que abre una caja de texto y avisa al asesor.
+- **Inicio del comprador** (`/comprador`): su presupuesto arriba (tope de compra con su razón) y debajo las tarjetas de los inmuebles compartidos, con foto, precio y los botones «Me interesa» / «No me interesa».
+- **Asesor, en la ficha del cliente:** «Acceso del cliente» (el mismo componente de invitar), el botón **«Compartir con el cliente»** en cada resultado de la búsqueda, y la sección **«Compartidos con el cliente»** con el interés que marcó. En el formulario del inmueble, **«Plano»**. En el inicio, la tarjeta de **solicitudes por atender**.
+- Estilo: el mismo lenguaje de terreno y cotas del resto de Predia. Se trata de «usted» al comprador.
+
+### 11.7 Pruebas previstas
+
+- **Matriz de acceso** con los cuatro roles: el COMPRADOR recibe 403 en todo lo del personal, del propietario y de otros roles; el personal y el PROPIETARIO reciben 403 en `/api/comprador/**`.
+- Visibilidad: un inmueble no compartido responde 404; uno compartido a **otro cliente** (misma inmobiliaria) responde 404; uno de otra inmobiliaria responde 404.
+- La ficha **no contiene** el código, la dirección exacta ni datos del propietario (se comprueba sobre el JSON).
+- Simulador: las cifras coinciden con `SimuladorCreditoService`/`CalculadoraCredito` para varias combinaciones; por debajo de la cuota inicial mínima, 422 con el mínimo; si el ahorro no alcanza, usa la mínima y lo dice; con el inmueble ya vendido, 422; pruebas unitarias de `CalculadoraCompra` (rangos, VIS, ahorro justo, ahorro mayor que el precio).
+- «Me interesa» queda guardado y lo ve el asesor; las solicitudes llegan al asesor correcto, el tope de 5 se respeta, y **no sale ningún correo**.
+- Compartir solo acepta inmuebles disponibles y en venta; borrar el cliente borra su cuenta, lo compartido y sus solicitudes.
+- Invitación del comprador: exige correo; el token no se guarda en claro, vence y sirve una vez; un correo ya usado por un propietario se rechaza con un mensaje claro.
+- Plano: se reduce y se guarda; rechaza archivos que no son imágenes; solo lo ve el comprador al que se le compartió el inmueble.
+
+### 11.8 Fuera de esta fase
+
+Línea de tiempo de la compra, agenda de visitas y comentarios tras la visita (**Fase 10**, y conecta con el extra de IA 2 de análisis de sentimiento); galería de varias fotos; arrendatarios (hoy solo compradores); el asistente de IA hablando con el comprador; los gastos de escrituración como parámetro; un asesor asignado a cada cliente por separado (hoy es quien registró su autorización).
