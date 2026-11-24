@@ -2,7 +2,7 @@ package co.predia.comprador;
 
 import co.predia.comun.seguridad.SesionActual;
 import co.predia.inventario.foto.FotoInmuebleRepositorio;
-import co.predia.inventario.foto.PlanoInmuebleRepositorio;
+import co.predia.inventario.foto.ImagenInmuebleRepositorio;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -76,11 +76,12 @@ public class CompradorController {
         return imagen(foto.contenido());
     }
 
-    @GetMapping("/inmuebles/{id}/plano")
-    @Operation(summary = "El plano de un inmueble compartido")
-    public ResponseEntity<byte[]> plano(@PathVariable Long id) {
-        PlanoInmuebleRepositorio.Plano plano = servicio.plano(sesion.usuario(), id);
-        return imagen(plano.contenido());
+    @GetMapping("/inmuebles/{id}/imagenes/{imagenId}")
+    @Operation(summary = "Una foto o plano de la galería de un inmueble compartido")
+    public ResponseEntity<byte[]> imagenDeGaleria(@PathVariable Long id, @PathVariable Long imagenId,
+                                                  @RequestParam(defaultValue = "grande") String tam) {
+        ImagenInmuebleRepositorio.Bytes imagen = servicio.imagen(sesion.usuario(), id, imagenId, "miniatura".equals(tam));
+        return imagen(imagen.contenido());
     }
 
     @PostMapping("/solicitudes")

@@ -52,14 +52,16 @@ public final class ProcesadorImagen {
         return new Imagen(bytesGrande, codificar(miniatura), grande.getWidth(), grande.getHeight(), sha256(bytesGrande));
     }
 
-    /** El plano: una sola copia (no hay miniatura), que se muestra completa sin recortar. */
-    public record Plano(byte[] imagen, int ancho, int alto, String hash) {
-    }
-
-    public static Plano procesarPlano(byte[] original) {
-        BufferedImage plano = reducir(leer(original), LADO_PLANO);
-        byte[] bytes = codificar(plano, CALIDAD_PLANO);
-        return new Plano(bytes, plano.getWidth(), plano.getHeight(), sha256(bytes));
+    /**
+     * Un plano: la copia grande se conserva a mayor resolución y con más calidad (lleva líneas finas y medidas que el
+     * comprador debe poder leer al ampliarlo); la miniatura es solo para la tira del carrusel. Nunca se recorta.
+     */
+    public static Imagen procesarPlano(byte[] original) {
+        BufferedImage origen = leer(original);
+        BufferedImage grande = reducir(origen, LADO_PLANO);
+        byte[] bytesGrande = codificar(grande, CALIDAD_PLANO);
+        return new Imagen(bytesGrande, codificar(reducir(origen, LADO_MINIATURA)), grande.getWidth(), grande.getHeight(),
+                sha256(bytesGrande));
     }
 
     private static BufferedImage leer(byte[] bytes) {

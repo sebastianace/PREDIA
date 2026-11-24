@@ -1,5 +1,32 @@
 # Progreso de Predia
 
+## Extra — Galería de fotos y planos por inmueble ✅ (24/11/2026)
+
+**Rama:** `feature/galeria-inmuebles` (sale de `feature/portal-comprador`; su PR apunta a esa rama hasta que se fusione). Boceto aprobado antes de programar.
+
+### Por qué
+Un inmueble tenía una sola foto (V6) y un plano aparte (V8). El comprador necesitaba ver varias fotos «pasándolas una por una», y a veces un inmueble no tiene plano sino solo fotos. Ahora todo es una sola galería ordenada.
+
+### Qué quedó
+- **Tabla `imagen_inmueble`** (migración V9): `id, inmueble_id, inmobiliaria_id, tipo (FOTO|PLANO), orden, etiqueta, grande, miniatura, ancho, alto, foco_x, foco_y, hash, subida_por, creada_en`. Reemplaza a `foto_inmueble` y `plano_inmueble`: la migración **copia lo que ya estaba subido** (la foto primero, el plano después, con la etiqueta «Plano») y borra las tablas viejas. Probada contra una copia de la base de desarrollo: las 2 fotos y los 2 planos de la demo pasaron intactos.
+- **Reglas:** una foto se guarda a 1600 px (miniatura de 480) y se recorta con su punto de interés; un plano, a 2000 px con más calidad y **nunca se recorta**. Máximo **12 imágenes** por inmueble y 8 MB por archivo. La **portada** del inventario es la primera FOTO por orden (un plano nunca es portada); sin fotos se ve el terreno.
+- **API del asesor** `/api/inmuebles/{id}/imagenes`: `GET` (lista en orden), `POST` multipart (`tipo`, `etiqueta`, `focoX`, `focoY`), `GET /{imagenId}?tam=` (con `ETag`), `PATCH /{imagenId}` (tipo, etiqueta, encuadre), `PUT /orden` (debe nombrar cada imagen una sola vez) y `DELETE /{imagenId}` (el orden queda sin huecos). `GET /api/inmuebles/{id}/foto` sigue entregando la portada. Se retiraron `PUT/PATCH/DELETE /foto` y `/plano`.
+- **API del comprador:** la ficha trae `imagenes` (en vez de `planoVersion`) y `GET /api/comprador/inmuebles/{id}/imagenes/{imagenId}` solo responde si el inmueble se le compartió.
+- **Asesor:** en «Editar inmueble», una sola cuadrícula de «Fotos y planos»: agrega varias a la vez (botones «Agregar fotos» y «Agregar planos»), ordena arrastrando o con las flechas, nombra cada una (sala, cocina…), cambia entre Foto y Plano, elige el encuadre de una foto y la quita. Cada cambio se guarda al instante. Un inmueble nuevo se guarda primero y pasa a su edición para agregar las imágenes.
+- **Comprador:** un carrusel con flechas, teclado y deslizar con el dedo, contador («2 / 6»), tira de miniaturas y visor a pantalla completa con ampliación (para leer las medidas de un plano).
+- Un valor inválido en un parámetro (por ejemplo, un tipo de imagen inventado) ahora responde `400` en vez de `500`.
+
+### Pruebas (231 en total; no llaman a OpenAI)
+- `GaleriaInmuebleApiTest` (11, PostgreSQL real): orden de subida y portada (un plano primero no es portada); tamaños de foto y plano con su miniatura; sin fotos no hay portada; reordenar, cambiar tipo, etiqueta y encuadre (lo no enviado se conserva); el orden debe nombrar cada imagen una vez; quitar no deja huecos; tope de 12; `ETag`/304; archivo falso, vacío, de 9 MB y tipo inventado; **otra inmobiliaria no ve, sube, ordena, edita ni quita (404)** ni alcanza una imagen ajena con un inmueble propio; sin sesión → 401.
+- `PortalCompradorApiTest`: la galería (fotos y planos) solo se ve si el inmueble se comparte.
+
+### Probado en vivo (API real, PostgreSQL)
+Migración V9 sobre una copia de la base; subida de 3 fotos y un plano desde el navegador, reordenar y nombrar; como comprador, carrusel con flechas, miniaturas y visor (también en 375 px). La copia de la base y los servidores de prueba se borraron.
+
+### Lo que no se hizo
+- No se probó con fotos reales de celular ni HEIC (el navegador de pruebas no abre el selector de archivos del sistema).
+- Un plano migrado de la tabla anterior usa su imagen completa como miniatura hasta que se vuelva a subir.
+
 ## Fase 9 — Portal del comprador ✅ (24/11/2026)
 
 **Rama:** `feature/portal-comprador` (sale de `develop`). Diseño aprobado en `docs/DISENO.md`, sección 11, y boceto aprobado antes de programar las pantallas.
@@ -15,7 +42,7 @@ El comprador era solo una ficha que administraba el asesor. Ahora tiene su propi
 - **Ficha del inmueble:** foto, **plano** (con visor a pantalla completa y ampliación), datos clave, nota del asesor y **«Simule su compra»**: cuota inicial y plazo; las cifras las calcula el servidor (`CalculadoraCompra` + `SimuladorCreditoService`), con una pequeña espera al mover los controles. La cuota inicial mínima es el porcentaje de la inmobiliaria (más bajo en VIS) y la máxima, su ahorro sin pasar del precio.
 - **Privacidad:** el comprador no ve el código interno, la dirección exacta ni nada del propietario.
 - **«Quiero más información»:** un mensaje al asesor (máximo 5 sin atender). No envía correos: aparece en el inicio del asesor («N mensajes de compradores por atender») y en `/solicitudes`, donde lo marca como atendido.
-- **Plano del inmueble** (`PUT/GET/DELETE /api/inmuebles/{id}/plano`): se guarda reducido a 2.000 px (calidad alta, nunca el original) y se sube desde el formulario del inmueble.
+- **Plano del inmueble:** se guarda reducido a 2.000 px (calidad alta, nunca el original). *(Después pasó a la galería de fotos y planos: ver arriba.)*
 - Un método HTTP no permitido ahora responde `405` (antes, `500`).
 - **Pulido tras revisar el diseño en vivo:** si un inmueble compartido cuesta más que el tope de compra del cliente, la tarjeta y la ficha muestran «Supera en $X lo que hoy puede comprar» (el valor lo calcula `CalculadoraCompra.excedenteSobreTope`; solo informa, la decisión es del asesor); el simulador muestra un esqueleto mientras llegan las cifras y las deja atenuadas mientras se recalculan; y se quitó el doble punto de «a. m..» en la tarjeta de acceso.
 
@@ -127,7 +154,7 @@ El asesor puede subir una foto por inmueble; aparece en la cabecera de cada tarj
 - La foto va en el formulario del inmueble (alta y edición). Si el inmueble se guarda pero la foto falla, no se pierde nada: se abre la edición con el motivo.
 
 ### Decisiones
-- **Una foto de portada por inmueble**, no una galería (no se pidió; sería la siguiente mejora).
+- **Una foto de portada por inmueble**, no una galería. *(Resuelto después con la galería de fotos y planos.)*
 - **En la base de datos, no en disco:** una copia de seguridad de la base incluye las fotos, no hay volúmenes que administrar y el filtro por inmobiliaria es el mismo que en todo lo demás. Con muchas fotos conviene pasar a un almacenamiento de objetos.
 - Las fotos **sí se guardan**, a diferencia de los PDF de los clientes: son material comercial de la propia inmobiliaria.
 - El servidor no lee la orientación EXIF; lo hace el navegador al reducir. Un cliente de la API que suba fotos de celular directas puede verlas giradas.

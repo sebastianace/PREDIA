@@ -12,6 +12,7 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -90,6 +91,13 @@ public class ManejadorErrores {
     ProblemDetail peticionIncompleta(Exception e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
                 "Falta un dato de la petición (por ejemplo, el archivo). Revísala e intenta de nuevo.");
+    }
+
+    /** Un valor que no es de los permitidos (por ejemplo, un tipo de imagen inventado): error del cliente, no del servidor. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ProblemDetail valorNoPermitido(MethodArgumentTypeMismatchException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "El valor de «" + e.getName() + "» no es válido. Revísalo e intenta de nuevo.");
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)

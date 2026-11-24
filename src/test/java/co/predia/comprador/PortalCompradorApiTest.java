@@ -234,22 +234,38 @@ class PortalCompradorApiTest extends PruebaIntegracion {
     }
 
     @Test
-    void elPlanoSoloSeVeSiElInmuebleSeComparteYElPersonalLoSubeComoImagen() throws Exception {
-        Escenario e = escenario("Plano");
-        MockMultipartFile imagen = new MockMultipartFile("archivo", "plano.png", "image/png", png());
-        mvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/inmuebles/" + e.inmueble().getId() + "/plano")
-                .file(imagen).header("Authorization", bearer(e.asesor()))).andExpect(status().is2xxSuccessful());
+    void laGaleriaSoloSeVeSiElInmuebleSeComparteYIncluyeFotosYPlanos() throws Exception {
+        Escenario e = escenario("Galería");
+        String ruta = "/api/inmuebles/" + e.inmueble().getId() + "/imagenes";
+        long plano = subirImagen(e, ruta, "PLANO", "Plano del piso");
+        long foto = subirImagen(e, ruta, "FOTO", "Sala");
 
-        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId() + "/plano")
+        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId() + "/imagenes/" + foto)
                 .header("Authorization", bearer(e.comprador()))).andExpect(status().isNotFound());
         compartir(e, "x");
-        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId() + "/plano")
-                        .header("Authorization", bearer(e.comprador())))
-                .andExpect(status().isOk()).andExpect(r -> assertThat(r.getResponse().getContentType())
-                        .isEqualTo("image/jpeg"));
-        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId())
-                        .header("Authorization", bearer(e.comprador())))
-                .andExpect(jsonPath("$.planoVersion").isNotEmpty());
+        for (long id : new long[]{plano, foto}) {
+            for (String tam : new String[]{"grande", "miniatura"}) {
+                mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId() + "/imagenes/" + id).param("tam", tam)
+                                .header("Authorization", bearer(e.comprador())))
+                        .andExpect(status().isOk()).andExpect(r -> assertThat(r.getResponse().getContentType())
+                                .isEqualTo("image/jpeg"));
+            }
+        }
+        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId()).header("Authorization", bearer(e.comprador())))
+                .andExpect(jsonPath("$.imagenes", org.hamcrest.Matchers.hasSize(2)))
+                .andExpect(jsonPath("$.imagenes[0].id").value(plano)).andExpect(jsonPath("$.imagenes[0].tipo").value("PLANO"))
+                .andExpect(jsonPath("$.imagenes[1].tipo").value("FOTO")).andExpect(jsonPath("$.imagenes[1].etiqueta").value("Sala"));
+        // Una imagen que no es de ese inmueble no se alcanza con un id ajeno.
+        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId() + "/imagenes/999999")
+                .header("Authorization", bearer(e.comprador()))).andExpect(status().isNotFound());
+    }
+
+    private long subirImagen(Escenario e, String ruta, String tipo, String etiqueta) throws Exception {
+        MockMultipartFile imagen = new MockMultipartFile("archivo", "x.png", "image/png", png());
+        String cuerpo = mvc.perform(multipart(org.springframework.http.HttpMethod.POST, ruta).file(imagen)
+                        .param("tipo", tipo).param("etiqueta", etiqueta).header("Authorization", bearer(e.asesor())))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return ((Number) com.jayway.jsonpath.JsonPath.read(cuerpo, "$.id")).longValue();
     }
 
     @Test

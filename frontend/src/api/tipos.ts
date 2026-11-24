@@ -31,6 +31,21 @@ export interface FotoInmueble {
   alto: number
 }
 
+export type TipoImagen = 'FOTO' | 'PLANO'
+
+/** Una imagen de la galería de un inmueble: una foto (se recorta) o un plano (se muestra completo). */
+export interface ImagenInmueble {
+  id: number
+  tipo: TipoImagen
+  orden: number
+  etiqueta: string | null
+  version: string
+  focoX: number
+  focoY: number
+  ancho: number
+  alto: number
+}
+
 export type EstadoInmueble = 'DISPONIBLE' | 'SEPARADO' | 'ARRENDADO' | 'VENDIDO'
 
 export interface Inmueble {
@@ -56,7 +71,6 @@ export interface Inmueble {
   descripcion: string
   estado: EstadoInmueble
   foto: FotoInmueble | null
-  planoVersion?: string | null
 }
 
 export type EstadoIndexacion = 'EN_COLA' | 'PROCESANDO' | 'INDEXADO' | 'ERROR'
@@ -563,7 +577,7 @@ export interface FichaComprador {
   nota: string | null
   interes: InteresComprador | null
   foto: FotoInmueble | null
-  planoVersion: string | null
+  imagenes: ImagenInmueble[]
   simulador: ControlesSimulador | null
   excedenteSobreTope: number | null
 }

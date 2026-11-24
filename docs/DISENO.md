@@ -456,7 +456,7 @@ El asesor del comprador es quien registró su autorización de datos (`cliente.a
 - **`usuario`**: el `rol` admite `COMPRADOR`; `cliente_id BIGINT NULL REFERENCES cliente(id) ON DELETE CASCADE` con `CHECK ((rol = 'COMPRADOR') = (cliente_id IS NOT NULL))` e índice único parcial. **Borrar un cliente borra también su cuenta y todo lo que compartió** (privacidad: el botón «Eliminar cliente y sus datos» ya existe).
 - **`inmueble_compartido`**: `id, inmobiliaria_id, cliente_id, inmueble_id, nota VARCHAR(500) NULL, compartido_por, compartido_en, interes VARCHAR(14) NULL CHECK (interes IN ('ME_INTERESA','NO_ME_INTERESA')), interes_en NULL`, único por `(cliente_id, inmueble_id)`, con `ON DELETE CASCADE` hacia cliente e inmueble. Es **la lista blanca**: lo que no esté aquí, el comprador no lo ve.
 - **`solicitud_comprador`**: `id, inmobiliaria_id, cliente_id, inmueble_id NULL, mensaje VARCHAR(1000), creada_en, atendida_en NULL, atendida_por NULL`. Es el «Quiero más información»: un aviso al asesor, **nunca un correo ni una respuesta automática**.
-- **`plano_inmueble`**: `inmueble_id PK, inmobiliaria_id, imagen BYTEA, ancho, alto, hash, subido_por, actualizada_en`. Una sola copia (no hay miniatura) de hasta 2.000 px, que se muestra **completa, sin recortar** (un plano no admite recorte). Reutiliza `ProcesadorImagen` con otro tamaño y mayor calidad de JPEG; las líneas muy finas pueden perder algo de nitidez y está dicho en las limitaciones.
+- **`plano_inmueble`** *(reemplazada después por la galería `imagen_inmueble`, migración V9: fotos y planos en una sola tabla ordenada, con tipo, orden, etiqueta y miniatura; ver `PROGRESO.md`)*: `inmueble_id PK, inmobiliaria_id, imagen BYTEA, ancho, alto, hash, subido_por, actualizada_en`. Una sola copia (no hay miniatura) de hasta 2.000 px, que se muestra **completa, sin recortar** (un plano no admite recorte). Reutiliza `ProcesadorImagen` con otro tamaño y mayor calidad de JPEG; las líneas muy finas pueden perder algo de nitidez y está dicho en las limitaciones.
 
 ### 11.3 Seguridad
 
@@ -485,8 +485,8 @@ Reutiliza `SimuladorCreditoService`, `CalculadoraCredito` y `CalculadoraPresupue
 |---|---|
 | `GET /api/comprador/perfil` | Su nombre, su asesor (nombre y correo) y su presupuesto: tope de compra, cuota máxima y de dónde salen, con la tasa usada |
 | `GET /api/comprador/inmuebles` | Los inmuebles compartidos: título, barrio, ciudad, precio, datos clave, foto, nota del asesor, su interés y si sigue disponible |
-| `GET /api/comprador/inmuebles/{id}` | La ficha completa, el rango del simulador y si hay plano |
-| `GET /api/comprador/inmuebles/{id}/foto` y `/plano` | Las imágenes (miniatura o grande, con la sesión) |
+| `GET /api/comprador/inmuebles/{id}` | La ficha completa, el rango del simulador y la lista de imágenes de su galería |
+| `GET /api/comprador/inmuebles/{id}/foto` y `/imagenes/{imagenId}` | La portada y cada imagen de la galería (miniatura o grande, con la sesión) |
 | `POST /api/comprador/inmuebles/{id}/simulacion` | `cuotaInicial, plazoAnios` → la simulación calculada en Java |
 | `PUT /api/comprador/inmuebles/{id}/interes` | `ME_INTERESA`, `NO_ME_INTERESA` o `null` (quitarlo) |
 | `POST /api/comprador/solicitudes` | `inmuebleId?, mensaje` → un aviso al asesor |

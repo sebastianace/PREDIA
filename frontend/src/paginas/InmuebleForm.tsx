@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
-import type { EstadoInmueble, FotoInmueble, Inmueble } from '../api/tipos'
+import type { EstadoInmueble, Inmueble } from '../api/tipos'
 import { Aviso, Campo, CampoPesos, claseBotonPrimario, claseInput } from '../componentes/Formulario'
-import { SelectorFoto, type CambioFoto } from '../componentes/SelectorFoto'
-import { SelectorPlano, type CambioPlano } from '../componentes/SelectorPlano'
+import { GaleriaInmueble } from '../componentes/GaleriaInmueble'
 
 const tipos = ['APARTAMENTO', 'CASA', 'LOCAL', 'OFICINA', 'LOTE'] as const
 const nombreTipo: Record<string, string> = { APARTAMENTO: 'Apartamento', CASA: 'Casa', LOCAL: 'Local', OFICINA: 'Oficina', LOTE: 'Lote' }
@@ -16,7 +15,7 @@ export function InmuebleForm() {
   const { id } = useParams()
   const edicion = id != null
   const navegar = useNavigate()
-  const { state } = useLocation() as { state: { aviso?: string } | null }
+  const { state } = useLocation() as { state: { aviso?: string; info?: string } | null }
 
   const [codigo, setCodigo] = useState('')
   const [titulo, setTitulo] = useState('')
@@ -37,12 +36,6 @@ export function InmuebleForm() {
   const [ph, setPh] = useState(true)
   const [descripcion, setDescripcion] = useState('')
   const [estado, setEstado] = useState<EstadoInmueble>('DISPONIBLE')
-  const [foto, setFoto] = useState<FotoInmueble | null>(null)
-  const [cambioFoto, setCambioFoto] = useState<CambioFoto | null>(null)
-  const alCambiarFoto = useCallback((c: CambioFoto) => setCambioFoto(c), [])
-  const [planoVersion, setPlanoVersion] = useState<string | null>(null)
-  const [cambioPlano, setCambioPlano] = useState<CambioPlano | null>(null)
-  const alCambiarPlano = useCallback((c: CambioPlano) => setCambioPlano(c), [])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -54,7 +47,7 @@ export function InmuebleForm() {
       setArea(i.areaM2); setHabitaciones(i.habitaciones); setBanos(i.banos); setParqueaderos(i.parqueaderos)
       setMascotas(i.aceptaMascotas); setAdministracion(i.valorAdministracion)
       setPrecio(i.operacion === 'VENTA' ? i.precioVenta : i.canonArriendo)
-      setEsVis(i.esVis); setPh(i.propiedadHorizontal); setDescripcion(i.descripcion); setEstado(i.estado); setFoto(i.foto); setPlanoVersion(i.planoVersion ?? null)
+      setEsVis(i.esVis); setPh(i.propiedadHorizontal); setDescripcion(i.descripcion); setEstado(i.estado)
     }).catch((e) => setError(e.message))
   }, [edicion, id])
 
@@ -72,13 +65,9 @@ export function InmuebleForm() {
       const guardado = await api<Inmueble>(edicion ? `/inmuebles/${id}` : '/inmuebles', {
         method: edicion ? 'PUT' : 'POST', body: JSON.stringify(cuerpo),
       })
-      // El inmueble ya quedó guardado; la foto y el plano van aparte para que un fallo suyo no pierda lo demás.
-      try {
-        await guardarFoto(guardado.id)
-        await guardarPlano(guardado.id)
-      } catch (errFoto) {
-        const motivo = errFoto instanceof ErrorApi ? errFoto.message : 'No se pudo subir la imagen.'
-        navegar(`/inventario/${guardado.id}/editar`, { state: { aviso: `El inmueble se guardó, pero la imagen no: ${motivo}` } })
+      // Un inmueble nuevo pasa a su edición: ahí se agregan las fotos y planos, que ya necesitan su id.
+      if (!edicion) {
+        navegar(`/inventario/${guardado.id}/editar`, { state: { info: 'Inmueble creado. Ahora agrega sus fotos y planos.' } })
         setGuardando(false)
         return
       }
@@ -86,34 +75,6 @@ export function InmuebleForm() {
     } catch (err) {
       setError(err instanceof ErrorApi ? err.message : 'No se pudo guardar el inmueble.')
       setGuardando(false)
-    }
-  }
-
-  const guardarFoto = async (inmuebleId: number) => {
-    const c = cambioFoto
-    if (!c) return
-    if (c.blob) {
-      const datos = new FormData()
-      datos.append('archivo', c.blob, 'foto.jpg')
-      datos.append('focoX', String(c.focoX))
-      datos.append('focoY', String(c.focoY))
-      await api(`/inmuebles/${inmuebleId}/foto`, { method: 'PUT', body: datos })
-    } else if (c.quitar && foto) {
-      await api(`/inmuebles/${inmuebleId}/foto`, { method: 'DELETE' })
-    } else if (c.focoCambiado && foto) {
-      await api(`/inmuebles/${inmuebleId}/foto/foco`, { method: 'PATCH', body: JSON.stringify({ focoX: c.focoX, focoY: c.focoY }) })
-    }
-  }
-
-  const guardarPlano = async (inmuebleId: number) => {
-    const c = cambioPlano
-    if (!c) return
-    if (c.blob) {
-      const datos = new FormData()
-      datos.append('archivo', c.blob, 'plano.jpg')
-      await api(`/inmuebles/${inmuebleId}/plano`, { method: 'PUT', body: datos })
-    } else if (c.quitar && planoVersion) {
-      await api(`/inmuebles/${inmuebleId}/plano`, { method: 'DELETE' })
     }
   }
 
@@ -129,10 +90,12 @@ export function InmuebleForm() {
       </h1>
 
       {state?.aviso && <div className="mt-4"><Aviso tipo="error">{state.aviso}</Aviso></div>}
+      {state?.info && <div className="mt-4"><Aviso tipo="info">{state.info}</Aviso></div>}
 
       <form onSubmit={guardar} className="mt-6 space-y-5">
-        <SelectorFoto inmuebleId={edicion ? Number(id) : null} foto={foto} titulo={titulo} onCambio={alCambiarFoto} />
-        <SelectorPlano inmuebleId={edicion ? Number(id) : null} version={planoVersion} onCambio={alCambiarPlano} />
+        {edicion
+          ? <GaleriaInmueble inmuebleId={Number(id)} />
+          : <p className="rounded-panel border border-dashed border-linea bg-white px-4 py-5 text-sm text-niebla">Guarda el inmueble para agregar sus fotos y planos.</p>}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Campo etiqueta="Código">{(idc) => <input id={idc} value={codigo} onChange={(e) => setCodigo(e.target.value)} required className={claseInput} />}</Campo>
