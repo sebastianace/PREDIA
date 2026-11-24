@@ -34,6 +34,9 @@ public final class ProcesadorImagen {
     /** Tope de píxeles decodificados: evita que una imagen diminuta en bytes pero enorme en píxeles agote la memoria. */
     static final long MAX_PIXELES = 50_000_000L;
     private static final float CALIDAD = 0.82f;
+    /** Un plano lleva líneas finas y texto pequeño: se conserva más grande y con más calidad que una foto. */
+    public static final int LADO_PLANO = 2000;
+    private static final float CALIDAD_PLANO = 0.92f;
 
     public record Imagen(byte[] grande, byte[] miniatura, int ancho, int alto, String hash) {
     }
@@ -47,6 +50,16 @@ public final class ProcesadorImagen {
         BufferedImage miniatura = reducir(origen, LADO_MINIATURA);
         byte[] bytesGrande = codificar(grande);
         return new Imagen(bytesGrande, codificar(miniatura), grande.getWidth(), grande.getHeight(), sha256(bytesGrande));
+    }
+
+    /** El plano: una sola copia (no hay miniatura), que se muestra completa sin recortar. */
+    public record Plano(byte[] imagen, int ancho, int alto, String hash) {
+    }
+
+    public static Plano procesarPlano(byte[] original) {
+        BufferedImage plano = reducir(leer(original), LADO_PLANO);
+        byte[] bytes = codificar(plano, CALIDAD_PLANO);
+        return new Plano(bytes, plano.getWidth(), plano.getHeight(), sha256(bytes));
     }
 
     private static BufferedImage leer(byte[] bytes) {
@@ -124,12 +137,16 @@ public final class ProcesadorImagen {
     }
 
     private static byte[] codificar(BufferedImage imagen) {
+        return codificar(imagen, CALIDAD);
+    }
+
+    private static byte[] codificar(BufferedImage imagen, float calidad) {
         ImageWriter escritor = ImageIO.getImageWritersByFormatName("jpeg").next();
         try (ByteArrayOutputStream salida = new ByteArrayOutputStream();
              MemoryCacheImageOutputStream flujo = new MemoryCacheImageOutputStream(salida)) {
             ImageWriteParam parametros = escritor.getDefaultWriteParam();
             parametros.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            parametros.setCompressionQuality(CALIDAD);
+            parametros.setCompressionQuality(calidad);
             parametros.setProgressiveMode(ImageWriteParam.MODE_DEFAULT);
             escritor.setOutput(flujo);
             escritor.write(null, new IIOImage(imagen, null, null), parametros);

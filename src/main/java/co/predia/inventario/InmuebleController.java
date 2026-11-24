@@ -3,6 +3,7 @@ package co.predia.inventario;
 import co.predia.comun.seguridad.SesionActual;
 import co.predia.comun.web.RecursoNoEncontradoException;
 import co.predia.inventario.foto.FotoInmuebleRepositorio;
+import co.predia.inventario.foto.PlanoInmuebleRepositorio;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,10 +37,12 @@ public class InmuebleController {
     private final BusquedaInmuebles busqueda;
     private final SesionActual sesion;
     private final FotoInmuebleRepositorio fotos;
+    private final PlanoInmuebleRepositorio planos;
 
     public InmuebleController(InmuebleRepository repositorio, InmuebleService servicio, BusquedaInmuebles busqueda,
-                              SesionActual sesion, FotoInmuebleRepositorio fotos) {
+                              SesionActual sesion, FotoInmuebleRepositorio fotos, PlanoInmuebleRepositorio planos) {
         this.fotos = fotos;
+        this.planos = planos;
         this.repositorio = repositorio;
         this.servicio = servicio;
         this.busqueda = busqueda;
@@ -54,7 +57,9 @@ public class InmuebleController {
                 ? repositorio.findByInmobiliariaIdOrderByTituloAsc(tenant)
                 : repositorio.findByInmobiliariaIdAndEstadoOrderByTituloAsc(tenant, estado);
         var info = fotos.infoDe(tenant);
-        return inmuebles.stream().map((i) -> InmuebleDto.desde(i).conFoto(info.get(i.getId()))).toList();
+        var versiones = planos.versionesDe(tenant);
+        return inmuebles.stream().map((i) -> InmuebleDto.desde(i).conFoto(info.get(i.getId()))
+                .conPlano(versiones.get(i.getId()))).toList();
     }
 
     @GetMapping("/{id}")
@@ -62,7 +67,8 @@ public class InmuebleController {
     public InmuebleDto detalle(@PathVariable Long id) {
         Long tenant = sesion.inmobiliariaId();
         return repositorio.findByIdAndInmobiliariaId(id, tenant)
-                .map((i) -> InmuebleDto.desde(i).conFoto(fotos.info(tenant, i.getId()).orElse(null)))
+                .map((i) -> InmuebleDto.desde(i).conFoto(fotos.info(tenant, i.getId()).orElse(null))
+                        .conPlano(planos.version(tenant, i.getId()).orElse(null)))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Inmueble", id));
     }
 
@@ -77,7 +83,8 @@ public class InmuebleController {
     @Operation(summary = "Edita un inmueble (incluido su estado)")
     public InmuebleDto actualizar(@PathVariable Long id, @Valid @RequestBody SolicitudInmueble solicitud) {
         Long tenant = sesion.inmobiliariaId();
-        return InmuebleDto.desde(servicio.actualizar(tenant, id, solicitud)).conFoto(fotos.info(tenant, id).orElse(null));
+        return InmuebleDto.desde(servicio.actualizar(tenant, id, solicitud)).conFoto(fotos.info(tenant, id).orElse(null))
+                .conPlano(planos.version(tenant, id).orElse(null));
     }
 
     @PostMapping("/busqueda")
