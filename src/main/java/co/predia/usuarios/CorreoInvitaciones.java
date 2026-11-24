@@ -46,6 +46,29 @@ public class CorreoInvitaciones {
                            String nombreQuienInvita, String enlace, Instant expiraEn, boolean recuperar) {
         String link = enlace == null ? MARCADOR_ENLACE : enlace;
         String vence = expiraEn == null ? "en 72 horas" : "el " + FECHA.format(expiraEn);
+        if (rol == Rol.COMPRADOR) {
+            String asunto = recuperar ? "Nueva contraseña para su portal de " + inmobiliaria
+                    : "Vea los inmuebles que " + inmobiliaria + " le compartió";
+            String cuerpo = """
+                    Hola, %s:
+
+                    %s
+
+                    %s
+
+                    Este enlace es personal, sirve una sola vez y vence %s. Después podrá entrar cuando quiera con su \
+                    correo y la contraseña que elija.
+
+                    Si no esperaba este mensaje, puede ignorarlo.
+
+                    %s
+                    %s""".formatted(nombre,
+                    recuperar ? "Para elegir una contraseña nueva para su portal, abra este enlace:"
+                            : ("En su portal de %s puede ver los inmuebles que su asesor le compartió, simular su compra "
+                            + "y escribirle directamente. Para crear su contraseña, abra este enlace:").formatted(inmobiliaria),
+                    link, vence, nombreQuienInvita, inmobiliaria);
+            return new Correo(email, asunto, cuerpo);
+        }
         if (rol == Rol.PROPIETARIO) {
             String asunto = recuperar ? "Nueva contraseña para su portal de " + inmobiliaria
                     : "Siga " + venta + " desde su portal";
