@@ -186,14 +186,14 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Módulo | Qué hace |
 |---|---|
 | Expedientes (RAG) | Sube un PDF, lo indexa de forma asíncrona y responde preguntas citando documento, página y sección. *(Fases 2–3)* |
-| Inventario de inmuebles | Filtra con SQL lo no negociable y ordena por similitud con lo que pidió el cliente. Cada inmueble puede tener una **foto de portada**: se sube en cualquier formato y tamaño, se reduce, y el asesor elige qué parte debe quedar visible al recortarla. *(Fase 4 y extra)* |
+| Inventario de inmuebles | Filtra con SQL lo no negociable y ordena por similitud con lo que pidió el cliente. Cada inmueble tiene una **galería de hasta 12 fotos y planos**: se suben en cualquier formato y tamaño, se reducen, el asesor las ordena (la primera foto es la portada) y elige qué parte de cada foto debe quedar visible al recortarla. *(Fase 4 y extra)* |
 | Presupuesto del cliente | Calcula la cuota máxima y el tope de compra con reglas configurables por inmobiliaria. *(Fase 4)* |
 | Simulador de crédito | Cuota fija (sistema francés) con tasas por banco cargadas por el ADMIN. *(Fase 4)* |
 | Reducción de crédito | Para un cliente que ya tiene crédito hipotecario: compara hasta tres abonos extraordinarios (mensual, anual o único) que reducen el plazo o la cuota, con el ahorro en intereses y seguros, la tabla de amortización y un estudio imprimible. Basado en el simulador del autor, reescrito en Java con pruebas. *(Extra)* |
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
 | Asistente con herramientas | Chat que elige entre siete herramientas (expedientes, inventario, presupuesto, crédito, reducción de crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
 | Usuarios y portal del propietario | El ADMIN crea al personal y el asesor invita al propietario que vende. Cada persona recibe un enlace de un solo uso (72 h) para crear su contraseña y después entra cuando quiera. El propietario solo ve **su portal**: cuánto le falta para firmar, qué documentos vencieron, cómo conseguirlos, y puede enviarlos; lo que envía queda en revisión hasta que el asesor lo confirma. *(Fase 8)* |
-| Portal del comprador | El asesor invita a un cliente y decide qué inmuebles le comparte (sin dirección exacta, código ni datos del propietario). El comprador ve su tope de compra con la razón de cada cifra, la foto y el plano de cada inmueble, **simula su compra** moviendo la cuota inicial y el plazo (las cifras las calcula el servidor), marca «me interesa» y le escribe al asesor, que ve esos mensajes en su inicio. *(Fase 9)* |
+| Portal del comprador | El asesor invita a un cliente y decide qué inmuebles le comparte (sin dirección exacta, código ni datos del propietario). El comprador ve su tope de compra con la razón de cada cifra, las fotos y los planos de cada inmueble en un carrusel, **simula su compra** moviendo la cuota inicial y el plazo (las cifras las calcula el servidor), marca «me interesa» y le escribe al asesor, que ve esos mensajes en su inicio. *(Fase 9)* |
 
 ## Guion de demo
 
@@ -215,7 +215,7 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 ## Limitaciones conocidas
 
 - **Invitaciones por correo:** en desarrollo llegan a Mailpit; en producción hay que configurar un servidor SMTP real (no se probó con uno). Si el correo no sale, quien invita puede copiar el enlace y compartirlo por otro medio.
-- **Las fotos de los inmuebles sí se guardan** (a diferencia de los PDF): solo dos copias reducidas (1600 y 480 píxeles, JPEG) en PostgreSQL, sin metadatos ni el archivo original. Predia no administra derechos de imagen: sube fotos que la inmobiliaria pueda usar.
+- **Las fotos y planos de los inmuebles sí se guardan** (a diferencia de los PDF): solo copias reducidas (fotos de 1600 píxeles y planos de 2000, más una miniatura de 480; JPEG) en PostgreSQL, sin metadatos ni el archivo original. Predia no administra derechos de imagen: sube fotos que la inmobiliaria pueda usar.
 - **No se conserva el PDF original.** Predia no puede mostrar ni verificar firmas, sellos, imágenes o tablas complejas del original. Si cambia la extracción o el OCR, hay que volver a subir el archivo; los embeddings, en cambio, se pueden regenerar desde el texto guardado.
 - **Dependencia del OCR:** la calidad de las páginas escaneadas depende de Tesseract y de la nitidez del documento.
 - Las vigencias de los documentos dependen de la fecha de expedición que confirma el asesor.
