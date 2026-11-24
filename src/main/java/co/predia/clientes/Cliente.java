@@ -120,6 +120,8 @@ public class Cliente {
     public List<String> getZonas() { return zonas; }
     public String getPreferencias() { return preferencias; }
     public boolean isAutorizacionDatos() { return autorizacionDatos; }
+    /** El asesor del cliente: quien registró su autorización de datos. */
+    public Long getAutorizacionRegistradaPor() { return autorizacionRegistradaPor; }
     public Instant getAutorizacionFecha() { return autorizacionFecha; }
     public Instant getCreadoEn() { return creadoEn; }
 }

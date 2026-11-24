@@ -22,7 +22,8 @@ public class SesionActual {
                 jwt.getClaimAsString(ServicioJwt.CLAIM_NOMBRE),
                 jwt.getClaimAsString(ServicioJwt.CLAIM_EMAIL),
                 Rol.valueOf(jwt.getClaimAsString(ServicioJwt.CLAIM_ROL)),
-                jwt.getClaim(ServicioJwt.CLAIM_PROPIETARIO) instanceof Number n ? n.longValue() : null);
+                jwt.getClaim(ServicioJwt.CLAIM_PROPIETARIO) instanceof Number n ? n.longValue() : null,
+                jwt.getClaim(ServicioJwt.CLAIM_CLIENTE) instanceof Number c ? c.longValue() : null);
     }
 
     /** Atajo para filtrar consultas: la inmobiliaria del usuario autenticado. */
