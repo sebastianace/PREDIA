@@ -18,9 +18,10 @@ import co.predia.inventario.InmuebleRepository;
 import co.predia.inventario.Operacion;
 import co.predia.inventario.foto.FotoInfo;
 import co.predia.inventario.foto.FotoInmuebleRepositorio;
-import co.predia.inventario.foto.PlanoInmuebleRepositorio;
+import co.predia.inventario.foto.ImagenInfo;
+import co.predia.inventario.foto.ImagenInmuebleRepositorio;
 import co.predia.inventario.foto.ServicioFotosInmueble;
-import co.predia.inventario.foto.ServicioPlanosInmueble;
+import co.predia.inventario.foto.ServicioImagenesInmueble;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,7 +62,7 @@ public class ServicioComprador {
                                  boolean aceptaMascotas, boolean propiedadHorizontal, boolean esVis,
                                  BigDecimal valorAdministracion, BigDecimal precio, String descripcion,
                                  boolean disponible, String nota, InmuebleCompartido.Interes interes, FotoInfo foto,
-                                 String planoVersion, Controles simulador, BigDecimal excedenteSobreTope) {
+                                 List<ImagenInfo> imagenes, Controles simulador, BigDecimal excedenteSobreTope) {
     }
 
     public record SolicitudDto(Long id, Long inmuebleId, String inmuebleTitulo, String mensaje, Instant creadaEn,
@@ -76,15 +77,14 @@ public class ServicioComprador {
     private final PresupuestoService presupuestos;
     private final SimuladorCompraService simulador;
     private final FotoInmuebleRepositorio fotos;
-    private final PlanoInmuebleRepositorio planos;
     private final ServicioFotosInmueble servicioFotos;
-    private final ServicioPlanosInmueble servicioPlanos;
+    private final ServicioImagenesInmueble servicioImagenes;
 
     public ServicioComprador(ClienteRepository clientes, UsuarioRepository usuarios, InmuebleRepository inmuebles,
                              InmuebleCompartidoRepository compartidos, SolicitudCompradorRepository solicitudes,
                              PresupuestoService presupuestos, SimuladorCompraService simulador,
-                             FotoInmuebleRepositorio fotos, PlanoInmuebleRepositorio planos,
-                             ServicioFotosInmueble servicioFotos, ServicioPlanosInmueble servicioPlanos) {
+                             FotoInmuebleRepositorio fotos,
+                             ServicioFotosInmueble servicioFotos, ServicioImagenesInmueble servicioImagenes) {
         this.clientes = clientes;
         this.usuarios = usuarios;
         this.inmuebles = inmuebles;
@@ -93,9 +93,8 @@ public class ServicioComprador {
         this.presupuestos = presupuestos;
         this.simulador = simulador;
         this.fotos = fotos;
-        this.planos = planos;
         this.servicioFotos = servicioFotos;
-        this.servicioPlanos = servicioPlanos;
+        this.servicioImagenes = servicioImagenes;
     }
 
     @Transactional(readOnly = true)
@@ -126,7 +125,7 @@ public class ServicioComprador {
                 i.isAceptaMascotas(), i.isPropiedadHorizontal(), i.isEsVis(), i.getValorAdministracion(),
                 i.getPrecioVenta(), i.getDescripcion(), disponible, s.getNota(), s.getInteres(),
                 fotos.info(c.getInmobiliariaId(), i.getId()).orElse(null),
-                planos.version(c.getInmobiliariaId(), i.getId()).orElse(null), controles,
+                servicioImagenes.listar(c.getInmobiliariaId(), i.getId()), controles,
                 CalculadoraCompra.excedenteSobreTope(i.getPrecioVenta(), tope(c)));
     }
 
@@ -177,11 +176,12 @@ public class ServicioComprador {
         return servicioFotos.leer(c.getInmobiliariaId(), inmuebleId, miniatura);
     }
 
+    /** Una imagen de la galería, solo si el inmueble se le compartió al comprador. */
     @Transactional(readOnly = true)
-    public PlanoInmuebleRepositorio.Plano plano(UsuarioActual comprador, Long inmuebleId) {
+    public ImagenInmuebleRepositorio.Bytes imagen(UsuarioActual comprador, Long inmuebleId, Long imagenId, boolean miniatura) {
         Cliente c = cliente(comprador);
         compartido(c, inmuebleId);
-        return servicioPlanos.leer(c.getInmobiliariaId(), inmuebleId);
+        return servicioImagenes.leer(c.getInmobiliariaId(), inmuebleId, imagenId, miniatura);
     }
 
     private PresupuestoComprador presupuesto(Cliente c) {
