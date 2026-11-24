@@ -4,6 +4,7 @@ import { api, ErrorApi } from '../api/cliente'
 import type { EstadoInmueble, FotoInmueble, Inmueble } from '../api/tipos'
 import { Aviso, Campo, CampoPesos, claseBotonPrimario, claseInput } from '../componentes/Formulario'
 import { SelectorFoto, type CambioFoto } from '../componentes/SelectorFoto'
+import { SelectorPlano, type CambioPlano } from '../componentes/SelectorPlano'
 
 const tipos = ['APARTAMENTO', 'CASA', 'LOCAL', 'OFICINA', 'LOTE'] as const
 const nombreTipo: Record<string, string> = { APARTAMENTO: 'Apartamento', CASA: 'Casa', LOCAL: 'Local', OFICINA: 'Oficina', LOTE: 'Lote' }
@@ -39,6 +40,9 @@ export function InmuebleForm() {
   const [foto, setFoto] = useState<FotoInmueble | null>(null)
   const [cambioFoto, setCambioFoto] = useState<CambioFoto | null>(null)
   const alCambiarFoto = useCallback((c: CambioFoto) => setCambioFoto(c), [])
+  const [planoVersion, setPlanoVersion] = useState<string | null>(null)
+  const [cambioPlano, setCambioPlano] = useState<CambioPlano | null>(null)
+  const alCambiarPlano = useCallback((c: CambioPlano) => setCambioPlano(c), [])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,7 +54,7 @@ export function InmuebleForm() {
       setArea(i.areaM2); setHabitaciones(i.habitaciones); setBanos(i.banos); setParqueaderos(i.parqueaderos)
       setMascotas(i.aceptaMascotas); setAdministracion(i.valorAdministracion)
       setPrecio(i.operacion === 'VENTA' ? i.precioVenta : i.canonArriendo)
-      setEsVis(i.esVis); setPh(i.propiedadHorizontal); setDescripcion(i.descripcion); setEstado(i.estado); setFoto(i.foto)
+      setEsVis(i.esVis); setPh(i.propiedadHorizontal); setDescripcion(i.descripcion); setEstado(i.estado); setFoto(i.foto); setPlanoVersion(i.planoVersion ?? null)
     }).catch((e) => setError(e.message))
   }, [edicion, id])
 
@@ -68,12 +72,13 @@ export function InmuebleForm() {
       const guardado = await api<Inmueble>(edicion ? `/inmuebles/${id}` : '/inmuebles', {
         method: edicion ? 'PUT' : 'POST', body: JSON.stringify(cuerpo),
       })
-      // El inmueble ya quedó guardado; la foto va aparte para que un fallo suyo no pierda lo demás.
+      // El inmueble ya quedó guardado; la foto y el plano van aparte para que un fallo suyo no pierda lo demás.
       try {
         await guardarFoto(guardado.id)
+        await guardarPlano(guardado.id)
       } catch (errFoto) {
-        const motivo = errFoto instanceof ErrorApi ? errFoto.message : 'No se pudo subir la foto.'
-        navegar(`/inventario/${guardado.id}/editar`, { state: { aviso: `El inmueble se guardó, pero la foto no: ${motivo}` } })
+        const motivo = errFoto instanceof ErrorApi ? errFoto.message : 'No se pudo subir la imagen.'
+        navegar(`/inventario/${guardado.id}/editar`, { state: { aviso: `El inmueble se guardó, pero la imagen no: ${motivo}` } })
         setGuardando(false)
         return
       }
@@ -100,6 +105,18 @@ export function InmuebleForm() {
     }
   }
 
+  const guardarPlano = async (inmuebleId: number) => {
+    const c = cambioPlano
+    if (!c) return
+    if (c.blob) {
+      const datos = new FormData()
+      datos.append('archivo', c.blob, 'plano.jpg')
+      await api(`/inmuebles/${inmuebleId}/plano`, { method: 'PUT', body: datos })
+    } else if (c.quitar && planoVersion) {
+      await api(`/inmuebles/${inmuebleId}/plano`, { method: 'DELETE' })
+    }
+  }
+
   const numero = (valor: number, set: (n: number) => void, min = 0, max = 30) => (idc: string) => (
     <input id={idc} type="number" min={min} max={max} value={valor} onChange={(e) => set(Number(e.target.value))} className={claseInput} />
   )
@@ -115,6 +132,7 @@ export function InmuebleForm() {
 
       <form onSubmit={guardar} className="mt-6 space-y-5">
         <SelectorFoto inmuebleId={edicion ? Number(id) : null} foto={foto} titulo={titulo} onCambio={alCambiarFoto} />
+        <SelectorPlano inmuebleId={edicion ? Number(id) : null} version={planoVersion} onCambio={alCambiarPlano} />
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Campo etiqueta="Código">{(idc) => <input id={idc} value={codigo} onChange={(e) => setCodigo(e.target.value)} required className={claseInput} />}</Campo>

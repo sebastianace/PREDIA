@@ -25,8 +25,8 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     setSistema(null)
   }, [])
 
-  // El estado de la IA es del personal; el propietario no lo necesita (y su rol no puede consultarlo).
-  const cargarSistema = (rol?: string) => rol === 'PROPIETARIO' ? Promise.resolve(setSistema(null))
+  // El estado de la IA es del personal; propietarios y compradores no lo necesitan (y su rol no puede consultarlo).
+  const cargarSistema = (rol?: string) => (rol === 'PROPIETARIO' || rol === 'COMPRADOR') ? Promise.resolve(setSistema(null))
     : api<EstadoSistema>('/sistema/estado').then(setSistema).catch(() => setSistema(null))
 
   useEffect(() => {

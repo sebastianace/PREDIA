@@ -15,7 +15,12 @@ const textoEstado: Record<AccesoPortal['estado'], string> = {
  * El acceso del propietario a su portal, desde el negocio. Invitar es una acción explícita del asesor: primero ve el
  * correo tal como saldrá y solo se envía cuando él lo confirma.
  */
-export function AccesoPortalPropietario({ propietarioId, nombre }: { propietarioId: number; nombre: string }) {
+export function AccesoPortalPropietario({ propietarioId, clienteId, nombre }:
+  { propietarioId?: number; clienteId?: number; nombre: string }) {
+  // El mismo componente administra el acceso de un propietario (su venta) y el de un cliente comprador (sus inmuebles).
+  const esCliente = clienteId != null
+  const base = esCliente ? `/clientes/${clienteId}` : `/propietarios/${propietarioId}`
+  const id = esCliente ? clienteId : propietarioId
   const [acceso, setAcceso] = useState<AccesoPortal | null>(null)
   const [vista, setVista] = useState<CorreoVistaPrevia | null>(null)
   const [resultado, setResultado] = useState<InvitacionPortal | null>(null)
@@ -23,13 +28,13 @@ export function AccesoPortalPropietario({ propietarioId, nombre }: { propietario
   const [trabajando, setTrabajando] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
-  const cargar = () => api<AccesoPortal>(`/propietarios/${propietarioId}/acceso`).then(setAcceso).catch(() => setAcceso(null))
-  useEffect(() => { void cargar() }, [propietarioId]) // eslint-disable-line react-hooks/exhaustive-deps
+  const cargar = () => api<AccesoPortal>(`${base}/acceso`).then(setAcceso).catch(() => setAcceso(null))
+  useEffect(() => { void cargar() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const prepararInvitacion = async () => {
     setError(null); setResultado(null)
     try {
-      setVista(await api<CorreoVistaPrevia>(`/propietarios/${propietarioId}/invitacion/vista-previa`))
+      setVista(await api<CorreoVistaPrevia>(`${base}/invitacion/vista-previa`))
     } catch (e) {
       setError(e instanceof ErrorApi ? e.message : 'No se pudo preparar la invitación.')
     }
@@ -38,7 +43,7 @@ export function AccesoPortalPropietario({ propietarioId, nombre }: { propietario
   const enviar = async () => {
     setTrabajando(true); setError(null)
     try {
-      const r = await api<InvitacionPortal>(`/propietarios/${propietarioId}/invitacion`, { method: 'POST' })
+      const r = await api<InvitacionPortal>(`${base}/invitacion`, { method: 'POST' })
       setResultado(r); setAcceso(r.acceso); setVista(null)
     } catch (e) {
       setError(e instanceof ErrorApi ? e.message : 'No se pudo enviar la invitación.')
@@ -51,7 +56,7 @@ export function AccesoPortalPropietario({ propietarioId, nombre }: { propietario
     if (!activo && !window.confirm(`¿Desactivar el acceso de ${nombre} a su portal? Su sesión se cerrará de inmediato.`)) return
     setTrabajando(true); setError(null)
     try {
-      setAcceso(await api<AccesoPortal>(`/propietarios/${propietarioId}/acceso`, { method: 'PUT', body: JSON.stringify({ activo }) }))
+      setAcceso(await api<AccesoPortal>(`${base}/acceso`, { method: 'PUT', body: JSON.stringify({ activo }) }))
     } catch (e) {
       setError(e instanceof ErrorApi ? e.message : 'No se pudo cambiar el acceso.')
     } finally {
@@ -68,10 +73,11 @@ export function AccesoPortalPropietario({ propietarioId, nombre }: { propietario
 
   return (
     <section className="mt-10" aria-labelledby="titulo-portal">
-      <h2 id="titulo-portal" className="text-lg font-semibold">Portal del propietario</h2>
+      <h2 id="titulo-portal" className="text-lg font-semibold">{esCliente ? 'Acceso del cliente' : 'Portal del propietario'}</h2>
       <p className="mt-1 text-sm text-niebla">
-        Desde su portal, {nombre} ve qué documentos faltan, cuáles vencieron y puede enviarlos. Lo que envía queda en
-        revisión hasta que tú lo confirmas.
+        {esCliente
+          ? `Desde su portal, ${nombre} ve su presupuesto y los inmuebles que tú le compartas, simula su compra y te deja mensajes. No ve la dirección exacta ni datos del propietario.`
+          : `Desde su portal, ${nombre} ve qué documentos faltan, cuáles vencieron y puede enviarlos. Lo que envía queda en revisión hasta que tú lo confirmas.`}
       </p>
 
       <div className="mt-4 rounded-panel border border-linea bg-white p-4 md:p-5">

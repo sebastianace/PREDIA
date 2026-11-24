@@ -1,4 +1,4 @@
-export type Rol = 'ADMIN' | 'ASESOR' | 'PROPIETARIO'
+export type Rol = 'ADMIN' | 'ASESOR' | 'PROPIETARIO' | 'COMPRADOR'
 
 export interface PerfilUsuario {
   id: number
@@ -56,6 +56,7 @@ export interface Inmueble {
   descripcion: string
   estado: EstadoInmueble
   foto: FotoInmueble | null
+  planoVersion?: string | null
 }
 
 export type EstadoIndexacion = 'EN_COLA' | 'PROCESANDO' | 'INDEXADO' | 'ERROR'
@@ -328,6 +329,7 @@ export interface ResumenDiario {
   }[]
   vencenEstaSemana: { negocioId: number; inmueble: string; documento: string; venceEl: string; diasRestantes: number }[]
   recordatoriosPorAprobar: number
+  solicitudesPorAtender: number
 }
 
 export interface CitaAsistente {
@@ -488,4 +490,131 @@ export interface RecordatorioPortal {
   asunto: string
   cuerpo: string
   enviadoEn: string
+}
+
+// ---- Portal del comprador (Fase 9) ----
+
+export type InteresComprador = 'ME_INTERESA' | 'NO_ME_INTERESA'
+
+export interface PresupuestoComprador {
+  topeDeCompra: number
+  limitante: 'AHORRO' | 'CAPACIDAD_DE_PAGO'
+  ahorro: number
+  pctCuotaInicial: number
+  cuotaMaxima: number
+  pctCuotaMaxima: number
+  plazoAnios: number
+  tasa: Tasa
+  avisos: string[]
+}
+
+export interface PerfilComprador {
+  nombre: string
+  asesor: { nombre: string; email: string } | null
+  presupuesto: PresupuestoComprador | null
+}
+
+export interface InmuebleResumenComprador {
+  id: number
+  titulo: string
+  barrio: string
+  ciudad: string
+  precio: number
+  areaM2: number
+  habitaciones: number
+  banos: number
+  parqueaderos: number
+  disponible: boolean
+  nota: string | null
+  interes: InteresComprador | null
+  foto: FotoInmueble | null
+}
+
+export interface ControlesSimulador {
+  cuotaInicialMinima: number
+  cuotaInicialMaxima: number
+  ahorroAlcanza: boolean
+  faltanteCuotaInicial: number
+  plazoPorDefecto: number
+  plazoMinimo: number
+  plazoMaximo: number
+}
+
+export interface FichaComprador {
+  id: number
+  titulo: string
+  tipo: string
+  barrio: string
+  ciudad: string
+  estrato: number | null
+  areaM2: number
+  habitaciones: number
+  banos: number
+  parqueaderos: number
+  aceptaMascotas: boolean
+  propiedadHorizontal: boolean
+  esVis: boolean
+  valorAdministracion: number
+  precio: number
+  descripcion: string
+  disponible: boolean
+  nota: string | null
+  interes: InteresComprador | null
+  foto: FotoInmueble | null
+  planoVersion: string | null
+  simulador: ControlesSimulador | null
+}
+
+export interface SimulacionCompra {
+  precio: number
+  cuotaInicial: number
+  cuotaInicialMinima: number
+  cuotaInicialMaxima: number
+  ahorroAlcanza: boolean
+  faltanteCuotaInicial: number
+  montoFinanciado: number
+  plazoAnios: number
+  numeroCuotas: number
+  cuotaMensual: number
+  totalAPagar: number
+  totalIntereses: number
+  cuotaMaxima: number
+  porcentajeSobreIngreso: number | null
+  cumpleCuotaMaxima: boolean
+  excesoMensual: number
+  veredicto: string
+  tasa: Tasa
+  aviso: string
+}
+
+export interface SolicitudDelComprador {
+  id: number
+  inmuebleId: number | null
+  inmuebleTitulo: string | null
+  mensaje: string
+  creadaEn: string
+  atendida: boolean
+}
+
+export interface CompartidoConCliente {
+  inmuebleId: number
+  titulo: string
+  barrio: string
+  ciudad: string
+  precio: number
+  estado: EstadoInmueble
+  nota: string | null
+  compartidoEn: string
+  interes: InteresComprador | null
+  interesEn: string | null
+}
+
+export interface SolicitudPendiente {
+  id: number
+  clienteId: number
+  clienteNombre: string
+  inmuebleId: number | null
+  inmuebleTitulo: string | null
+  mensaje: string
+  creadaEn: string
 }

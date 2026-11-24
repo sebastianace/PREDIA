@@ -32,7 +32,7 @@ export function Activar() {
       .catch((e) => setInvalido(e instanceof ErrorApi ? e.message : 'No se pudo abrir el enlace.'))
   }, [token])
 
-  const usted = vista?.rol === 'PROPIETARIO'
+  const usted = vista?.rol === 'PROPIETARIO' || vista?.rol === 'COMPRADOR'
   const coinciden = clave === repetida
   const puede = clave.length >= MINIMO && coinciden && !enviando
 
@@ -43,7 +43,7 @@ export function Activar() {
     try {
       const r = await api<RespuestaLogin>('/auth/activar', { method: 'POST', body: JSON.stringify({ token, password: clave }) })
       await entrarCon(r)
-      navegar(r.usuario.rol === 'PROPIETARIO' ? '/portal' : '/', { replace: true })
+      navegar(r.usuario.rol === 'PROPIETARIO' ? '/portal' : r.usuario.rol === 'COMPRADOR' ? '/comprador' : '/', { replace: true })
     } catch (err) {
       setError(err instanceof ErrorApi ? err.message : 'No se pudo guardar la contraseña.')
       setEnviando(false)

@@ -129,6 +129,13 @@ export function Inicio() {
             </div>
           )}
 
+          {resumen && resumen.solicitudesPorAtender > 0 && (
+            <Link to="/solicitudes" className="mt-6 flex items-center justify-between gap-3 border-l-2 border-cobalto bg-cobalto-suave px-4 py-3 text-sm text-prusia">
+              <span><strong>{resumen.solicitudesPorAtender}</strong> mensaje{resumen.solicitudesPorAtender === 1 ? '' : 's'} de compradores por atender</span>
+              <span className="font-medium">Ver</span>
+            </Link>
+          )}
+
           {resumen && resumen.recordatoriosPorAprobar > 0 && (
             <Link to="/recordatorios" className="mt-6 flex items-center justify-between gap-3 border-l-2 border-cobalto bg-cobalto-suave px-4 py-3 text-sm text-prusia">
               <span><strong>{resumen.recordatoriosPorAprobar}</strong> recordatorio{resumen.recordatoriosPorAprobar === 1 ? '' : 's'} por aprobar</span>
