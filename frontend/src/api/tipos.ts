@@ -528,6 +528,8 @@ export interface InmuebleResumenComprador {
   nota: string | null
   interes: InteresComprador | null
   foto: FotoInmueble | null
+  /** Cuánto pasa el precio de su tope de compra (calculado en el servidor); null si no lo pasa. */
+  excedenteSobreTope: number | null
 }
 
 export interface ControlesSimulador {
@@ -563,6 +565,7 @@ export interface FichaComprador {
   foto: FotoInmueble | null
   planoVersion: string | null
   simulador: ControlesSimulador | null
+  excedenteSobreTope: number | null
 }
 
 export interface SimulacionCompra {

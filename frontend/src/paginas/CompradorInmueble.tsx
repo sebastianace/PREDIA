@@ -7,6 +7,7 @@ import { CifraAcotada } from '../componentes/Cota'
 import { EncabezadoComprador } from '../componentes/EncabezadoComprador'
 import { Aviso } from '../componentes/Formulario'
 import { FotoDeInmueble } from '../componentes/FotoInmueble'
+import { AvisoTope } from '../componentes/AvisoTope'
 import { Terreno } from '../componentes/Terreno'
 import { formatoPesos, formatoPorcentaje, formatoTasaEa } from '../formato'
 
@@ -18,6 +19,23 @@ const pasoDe = (min: number, max: number) => (max - min >= 10_000_000 ? 1_000_00
  * No muestra el código interno, la dirección exacta ni nada del propietario. Las cifras del simulador las calcula
  * el servidor (con una pequeña espera al mover los controles), nunca el navegador.
  */
+/** Barras que ocupan el lugar de las cifras mientras llegan del servidor. */
+function EsqueletoSimulacion() {
+  const barra = 'rounded bg-white/15 motion-safe:animate-pulse'
+  return (
+    <div role="status" aria-label="Calculando su cuota">
+      <div className={`${barra} h-3 w-24`} />
+      <div className={`${barra} mt-3 h-8 w-48`} />
+      <div className={`${barra} mt-3 h-3 w-3/4`} />
+      <div className="mt-5 space-y-3">
+        <div className={`${barra} h-3 w-full`} />
+        <div className={`${barra} h-3 w-full`} />
+        <div className={`${barra} h-3 w-full`} />
+      </div>
+    </div>
+  )
+}
+
 export function CompradorInmueble() {
   const { id } = useParams()
   const [ficha, setFicha] = useState<FichaComprador | null>(null)
@@ -26,6 +44,7 @@ export function CompradorInmueble() {
   const [plazo, setPlazo] = useState(20)
   const [sim, setSim] = useState<SimulacionCompra | null>(null)
   const [errorSim, setErrorSim] = useState<string | null>(null)
+  const [calculando, setCalculando] = useState(false)
   const [verPlano, setVerPlano] = useState(false)
 
   useEffect(() => {
@@ -49,11 +68,13 @@ export function CompradorInmueble() {
   useEffect(() => {
     if (!c || !ficha) return
     const mia = ++secuencia.current
+    setCalculando(true)
     const t = setTimeout(() => {
       api<SimulacionCompra>(`/comprador/inmuebles/${ficha.id}/simulacion`, {
         method: 'POST', body: JSON.stringify({ cuotaInicial, plazoAnios: plazo }),
       }).then((s) => { if (mia === secuencia.current) { setSim(s); setErrorSim(null) } })
         .catch((e) => { if (mia === secuencia.current) setErrorSim(e instanceof ErrorApi ? e.message : 'No se pudo calcular.') })
+        .finally(() => { if (mia === secuencia.current) setCalculando(false) })
     }, 300)
     return () => clearTimeout(t)
   }, [c, ficha, cuotaInicial, plazo])
@@ -88,6 +109,9 @@ export function CompradorInmueble() {
               <h1 className="ancha mt-5 text-[30px] font-semibold leading-[1.05] md:text-4xl">{ficha.titulo}</h1>
               <p className="mt-1 text-niebla">{ficha.barrio}, {ficha.ciudad}</p>
               <p className="ancha cifra mt-3 text-3xl font-semibold text-tinta">{formatoPesos(ficha.precio)}</p>
+              {ficha.disponible && ficha.excedenteSobreTope != null && (
+                <AvisoTope excedente={ficha.excedenteSobreTope} conOrientacion />
+              )}
               {!ficha.disponible && <div className="mt-3"><Aviso tipo="info">Este inmueble ya no está disponible. Su asesor puede mostrarle otras opciones.</Aviso></div>}
 
               <dl className="mt-5 grid grid-cols-2 gap-x-6 text-sm sm:grid-cols-3">
@@ -162,8 +186,9 @@ export function CompradorInmueble() {
 
                     <div className="mt-7 min-h-44" aria-live="polite">
                       {errorSim && <Aviso tipo="error">{errorSim}</Aviso>}
+                      {!sim && !errorSim && <EsqueletoSimulacion />}
                       {sim && (
-                        <>
+                        <div className={calculando ? 'opacity-50 transition-opacity' : 'transition-opacity'} aria-busy={calculando}>
                           <CifraAcotada tono="sobre-azul" etiqueta="Cuota mensual" valor={formatoPesos(sim.cuotaMensual)}
                             razon={sim.porcentajeSobreIngreso != null ? `Es el ${formatoPorcentaje(sim.porcentajeSobreIngreso)} de su ingreso.` : undefined} />
                           <p className={`mt-3 text-sm font-medium ${sim.cumpleCuotaMaxima ? 'text-[#9be7b5]' : 'text-[#ffd28a]'}`}>{sim.veredicto}</p>
@@ -182,7 +207,7 @@ export function CompradorInmueble() {
                           <p className="mt-3 text-xs text-white/60">
                             Tasa de {sim.tasa.banco}: {formatoTasaEa(sim.tasa.tasaEa)}{sim.tasa.esEjemplo && ' (de ejemplo)'}. {sim.aviso}
                           </p>
-                        </>
+                        </div>
                       )}
                     </div>
                   </>

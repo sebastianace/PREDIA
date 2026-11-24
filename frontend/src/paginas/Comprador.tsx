@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { InmuebleResumenComprador, InteresComprador, PerfilComprador, SolicitudDelComprador } from '../api/tipos'
 import { CajaMensajeAsesor } from '../componentes/CajaMensajeAsesor'
+import { AvisoTope } from '../componentes/AvisoTope'
 import { CifraAcotada } from '../componentes/Cota'
 import { EncabezadoComprador } from '../componentes/EncabezadoComprador'
 import { Aviso } from '../componentes/Formulario'
@@ -102,6 +103,7 @@ export function Comprador() {
                     <p className="truncate text-sm text-niebla">{i.barrio}, {i.ciudad} · {i.habitaciones} hab · {i.areaM2} m²</p>
                     <p className="ancha cifra mt-2 text-2xl font-semibold text-tinta">{formatoPesos(i.precio)}</p>
                     {!i.disponible && <p className="mt-1 text-sm font-medium text-sello">Este inmueble ya no está disponible.</p>}
+                    {i.disponible && i.excedenteSobreTope != null && <AvisoTope excedente={i.excedenteSobreTope} />}
                     {i.nota && <p className="mt-2 border-l-2 border-cobalto pl-3 text-sm text-grafito [overflow-wrap:anywhere]">{i.nota}</p>}
                   </div>
                 </Link>
