@@ -1,5 +1,14 @@
 # Progreso de Predia
 
+## Extra — Pulido visual de Negocios, Clientes y Activar cuenta ✅ (24/11/2026)
+
+**Rama:** `feature/rediseno-pantallas` (sale de `feature/galeria-inmuebles`). Boceto aprobado antes de programar; Sebastián pidió el cambio del panel azul de «Activar cuenta» (un dibujo en vez de curvas sueltas) y se mostraron dos opciones: eligió el edificio.
+
+- **Negocios:** cada negocio es una tarjeta con cabecera azul de Prusia y curvas de nivel, semáforo, avatares de quien vende y quien compra, la cota de avance y la firma tentativa. Arriba, tres resúmenes (negocios abiertos, documentos por resolver, próxima firma) que son sumas de lo que ya entrega el servidor.
+- **Clientes:** tarjeta con avatar de iniciales, franja cobalto, etiquetas (intención, zona, habitaciones) y, a la derecha, el ingreso y el ahorro.
+- **Activar cuenta:** el panel azul lleva la **fachada de un edificio dibujada con líneas blancas** (pisos, ventanas, entrada, suelo y una cota vertical que marca el «Apto 1102»), que se traza al entrar; la parte del formulario es una tarjeta con pasos, lo que podrá hacer el propietario o el comprador, mostrar u ocultar la contraseña y un medidor orientativo (la única regla que se exige sigue siendo el mínimo de 10 caracteres).
+- Verificado en el navegador, en escritorio y en celular (375 px); en celular el chip y el lema del panel se ocultan para no pisar el dibujo. `npm run build` sin errores.
+
 ## Extra — Galería de fotos y planos por inmueble ✅ (24/11/2026)
 
 **Rama:** `feature/galeria-inmuebles` (sale de `feature/portal-comprador`; su PR apunta a esa rama hasta que se fusione). Boceto aprobado antes de programar.
