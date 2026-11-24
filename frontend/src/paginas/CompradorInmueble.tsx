@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, apiBlob, ErrorApi } from '../api/cliente'
+import { api, ErrorApi } from '../api/cliente'
 import type { FichaComprador, InteresComprador, SimulacionCompra } from '../api/tipos'
 import { CajaMensajeAsesor } from '../componentes/CajaMensajeAsesor'
 import { CifraAcotada } from '../componentes/Cota'
 import { EncabezadoComprador } from '../componentes/EncabezadoComprador'
 import { Aviso } from '../componentes/Formulario'
-import { FotoDeInmueble } from '../componentes/FotoInmueble'
+import { CarruselInmueble } from '../componentes/CarruselInmueble'
 import { AvisoTope } from '../componentes/AvisoTope'
 import { Terreno } from '../componentes/Terreno'
 import { formatoPesos, formatoPorcentaje, formatoTasaEa } from '../formato'
@@ -15,7 +15,7 @@ import { formatoPesos, formatoPorcentaje, formatoTasaEa } from '../formato'
 const pasoDe = (min: number, max: number) => (max - min >= 10_000_000 ? 1_000_000 : 100_000)
 
 /**
- * La ficha de un inmueble compartido: foto, plano y datos a la izquierda; «Simule su compra» a la derecha.
+ * La ficha de un inmueble compartido: fotos y planos en un carrusel, y los datos a la izquierda; «Simule su compra» a la derecha.
  * No muestra el código interno, la dirección exacta ni nada del propietario. Las cifras del simulador las calcula
  * el servidor (con una pequeña espera al mover los controles), nunca el navegador.
  */
@@ -45,7 +45,6 @@ export function CompradorInmueble() {
   const [sim, setSim] = useState<SimulacionCompra | null>(null)
   const [errorSim, setErrorSim] = useState<string | null>(null)
   const [calculando, setCalculando] = useState(false)
-  const [verPlano, setVerPlano] = useState(false)
 
   useEffect(() => {
     api<FichaComprador>(`/comprador/inmuebles/${id}`).then((f) => {
@@ -101,10 +100,7 @@ export function CompradorInmueble() {
         {ficha && (
           <div className="mt-3 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
             <div className="min-w-0">
-              <div className="relative isolate aspect-[4/3] overflow-hidden rounded-panel bg-prusia">
-                <Terreno semilla={ficha.id * 31 + 7} trazar niveles={12} className="absolute inset-0 -z-20 size-full text-trazo opacity-40" />
-                <FotoDeInmueble inmuebleId={ficha.id} foto={ficha.foto} tam="grande" titulo={ficha.titulo} base={`/comprador/inmuebles/${ficha.id}/foto`} />
-              </div>
+              <CarruselInmueble ruta={`/comprador/inmuebles/${ficha.id}/imagenes`} imagenes={ficha.imagenes} titulo={ficha.titulo} semilla={ficha.id * 31 + 7} />
 
               <h1 className="ancha mt-5 text-[30px] font-semibold leading-[1.05] md:text-4xl">{ficha.titulo}</h1>
               <p className="mt-1 text-niebla">{ficha.barrio}, {ficha.ciudad}</p>
@@ -139,13 +135,6 @@ export function CompradorInmueble() {
                 <div className="mt-5 border-l-2 border-cobalto bg-cobalto-suave px-4 py-3 text-sm text-prusia">
                   <p className="rotulo text-cobalto-hondo">Nota de su asesor</p>
                   <p className="mt-1 [overflow-wrap:anywhere]">{ficha.nota}</p>
-                </div>
-              )}
-
-              {ficha.planoVersion && (
-                <div className="mt-6">
-                  <h2 className="ancha text-lg font-semibold">Plano</h2>
-                  <MiniaturaPlano inmuebleId={ficha.id} version={ficha.planoVersion} titulo={ficha.titulo} onAbrir={() => setVerPlano(true)} />
                 </div>
               )}
             </div>
@@ -229,62 +218,6 @@ export function CompradorInmueble() {
           </div>
         )}
       </main>
-      {verPlano && ficha && <VisorPlano inmuebleId={ficha.id} version={ficha.planoVersion ?? ''} titulo={ficha.titulo} onCerrar={() => setVerPlano(false)} />}
-    </div>
-  )
-}
-
-// El plano se descarga con la sesión (un <img src> no envía el JWT) y se reutiliza mientras no cambie su versión.
-const cachePlano = new Map<string, Promise<string>>()
-function usePlano(inmuebleId: number, version: string): string | null {
-  const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => {
-    const clave = `${inmuebleId}:${version}`
-    let vigente = true
-    let p = cachePlano.get(clave)
-    if (!p) {
-      p = apiBlob(`/comprador/inmuebles/${inmuebleId}/plano`).then((b) => URL.createObjectURL(b))
-      p.catch(() => cachePlano.delete(clave))
-      cachePlano.set(clave, p)
-    }
-    p.then((u) => { if (vigente) setUrl(u) }).catch(() => { if (vigente) setUrl(null) })
-    return () => { vigente = false }
-  }, [inmuebleId, version])
-  return url
-}
-
-function MiniaturaPlano({ inmuebleId, version, titulo, onAbrir }: { inmuebleId: number; version: string; titulo: string; onAbrir: () => void }) {
-  const url = usePlano(inmuebleId, version)
-  return (
-    <button onClick={onAbrir} disabled={!url} className="mt-3 block w-full overflow-hidden rounded-panel border border-linea bg-white p-2 text-left hover:border-niebla">
-      {url ? <img src={url} alt={`Plano de ${titulo}`} className="max-h-72 w-full object-contain" /> : <span className="block py-16 text-center text-sm text-niebla">Cargando plano…</span>}
-      <span className="mt-2 block text-center text-sm font-medium text-cobalto">Ver plano completo</span>
-    </button>
-  )
-}
-
-/** El plano a pantalla completa; un toque lo amplía para ver los detalles y otro lo ajusta de nuevo. */
-function VisorPlano({ inmuebleId, version, titulo, onCerrar }: { inmuebleId: number; version: string; titulo: string; onCerrar: () => void }) {
-  const url = usePlano(inmuebleId, version)
-  const [ampliado, setAmpliado] = useState(false)
-  useEffect(() => {
-    const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') onCerrar() }
-    window.addEventListener('keydown', alTeclear)
-    return () => window.removeEventListener('keydown', alTeclear)
-  }, [onCerrar])
-  return (
-    <div role="dialog" aria-modal="true" aria-label={`Plano de ${titulo}`} className="fixed inset-0 z-50 flex flex-col bg-black/85">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">
-        <p className="min-w-0 truncate text-sm">Plano de {titulo}</p>
-        <button autoFocus onClick={onCerrar} className="rounded-control border border-white/40 px-3 py-1.5 text-sm hover:bg-white/10">Cerrar</button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-3">
-        {url && (
-          <img src={url} alt={`Plano de ${titulo}`} onClick={() => setAmpliado((a) => !a)}
-            className={`mx-auto rounded-sm bg-white ${ampliado ? 'max-w-none cursor-zoom-out' : 'max-h-full max-w-full cursor-zoom-in object-contain'}`}
-            style={ampliado ? { width: '220%' } : undefined} />
-        )}
-      </div>
     </div>
   )
 }

@@ -22,6 +22,11 @@ const trazos = {
   mas: 'M5 7h14M5 12h14M5 17h14',
   chulo: 'M4.5 12.5 9.5 17.5 19.5 6.5',
   equis: 'M6 6l12 12M18 6 6 18',
+  izquierda: 'M14.5 5.5 8 12l6.5 6.5',
+  derecha: 'M9.5 5.5 16 12l-6.5 6.5',
+  foto: 'M4.5 5.5h15v13h-15zM4.5 15.5l4.5-4.5 4 4 2.5-2.5 4 4M15.5 9.5h.01',
+  regla: 'M3.5 16.5 16.5 3.5l4 4-13 13zM7.5 12.5l2 2M10.5 9.5l2 2M13.5 6.5l2 2',
+  mas2: 'M12 5v14M5 12h14',
 } as const
 
 export type NombreIcono = keyof typeof trazos

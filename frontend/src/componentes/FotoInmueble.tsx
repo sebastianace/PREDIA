@@ -32,6 +32,18 @@ export function useUrlFoto(inmuebleId: number, foto: Foto | null | undefined, ta
   return url
 }
 
+/** Una imagen de la galería por su ruta de API (`.../imagenes/{id}`); se vuelve a pedir solo si cambia su `version`. */
+export function useUrlImagen(ruta: string | null, version: string | undefined, tam: Tamano): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!ruta || !version) { setUrl(null); return }
+    let vigente = true
+    urlDeFoto(0, version, tam, ruta).then((u) => { if (vigente) setUrl(u) }).catch(() => { if (vigente) setUrl(null) })
+    return () => { vigente = false }
+  }, [ruta, version, tam])
+  return url
+}
+
 /**
  * La foto de un inmueble recortada para llenar su contenedor, sea horizontal, vertical, cuadrada o panorámica:
  * `object-fit: cover` con el punto de interés (`foco`) que eligió el asesor. Debe ir dentro de un contenedor
