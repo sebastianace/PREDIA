@@ -31,6 +31,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 6 | Asistente con herramientas (tool calling) | ✅ Listo |
 | 7 | Pulido, guion de demo y pruebas finales | ✅ Listo |
 | 8 | Usuarios, invitaciones y portal del propietario | ✅ Listo |
+| 9 | Portal del comprador: inmuebles compartidos y simulador de compra | ✅ Listo |
 | Extra | Reducción de crédito con abonos extraordinarios (Ley 546 de 1999) | ✅ Listo |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
@@ -138,8 +139,9 @@ Con Docker Desktop abierto y el `.env` listo, el script levanta PostgreSQL, Mail
 | Rol | Quién es | Qué puede hacer |
 |---|---|---|
 | ADMIN | Personal de la inmobiliaria | Todo, y además: usuarios, tasas, parámetros, catálogo de requisitos y regenerar vectores |
-| ASESOR | Personal de la inmobiliaria | El trabajo diario, e invitar al propietario al portal |
+| ASESOR | Personal de la inmobiliaria | El trabajo diario, e invitar al propietario y al comprador a su portal |
 | PROPIETARIO | El vendedor de un inmueble | Solo su portal (`/portal`): su venta, sus documentos y los recordatorios que se le enviaron |
+| COMPRADOR | Un cliente que quiere comprar | Solo su portal (`/comprador`): su presupuesto, los inmuebles que el asesor le compartió y el simulador de compra |
 
 Nadie se registra solo: se entra por invitación. Desactivar a alguien cierra su sesión al instante.
 
@@ -191,6 +193,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
 | Asistente con herramientas | Chat que elige entre siete herramientas (expedientes, inventario, presupuesto, crédito, reducción de crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
 | Usuarios y portal del propietario | El ADMIN crea al personal y el asesor invita al propietario que vende. Cada persona recibe un enlace de un solo uso (72 h) para crear su contraseña y después entra cuando quiera. El propietario solo ve **su portal**: cuánto le falta para firmar, qué documentos vencieron, cómo conseguirlos, y puede enviarlos; lo que envía queda en revisión hasta que el asesor lo confirma. *(Fase 8)* |
+| Portal del comprador | El asesor invita a un cliente y decide qué inmuebles le comparte (sin dirección exacta, código ni datos del propietario). El comprador ve su tope de compra con la razón de cada cifra, la foto y el plano de cada inmueble, **simula su compra** moviendo la cuota inicial y el plazo (las cifras las calcula el servidor), marca «me interesa» y le escribe al asesor, que ve esos mensajes en su inicio. *(Fase 9)* |
 
 ## Guion de demo
 

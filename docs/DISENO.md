@@ -433,7 +433,7 @@ Al arrancar, si **no existe ningún ADMIN** y están definidas `PREDIA_ADMIN_EMA
 
 Portal del comprador y plan de pagos (Fase 9); un «olvidé mi contraseña» autónomo, sin pasar por el asesor; línea de tiempo, agenda y avisos; que el propietario hable con el asistente.
 
-## 11. Fase 9 — Portal del comprador (propuesta, pendiente de revisión)
+## 11. Fase 9 — Portal del comprador (aprobada e implementada)
 
 **Objetivo.** Que el comprador (por ejemplo «Paola y Juan») pueda ver los inmuebles que su asesor le compartió, con una ficha clara (foto, plano, datos) y un **simulador de compra** que le diga qué le cuesta y si le alcanza. El comprador **no navega el inventario**: solo ve lo que el asesor decide mostrarle. Entra por invitación, como el propietario.
 
