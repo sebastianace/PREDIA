@@ -1,5 +1,17 @@
 # Progreso de Predia
 
+## Extra — Perfiles y equipo, entrega 1: fotos de perfil ✅ (25/11/2026)
+
+**Rama:** `feature/perfiles-y-equipo` (sale de `release/1.2.0`). Diseño y boceto aprobados antes de programar; esta es la primera de dos entregas (la segunda es el cierre de negocios, «Mi perfil» y «Equipo»).
+
+- **Fotos de perfil de clientes, vendedores y asesores.** Tabla aparte `foto_perfil` (V10) para que listar personas nunca cargue bytes. `ProcesadorImagen.procesarPerfil` recorta el mayor cuadrado alrededor de un punto de interés elegido por el asesor y guarda dos copias JPEG (512 px y miniatura de 128 px); nunca se conserva el archivo original ni sus metadatos. Una foto más pequeña no se amplía.
+- **Reglas.** Es un dato personal (Ley 1581 de 2012): la foto de un cliente o vendedor solo se guarda si autorizó el tratamiento de sus datos, y **al eliminar a un cliente (derecho de supresión) su foto se borra con él**. Una persona de otra inmobiliaria responde 404, igual que una inexistente. La foto de un asesor solo la cambia él mismo o un administrador; los demás del personal sí la ven (por eso vive bajo `/api/perfil`, ya que `/api/usuarios` es solo del administrador).
+- **Sin fotos viejas.** Se sirven con `no-cache` y ETag, y la interfaz pide cada foto con su versión (`v=`), el mismo criterio que corrigió las imágenes de los inmuebles. Las listas, la sesión (`/api/auth/yo`) y los negocios traen `fotoVersion`.
+- **Interfaz.** `Avatar` muestra la foto o, si no hay, las iniciales de siempre. `CampoFotoPerfil` (subir, cambiar, quitar y deshacer) con recorte circular que se arrastra, o se mueve con las flechas del teclado, para elegir qué parte se ve; no sube nada hasta guardar a la persona y, si la foto falla, la persona queda guardada y se avisa en su ficha. Aparece en el formulario de cliente, en el de vendedor (Nuevo negocio), en la lista de clientes, la ficha del cliente, los negocios y el menú del asesor.
+- **Pruebas:** 12 nuevas (`ProcesadorPerfilTest` 5 y `FotoPerfilApiTest` 7: subir, ver cuadrada, revalidar, reemplazar, quitar, aislamiento entre inmobiliarias, permisos de asesor y administrador, archivos inválidos, supresión del cliente y versiones en el negocio).
+- **Verificado en el navegador** contra una copia de la base (borrada al terminar): cliente nuevo con foto movida con el ratón, quitar la foto desde «Editar», vendedor con foto al abrir un negocio y la foto de Laura en el menú.
+- **Falta (entrega 2):** pantalla «Mi perfil» para que el asesor edite su nombre y su foto, cerrar negocios (que cuenta las ventas) y «Equipo» para el administrador.
+
 ## Versión 1.2.0 ✅ (25/11/2026)
 
 **Rama:** `release/1.2.0` (sale de `develop`). Sube la versión del backend (`pom.xml`), del frontend (`package.json`) y de la guía de despliegue, y reúne lo que se fusionó en `develop` desde la 1.1.0:
