@@ -1,0 +1,16 @@
+[1;34m▸[0m Levantando PostgreSQL y Mailpit...
+[1;34m▸[0m Arrancando el backend (Flyway migra y se siembra la demo)...
+[1;34m▸[0m Arrancando el frontend...
+[1;34m▸[0m Esperando al backend (puede tardar 20-40 s)...
+
+[1;32mPredia está listo[0m — con IA (OPENAI_API_KEY configurada)
+
+  App        http://localhost:5173
+  API        http://localhost:8080   (Swagger: /swagger-ui.html)
+  Correos    http://localhost:8026   (Mailpit)
+
+  Usuarios   laura@altos.test (ASESOR) · admin@altos.test (ADMIN)
+             contraseña: DEMO_PASSWORD de tu .env
+
+  Registros  logs/backend.log · logs/frontend.log
+  Ctrl+C para apagar.

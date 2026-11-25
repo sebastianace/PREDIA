@@ -1,5 +1,23 @@
 # Progreso de Predia
 
+## Preparación de la presentación ✅ (25/11/2026)
+
+**Rama:** `fix/seccion-en-citas` (sale de `develop`). Ensayo completo del recorrido de la demo en la instancia real (Ollama, PostgreSQL y Mailpit), por la API y por la interfaz.
+
+- **Umbral de similitud en 0,35** (parámetro de la inmobiliaria; no tiene pantalla, se cambia con `PUT /api/parametros` como ADMIN): con `bge-m3` corta lo ajeno y conserva las paráfrasis (ver la sección de Ollama).
+- **Citas con la sección correcta (error encontrado al ensayar).** El fragmentador guardaba como sección el *último* encabezado visto; como los PDF de la demo caben en un solo fragmento, toda cita decía «CLÁUSULA QUINTA. DEPÓSITO» aunque el parqueadero estuviera en otra cláusula. Ahora cada bloque recuerda su sección y el fragmento cita lo que contiene: una sola, o el rango «primera — última». También se corrigió que el encabezado del bloque siguiente se le atribuyera al fragmento que se cerraba. 3 pruebas nuevas y 3 ajustadas; los PDF ya indexados deben subirse de nuevo para tener la sección nueva.
+- **Recordatorios mejor redactados con Ollama (error encontrado al ensayar).** `qwen3:8b` escribió «le recuerdo que aún pendiente los siguientes documentos». La instrucción ahora fija la estructura del correo y pide frases completas con verbos conjugados; en tres borradores seguidos salieron gramaticales y consistentes. El validador sigue exigiendo todos los documentos pendientes y ningún número nuevo, y si falla se usa la plantilla.
+- **Modelos cargados 2 horas** (`OLLAMA_KEEP_ALIVE`): Ollama los descarga a los 5 minutos y la primera pregunta tras una pausa tardaba mucho más.
+- **Lista de comprobación antes de presentar** en el README (guion de demo).
+
+### Ensayo (todo con Ollama: `qwen3:8b` + `bge-m3`)
+- RAG: parqueadero → sí, con cita; canon, duración y mascotas → respuesta con cita; «mundial de 2014» → «no tengo información» **sin llamar al modelo** (0,04 s).
+- Asistente (6–15 s cada una, `cifrasSinRespaldo` vacío): las tres preguntas del profesor, y «redacta un recordatorio» dejó un BORRADOR sin enviar nada.
+- Cierre: al subir el paz y salvo al negocio, el modelo lo clasificó (`PAZ_Y_SALVO_ADMINISTRACION`, 0,95) y el requisito quedó **SUGERIDO** por la IA; el semáforo siguió en «Faltan 2 documentos» hasta que el asesor lo confirme. Se reabrió y se borró el documento.
+- Interfaz: inicio, expedientes (con la cita), clientes, negocios, recordatorios y asistente sin errores de consola; el asistente muestra «Consultando las herramientas de Predia…» durante la espera.
+- Suite: 264 pruebas, todas pasan.
+- Todo lo hecho en el ensayo se deshizo: documentos, borradores, requisitos y Mailpit quedaron como al empezar.
+
 ## Extra — IA local con Ollama ✅ (25/11/2026)
 
 **Rama:** `feature/proveedor-ollama` (sale de `develop`). Diseño aprobado antes de programar. Predia puede correr con modelos locales: nada de lo que se indexa o se pregunta sale del equipo y no hay costo por uso.

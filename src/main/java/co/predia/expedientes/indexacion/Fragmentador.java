@@ -41,20 +41,15 @@ public class Fragmentador {
     }
 
     public List<FragmentoCandidato> fragmentar(List<PaginaTexto> paginas) {
-        List<Bloque> bloques = construirBloques(paginas);
+        List<Bloque> bloques = asignarSecciones(construirBloques(paginas));
         List<FragmentoCandidato> candidatos = new ArrayList<>();
         List<Bloque> buffer = new ArrayList<>();
-        // La sección de un fragmento es el último encabezado visto hasta cerrarlo (puede cruzar secciones).
-        String seccionActual = null;
 
         for (Bloque bloque : bloques) {
-            if (bloque.esEncabezado()) {
-                seccionActual = bloque.texto();
-            }
             for (Bloque parte : dividirSiExcedeElMaximo(bloque)) {
                 int tokensParte = contarTokens(parte.texto());
                 if (!buffer.isEmpty() && tokensDe(buffer) + tokensParte > TOKENS_MAXIMO) {
-                    candidatos.add(cerrarFragmento(buffer, seccionActual, candidatos.size()));
+                    candidatos.add(cerrarFragmento(buffer, candidatos.size()));
                     List<Bloque> solape = tomarSolape(buffer);
                     // Si el solape más esta parte ya se pasarían del máximo, se prefiere perder el
                     // solape antes que violar el tamaño máximo del fragmento.
@@ -66,7 +61,7 @@ public class Fragmentador {
             }
         }
         if (!buffer.isEmpty()) {
-            candidatos.add(cerrarFragmento(buffer, seccionActual, candidatos.size()));
+            candidatos.add(cerrarFragmento(buffer, candidatos.size()));
         }
         return candidatos;
     }
@@ -175,7 +170,45 @@ public class Fragmentador {
         return buffer.stream().map(Bloque::texto).reduce((a, b) -> a + "\n\n" + b).orElse("");
     }
 
-    private FragmentoCandidato cerrarFragmento(List<Bloque> buffer, String seccion, int orden) {
+    /** A cada bloque le anota la sección vigente: un encabezado abre la suya y los párrafos siguientes la heredan. */
+    private List<Bloque> asignarSecciones(List<Bloque> bloques) {
+        List<Bloque> anotados = new ArrayList<>(bloques.size());
+        String vigente = null;
+        for (Bloque bloque : bloques) {
+            if (bloque.esEncabezado()) {
+                vigente = bloque.texto();
+            }
+            anotados.add(bloque.conSeccion(vigente));
+        }
+        return anotados;
+    }
+
+    /**
+     * La sección que se cita es la que el fragmento realmente contiene: una sola, o el rango «primera — última» si
+     * cruza varias (un fragmento de 500–1.000 tokens puede abarcar varias cláusulas). Así la cita nunca señala una
+     * cláusula que no está en el fragmento.
+     */
+    private String seccionDe(List<Bloque> buffer) {
+        String primera = null;
+        String ultima = null;
+        for (Bloque bloque : buffer) {
+            if (bloque.seccion() == null) {
+                continue;
+            }
+            if (primera == null) {
+                primera = bloque.seccion();
+            }
+            ultima = bloque.seccion();
+        }
+        if (primera == null || primera.equals(ultima)) {
+            return primera;
+        }
+        // Un encabezado mide a lo sumo 80 caracteres, así que el rango cabe en la columna (VARCHAR(200)).
+        return primera + " — " + ultima;
+    }
+
+    private FragmentoCandidato cerrarFragmento(List<Bloque> buffer, int orden) {
+        String seccion = seccionDe(buffer);
         String texto = unir(buffer);
         int paginaInicio = buffer.stream().mapToInt(Bloque::pagina).min().orElseThrow();
         int paginaFin = buffer.stream().mapToInt(Bloque::pagina).max().orElseThrow();
@@ -195,9 +228,17 @@ public class Fragmentador {
         return cola;
     }
 
-    private record Bloque(int pagina, String texto, boolean esOcr, boolean esEncabezado) {
+    private record Bloque(int pagina, String texto, boolean esOcr, boolean esEncabezado, String seccion) {
+        Bloque(int pagina, String texto, boolean esOcr, boolean esEncabezado) {
+            this(pagina, texto, esOcr, esEncabezado, null);
+        }
+
         Bloque conTexto(String nuevoTexto) {
-            return new Bloque(pagina, nuevoTexto, esOcr, false);
+            return new Bloque(pagina, nuevoTexto, esOcr, false, seccion);
+        }
+
+        Bloque conSeccion(String nuevaSeccion) {
+            return new Bloque(pagina, texto, esOcr, esEncabezado, nuevaSeccion);
         }
     }
 }

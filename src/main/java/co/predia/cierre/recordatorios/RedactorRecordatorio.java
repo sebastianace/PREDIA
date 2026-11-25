@@ -28,7 +28,13 @@ public class RedactorRecordatorio {
             nombre tal cual; copia las fechas y los plazos exactamente como están escritos en la lista, sin \
             cambiarlos ni calcular otros; no menciones ningún documento que no esté en la lista; no inventes \
             requisitos, plazos ni valores; no prometas nada; no uses números que no estén en la lista. Sé amable \
-            y breve, y firma con el nombre del asesor.""";
+            y breve, y firma con el nombre del asesor. Escribe en frases completas y gramaticalmente correctas, \
+            con verbos conjugados (por ejemplo «faltan», «necesitamos»), sin frases cortadas.
+
+            Estructura del cuerpo: (1) «Buen día, señor/señora [nombre]:»; (2) una frase completa que explique que, \
+            para avanzar hacia la firma de la venta del inmueble, todavía faltan los documentos de la lista; (3) la \
+            lista con viñetas «- Nombre: detalle», copiada tal cual; (4) una frase que diga que puede enviarlos \
+            respondiendo a este correo o entregándolos a su asesor; (5) «Cordialmente,» y el nombre del asesor.""";
 
     private final ChatClient chatClient;
     private final EstadoIa estadoIa;

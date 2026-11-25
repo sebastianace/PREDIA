@@ -63,9 +63,13 @@ spring:
       chat:
         options:
           model: ${OLLAMA_CHAT_MODEL:qwen3:8b}
+          # Ollama descarga el modelo de la memoria a los 5 minutos de inactividad y la primera pregunta tras una
+          # pausa tarda mucho más: se le pide que lo mantenga cargado.
+          keep-alive: ${OLLAMA_KEEP_ALIVE:2h}
       embedding:
         options:
           model: ${OLLAMA_EMBEDDING_MODEL:bge-m3}
+          keep-alive: ${OLLAMA_KEEP_ALIVE:2h}
 
 springdoc:
   swagger-ui:
