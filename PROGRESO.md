@@ -10,8 +10,10 @@
 - Escaneo de archivos: revisión del PDF y ClamAV opcional (#20).
 - IA local con Ollama como proveedor elegible (#21).
 - Citas con el rango de secciones y pulido de la demo (#22).
+- Asistente completo en «¿Qué les alcanza?» y temperatura de Ollama (#23).
 
 Verificación antes de publicar: suite completa (264 pruebas) y `npm run build` del frontend. Ensayo de la demo con Ollama en la instancia real (ver «Preparación de la presentación»).
+
 ## Prueba completa antes de la release 1.2.0 ✅ (25/11/2026)
 
 **Rama:** `fix/asistente-completo`. Antes de publicar la 1.2.0 se probó todo junto en una **base nueva** (arranque desde cero: 9 migraciones y demo sembrada) con la rama de la release y Ollama, con un script que recorre 90 comprobaciones por rol (sin Ollama el script no aplica: usa los cuatro roles y el asistente real).
