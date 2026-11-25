@@ -55,7 +55,20 @@ public class ClienteController {
     @Operation(summary = "Lista los clientes de la inmobiliaria")
     public List<ClienteDto> listar() {
         return clientes.findByInmobiliariaIdOrderByNombreAsc(sesion.inmobiliariaId()).stream()
-                .map(ClienteDto::desde).toList();
+                .map(c -> ClienteDto.desde(c, topeDe(c))).toList();
+    }
+
+    /** El presupuesto de un comprador con el plazo y la tasa por defecto; null si no aplica o no hay tasa configurada. */
+    private CalculadoraPresupuesto.Presupuesto topeDe(Cliente cliente) {
+        if (cliente.getIntencion() != Intencion.COMPRAR) {
+            return null;
+        }
+        try {
+            return presupuestos.calcular(sesion.inmobiliariaId(), cliente.getId(), null, null, false).presupuesto();
+        } catch (RuntimeException e) {
+            // Sin una tasa vigente la lista sigue funcionando: la tarjeta simplemente no muestra el tope.
+            return null;
+        }
     }
 
     @GetMapping("/{id}")

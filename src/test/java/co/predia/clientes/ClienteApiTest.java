@@ -35,6 +35,42 @@ class ClienteApiTest extends PruebaIntegracion {
     }
 
     @Test
+    void laListaTraeElTopeDeCompraQueCalculanLasReglasSoloParaQuienQuiereComprar() throws Exception {
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Inmobiliaria Lista Tope");
+        crearTasa(inmobiliaria, "Banco Lista", TipoTasa.NO_VIS, "0.12");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        Cliente comprador = crearCliente(inmobiliaria, asesor, "Compradora", "7500000", "90000000");
+        Cliente arrendatario = crearCliente(inmobiliaria, asesor, "Arrendatario", "3000000", "5000000");
+        arrendatario.actualizarPerfil("Arrendatario", null, null, arrendatario.getIngresoFamiliar(),
+                arrendatario.getAhorro(), BigDecimal.ZERO, Intencion.ARRENDAR, (short) 2, java.util.List.of(), "");
+        clientes.save(arrendatario);
+
+        // El tope de la lista es el mismo que da la ficha del cliente (CalculadoraPresupuesto, no el frontend).
+        String presupuesto = mvc.perform(get("/api/clientes/" + comprador.getId() + "/presupuesto")
+                        .header("Authorization", bearer(asesor))).andReturn().getResponse().getContentAsString();
+        Number esperado = com.jayway.jsonpath.JsonPath.read(presupuesto, "$.presupuesto.topeDeCompra");
+        String limitante = com.jayway.jsonpath.JsonPath.read(presupuesto, "$.presupuesto.limitante");
+
+        mvc.perform(get("/api/clientes").header("Authorization", bearer(asesor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.nombre == 'Compradora')].topeDeCompra").value(hasItem(esperado.intValue())))
+                .andExpect(jsonPath("$[?(@.nombre == 'Compradora')].limitadoPor").value(hasItem(limitante)))
+                .andExpect(jsonPath("$[?(@.nombre == 'Arrendatario')].topeDeCompra").value(hasItem(org.hamcrest.Matchers.nullValue())));
+    }
+
+    @Test
+    void sinUnaTasaConfiguradaLaListaSigueFuncionandoSinTope() throws Exception {
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Inmobiliaria Sin Tasa");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        crearCliente(inmobiliaria, asesor, "Sin tasa", "7500000", "90000000");
+
+        mvc.perform(get("/api/clientes").header("Authorization", bearer(asesor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].topeDeCompra").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
     void noSeGuardaUnClienteSinLaAutorizacionDeDatos() throws Exception {
         Inmobiliaria inmobiliaria = crearInmobiliaria("Inmobiliaria Clientes");
         Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
