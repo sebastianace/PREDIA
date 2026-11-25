@@ -225,7 +225,7 @@ Recorrido de unos 8 minutos. Requiere `docker compose up -d`, `./mvnw spring-boo
 
 1. Docker abierto y `ollama serve` corriendo, con `qwen3:8b` y `bge-m3` descargados (`ollama list`).
 2. `PREDIA_IA_PROVEEDOR=ollama ./arrancar.sh` (o la variable en el `.env`). `GET /api/sistema/estado` debe decir `"proveedor":"ollama"`.
-3. Umbral de similitud en `0,35` (*Requisitos y parámetros*, como ADMIN). Con el `0,30` de OpenAI, `bge-m3` deja pasar preguntas ajenas.
+3. Umbral de similitud en `0,35`: no tiene pantalla, se cambia con `PUT /api/parametros` (Swagger, como ADMIN, campo `umbralSimilitudRag`); `GET /api/parametros` lo muestra. Con el `0,30` de OpenAI, `bge-m3` deja pasar preguntas ajenas.
 4. Calienta los modelos con una pregunta cualquiera: la primera tras arrancar tarda más (después, de 5 a 15 s por respuesta; Predia pide a Ollama que los mantenga cargados 2 horas).
 5. Estado limpio: solo `contrato-demo.pdf` en el inmueble 1102, el borrador de recordatorio en la bandeja y Mailpit vacío (<http://localhost:8026>).
 
