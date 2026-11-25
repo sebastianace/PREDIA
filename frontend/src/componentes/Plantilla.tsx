@@ -18,7 +18,9 @@ const todas: { ruta: string; nombre: string; icono: NombreIcono; principal: bool
   { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente', principal: false },
   { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas', principal: false },
   { ruta: '/requisitos', nombre: 'Requisitos', icono: 'requisitos', principal: false },
+  { ruta: '/equipo', nombre: 'Equipo', icono: 'barras', principal: false, soloAdmin: true },
   { ruta: '/usuarios', nombre: 'Usuarios', icono: 'clientes', principal: false, soloAdmin: true },
+  { ruta: '/perfil', nombre: 'Mi perfil', icono: 'usuario', principal: false },
 ]
 
 const fotoDe = (u: { id: number; fotoVersion?: string | null } | null) => (u ? { ruta: `/perfil/usuarios/${u.id}/foto`, version: u.fotoVersion } : undefined)

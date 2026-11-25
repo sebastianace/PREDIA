@@ -1,3 +1,5 @@
+import { Equipo } from './paginas/Equipo'
+import { Perfil } from './paginas/Perfil'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Plantilla } from './componentes/Plantilla'
 import { Activar } from './paginas/Activar'
@@ -71,7 +73,9 @@ function Rutas() {
         <Route path="requisitos" element={<Requisitos />} />
         <Route path="expedientes" element={<Expedientes />} />
         <Route path="tasas" element={<Tasas />} />
+        <Route path="perfil" element={<Perfil />} />
         {usuario.rol === 'ADMIN' && <Route path="usuarios" element={<Usuarios />} />}
+        {usuario.rol === 'ADMIN' && <Route path="equipo" element={<Equipo />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

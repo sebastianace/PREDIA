@@ -88,15 +88,17 @@ export function SeccionNumerada({ numero, titulo, children }: { numero: number; 
 }
 
 /** Un grupo de opciones excluyentes (Comprar/Arrendar, persona natural/jurídica). */
-export function Segmentado<T extends string>({ etiqueta, opciones, valor, onChange }: {
+export function Segmentado<T extends string>({ etiqueta, opciones, valor, onChange, ocultarEtiqueta = false }: {
   etiqueta: string
+  /** La etiqueta sigue accesible para lectores de pantalla pero no se ve (para un selector de periodo en un encabezado). */
+  ocultarEtiqueta?: boolean
   opciones: { valor: T; texto: string }[]
   valor: T
   onChange: (v: T) => void
 }) {
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-medium text-tinta">{etiqueta}</span>
+      <span className={ocultarEtiqueta ? 'sr-only' : 'mb-1.5 block text-sm font-medium text-tinta'}>{etiqueta}</span>
       <div role="radiogroup" aria-label={etiqueta} className="inline-flex overflow-hidden rounded-control border border-linea bg-white">
         {opciones.map((o) => (
           <button key={o.valor} type="button" role="radio" aria-checked={valor === o.valor} onClick={() => onChange(o.valor)}
