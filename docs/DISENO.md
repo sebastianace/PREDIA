@@ -340,7 +340,7 @@ export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
 
 - Sin el PDF original no se pueden verificar firmas, sellos ni tablas complejas. Un cambio en el OCR o en la extracción obliga a volver a subir el archivo; los embeddings, en cambio, se pueden regenerar desde el texto guardado.
 - La vigencia depende de la fecha de expedición que confirma el asesor.
-- No hay antivirus (ClamAV): se valida el tipo, la estructura y el tamaño.
+- El antivirus (ClamAV) es opcional y viene apagado por defecto; la revisión estructural del PDF (firma, JavaScript, acciones que lanzan programas y archivos incrustados) está siempre activa. Ver la sección «Escaneo de archivos».
 - La columna `vector(1536)` está atada al modelo actual. Pasar a un proveedor local con otra dimensión requiere una migración y reindexar.
 - La lista de requisitos es de referencia; Predia no da asesoría legal.
 
@@ -528,3 +528,15 @@ El resumen diario suma **solicitudes por atender**.
 ### 11.8 Fuera de esta fase
 
 Línea de tiempo de la compra, agenda de visitas y comentarios tras la visita (**Fase 10**, y conecta con el extra de IA 2 de análisis de sentimiento); galería de varias fotos; arrendatarios (hoy solo compradores); el asistente de IA hablando con el comprador; los gastos de escrituración como parámetro; un asesor asignado a cada cliente por separado (hoy es quien registró su autorización).
+
+## 11. Escaneo de archivos (aprobado el 24/11/2026)
+
+El punto 4 del flujo pide «límites de tamaño, validación y escaneo de archivos». El único punto de entrada de los PDF es `ServicioCargaDocumento.cargar`, que usan el asesor y el portal del propietario.
+
+**Orden en la carga:** tamaño y tipo declarado → archivo temporal con hash → **antivirus** → **firma `%PDF-`** → abrir con PDFBox (cifrado, páginas) → **inspección del contenido activo** → registro y cola de indexación.
+
+- `InspectorPdf` (Java puro): recorre todos los objetos del PDF (sin seguir referencias, así que no hay ciclos) y rechaza `/JS`, `/JavaScript`, acciones `/S /JavaScript` o `/S /Launch`, y archivos incrustados (`/EF`, `/EmbeddedFiles`, `/Type /EmbeddedFile`). No bloquea `/OpenAction` en general: muchos PDF legítimos lo usan para abrirse en una página.
+- `EscanerArchivos` con dos implementaciones elegidas por `predia.expedientes.escaneo.modo`: `EscanerDesactivado` (por defecto) y `EscanerClamAv` (comando `INSTREAM` de `clamd` por TCP, sin librería externa).
+- Un archivo infectado → 422 («rechazado por seguridad»; sin el nombre de la amenaza). Antivirus caído y `obligatorio=true` → 503. Antivirus caído y `obligatorio=false` → se acepta y queda sin verificar.
+- ClamAV va en `docker-compose.yml` bajo el perfil `escaneo` (imagen `clamav/clamav-debian`, porque la imagen principal no publica arm64 para Apple Silicon).
+

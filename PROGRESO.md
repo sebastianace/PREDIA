@@ -1,5 +1,30 @@
 # Progreso de Predia
 
+## Extra — Escaneo de archivos ✅ (24/11/2026)
+
+**Rama:** `feature/escaneo-archivos` (sale de `develop`). Diseño aprobado antes de programar. Cierra lo que faltaba del punto 4 del flujo («límites de tamaño, validación y escaneo de archivos»).
+
+- **Revisión del PDF** (`InspectorPdf`, siempre activa): firma `%PDF-` en los primeros 1.024 bytes (la extensión y el tipo que declara el navegador no bastan) y rechazo de JavaScript, acciones que lanzan programas y archivos incrustados, recorriendo todos los objetos del documento (también los comprimidos).
+- **Antivirus ClamAV opcional** (`EscanerClamAv`): el archivo viaja a `clamd` por el comando `INSTREAM`. Apagado por defecto (`ESCANEO_MODO=DESACTIVADO`) para que Predia siga arrancando con solo PostgreSQL. Con `CLAMAV` y `ESCANEO_OBLIGATORIO=true`, si el antivirus no responde el archivo se rechaza con 503: nunca se da por limpio lo que no se pudo verificar.
+- **Efecto de un rechazo:** 422 «rechazado por seguridad» (sin el nombre de la amenaza) y no queda documento, trabajo ni temporal. En el log solo van el hash y el nombre de la amenaza.
+- **Docker:** servicio `clamav` bajo el perfil `escaneo` (`docker compose --profile escaneo up -d clamav`). Se usa `clamav/clamav-debian` porque la imagen `clamav/clamav` solo publica amd64 y el Mac de desarrollo es Apple Silicon.
+
+### Pruebas (nuevas; no llaman a OpenAI ni necesitan ClamAV)
+- `InspectorPdfTest` (8): un PDF normal y un enlace web pasan; JavaScript al abrir, JavaScript dentro de una anotación, `Launch` y archivos incrustados se rechazan; la firma distingue un PDF de una imagen o un ejecutable con extensión `.pdf` y tolera basura corta antes de la firma.
+- `EscanerClamAvTest` (6): el protocolo `INSTREAM` contra un `clamd` falso en un socket (el archivo llega completo; `OK`, `FOUND` con el nombre de la amenaza, `ERROR` nunca se da por limpio; sin antivirus, obligatorio o no).
+- `CargaSeguraApiTest` (5, PostgreSQL real): archivo limpio → 202; amenaza → 422 sin documento ni temporal y sin nombrar la amenaza; antivirus caído → 503 sin documento ni temporal; PDF con JavaScript → 422 aunque el antivirus no lo vea; un PNG con extensión `.pdf` → 422.
+
+### Probado en vivo con ClamAV real (Docker, arm64)
+- Un archivo EICAR (la cadena de prueba estándar de los antivirus, que no es un virus) subido como `.pdf` → **422 «rechazado por seguridad»** y una línea en el log con el hash y `Eicar-Test-Signature`.
+- Un PDF con JavaScript en `/OpenAction` → **422 «El PDF contiene JavaScript»**.
+- Con el contenedor de ClamAV detenido → **503 «No se pudo verificar el archivo…»**; al volver a encenderlo, el mismo archivo limpio se aceptó (202).
+- **Límite que conviene saber:** ClamAV reconoce el archivo EICAR cuando es el archivo completo; pegado al final de un PDF real no lo marcó. Es una propiedad de esa firma de prueba, no de Predia; por eso la revisión estructural del PDF va además del antivirus.
+- La prueba se hizo en una copia de la base de desarrollo, que se borró al terminar.
+
+### Lo que no se hizo
+- No se escanean las fotos y planos de la galería: no se guardan los bytes originales, solo la imagen decodificada y vuelta a codificar como JPEG (`ProcesadorImagen`).
+- No hay un aviso en la interfaz de que un archivo se subió «sin verificar» cuando el antivirus está apagado.
+
 ## Extra — Pulido visual de Negocios, Clientes y Activar cuenta ✅ (24/11/2026)
 
 **Rama:** `feature/rediseno-pantallas` (sale de `feature/galeria-inmuebles`). Boceto aprobado antes de programar; Sebastián pidió el cambio del panel azul de «Activar cuenta» (un dibujo en vez de curvas sueltas) y se mostraron dos opciones: eligió el edificio.
@@ -144,7 +169,7 @@ Salió de auditar el proyecto contra `Requerimientos.md` (el punto 11 del flujo 
 - Las dos pruebas existentes de la consulta que insertaban fragmentos con el modelo `pruebas` ahora fijan ese modelo en el simulador de IA.
 
 ### Lo que no se hizo
-- **El escaneo de archivos (antivirus)** que pide el punto 4 sigue sin implementarse: se valida el tipo, la estructura y el tamaño, y está documentado como limitación. Se puede agregar ClamAV como servicio opcional.
+- ~~El escaneo de archivos (antivirus)~~: implementado después (ver «Extra — Escaneo de archivos», arriba).
 - No hay botón en la interfaz para regenerar los vectores: se llama al endpoint (Swagger) como ADMIN.
 
 
