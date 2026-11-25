@@ -75,6 +75,14 @@ predia:
     # El PDF solo vive aquí mientras se indexa; se borra al terminar (ver ProcesadorIndexacion).
     directorio-temporal: ${EXPEDIENTES_TMP_DIR:${java.io.tmpdir}/predia/documentos}
     tamano-maximo-mb: 20
+    # Antivirus opcional (ClamAV): DESACTIVADO (por defecto) o CLAMAV. Con CLAMAV, si el antivirus no responde y
+    # «obligatorio» es true, el archivo se rechaza con 503 en vez de aceptarse sin verificar.
+    escaneo:
+      modo: ${ESCANEO_MODO:DESACTIVADO}
+      host: ${CLAMAV_HOST:localhost}
+      puerto: ${CLAMAV_PUERTO:3310}
+      obligatorio: ${ESCANEO_OBLIGATORIO:true}
+      tiempo-maximo-segundos: 30
   usuarios:
     # Dirección pública de la interfaz: con ella se arman los enlaces de invitación que llegan por correo.
     url-publica: ${PREDIA_URL_PUBLICA:http://localhost:5173}
