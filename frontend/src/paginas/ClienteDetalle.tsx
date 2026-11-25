@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Cliente, CompartidoConCliente, PresupuestoCliente, RespuestaBusqueda, ResultadoInmueble, Simulacion, Tasa } from '../api/tipos'
+import { Avatar } from '../componentes/Avatar'
 import { CifraAcotada } from '../componentes/Cota'
 import { AccesoPortalPropietario } from '../componentes/AccesoPortalPropietario'
 import { Terreno } from '../componentes/Terreno'
@@ -11,6 +12,8 @@ import { formatoFechaHora, formatoPesos, formatoPorcentaje, formatoTasaEa } from
 const plazos = [5, 10, 15, 20, 25, 30]
 
 export function ClienteDetalle() {
+  // Si la foto no se pudo guardar al crear o editar al cliente, el formulario avisa aquí (el cliente sí quedó guardado).
+  const avisoFoto = (useLocation().state as { avisoFoto?: string } | null)?.avisoFoto
   const { id } = useParams()
   const navegar = useNavigate()
   const [cliente, setCliente] = useState<Cliente | null>(null)
@@ -99,14 +102,18 @@ export function ClienteDetalle() {
   return (
     <div className="mx-auto max-w-3xl">
       <Link to="/clientes" className="text-sm text-niebla hover:text-tinta">← Clientes</Link>
+      {avisoFoto && <div className="mt-3"><Aviso tipo="error">{avisoFoto}</Aviso></div>}
       <div className="mt-2 flex items-start justify-between gap-4">
-        <div>
+        <div className="flex min-w-0 items-center gap-4">
+          <Avatar nombre={cliente.nombre} tamano="gigante" foto={{ ruta: `/clientes/${cliente.id}/foto`, version: cliente.fotoVersion }} />
+          <div className="min-w-0">
           <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">{cliente.nombre}</h1>
           <p className="mt-1 text-niebla">
             {cliente.intencion === 'COMPRAR' ? 'Quiere comprar' : 'Quiere arrendar'}
             {cliente.zonas.length > 0 && ` en ${cliente.zonas.join(', ')}`}
             {cliente.habitacionesMin > 0 && ` · ${cliente.habitacionesMin}+ habitaciones`}
           </p>
+          </div>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <Link to={`/reduccion?cliente=${cliente.id}`} className={claseBotonSecundario}>Reducir su crédito</Link>

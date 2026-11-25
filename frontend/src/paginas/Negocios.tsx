@@ -74,7 +74,7 @@ export function Negocios() {
               <div className="px-5 pb-5 pt-4">
                 <div className="flex flex-wrap gap-x-8 gap-y-3">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <Avatar nombre={n.propietarioNombre} tono="suave" />
+                    <Avatar nombre={n.propietarioNombre} tono="suave" foto={{ ruta: `/propietarios/${n.propietarioId}/foto`, version: n.propietarioFotoVersion }} />
                     <div className="min-w-0">
                       <div className="rotulo text-sm text-niebla">Vende</div>
                       <div className="truncate text-sm font-medium text-tinta">{n.propietarioNombre}</div>
@@ -82,7 +82,7 @@ export function Negocios() {
                   </div>
                   {n.clienteCompradorNombre && (
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <Avatar nombre={n.clienteCompradorNombre} />
+                      <Avatar nombre={n.clienteCompradorNombre} foto={{ ruta: `/clientes/${n.clienteCompradorId}/foto`, version: n.clienteCompradorFotoVersion }} />
                       <div className="min-w-0">
                         <div className="rotulo text-sm text-niebla">Compra</div>
                         <div className="truncate text-sm font-medium text-tinta">{n.clienteCompradorNombre}</div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Documento, EstadoDocumental, HipotecaVigente, ItemDocumental, Negocio, Recordatorio } from '../api/tipos'
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
@@ -12,6 +12,8 @@ import { formatoFecha, formatoFechaHora } from '../formato'
 
 export function NegocioDetalle() {
   const { id } = useParams()
+  // Si la foto del vendedor no se pudo guardar al abrir el negocio, el formulario avisa aquí (el negocio sí quedó).
+  const avisoFoto = (useLocation().state as { avisoFoto?: string } | null)?.avisoFoto
   const [negocio, setNegocio] = useState<Negocio | null>(null)
   const [estado, setEstado] = useState<EstadoDocumental | null>(null)
   const [documentos, setDocumentos] = useState<Documento[]>([])
@@ -110,6 +112,7 @@ export function NegocioDetalle() {
 
   return (
     <div className="mx-auto max-w-3xl">
+      {avisoFoto && <div className="mb-3"><Aviso tipo="error">{avisoFoto}</Aviso></div>}
       <header className="relative isolate overflow-hidden rounded-panel bg-prusia px-5 pb-6 pt-5 text-white md:px-8 md:pb-8 md:pt-6">
         <Terreno semilla={negocio.inmuebleId * 31 + 7} trazar niveles={12}
           className="absolute inset-0 -z-10 size-full text-trazo opacity-40" />

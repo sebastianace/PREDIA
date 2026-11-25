@@ -97,7 +97,7 @@ class FotoPerfilApiTest extends PruebaIntegracion {
         mvc.perform(get(ruta).header("If-None-Match", etag).header("Authorization", bearer(asesor)))
                 .andExpect(status().isOk());
 
-        mvc.perform(delete(ruta).header("Authorization", bearer(asesor))).andExpect(status().isOk());
+        mvc.perform(delete(ruta).header("Authorization", bearer(asesor))).andExpect(status().isNoContent());
         mvc.perform(get(ruta).header("Authorization", bearer(asesor))).andExpect(status().isNotFound());
         mvc.perform(get("/api/clientes/" + cliente.getId()).header("Authorization", bearer(asesor)))
                 .andExpect(jsonPath("$.fotoVersion").value(nullValue()));
