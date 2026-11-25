@@ -1,5 +1,18 @@
 # Progreso de Predia
 
+## Correcciones tras la presentación al profesor ✅ (25/11/2026)
+
+Al probar Predia por completo, el profesor y Sebastián encontraron dos fallas reales. Se corrigieron en `release/1.2.0` antes de publicarla.
+
+- **El asistente respondía temas ajenos** («cuántos años tiene Messi», «cómo quedó el Bucaramanga ayer»), inventando datos. La regla del prompt no alcanzaba con un modelo de 8B: reproducido, tras una conversación sobre un negocio respondió mal 3 de 3 veces. Ahora `FiltroDeTema` clasifica cada mensaje **antes** de llamar al asistente (una llamada aparte, prompt corto, una palabra de respuesta, con lo último que dijo el asistente como contexto). Si es ajeno, responde un aviso fijo escrito en Java, sin herramientas y sin guardarlo en el historial; si el filtro falla o duda, el mensaje pasa. Medido contra Ollama real: 14 de 14 mensajes ajenos rechazados (también con contexto de negocio previo) y 15 de 15 legítimos atendidos, incluidos «sí» y «y el de Cabecera?». Un rechazo tarda menos de 0,6 s y a una pregunta del negocio le suma menos de 1 s. 5 pruebas del filtro y 2 de punta a punta.
+- **Las imágenes no se actualizaban** (el asesor y el comprador veían fotos viejas). Las portadas se servían con `Cache-Control: max-age=30 días, immutable` en una dirección que **no cambia** cuando cambia la foto, así que el navegador no volvía a preguntar. Ahora: la portada (asesor, comprador y propietario) se manda con `no-cache` y ETag (el navegador pregunta siempre y recibe 304 si no cambió), y el frontend añade la versión de la imagen a la dirección (`v=`), con lo que las fotos que ya habían quedado guardadas en el navegador dejan de usarse. Las imágenes de la galería por id (que nunca cambian) siguen guardándose. 2 pruebas nuevas (asesor y comprador).
+- **Las pruebas dependían del `.env` de quien las corre:** con `PREDIA_IA_PROVEEDOR=ollama` en el `.env`, dos pruebas de inventario «sin IA» fallaban. El perfil de pruebas ahora fija el proveedor.
+- **`logs/arrancar.out` estaba versionado** (se coló en un commit por un `git add -A`); sin datos sensibles, pero se sacó del repositorio y `logs/` quedó en `.gitignore`.
+- **`arrancar.sh`** ahora dice el proveedor real de IA y avisa si Ollama está apagado.
+- Suite: 273 pruebas, todas pasan.
+
+**Pendiente (pedido por el profesor, con boceto primero):** rediseñar la impresión de la reducción de crédito (con el ejemplo que dio), y mejorar el diseño de Clientes y de los formularios de crear cliente y vendedor.
+
 ## Versión 1.2.0 ✅ (25/11/2026)
 
 **Rama:** `release/1.2.0` (sale de `develop`). Sube la versión del backend (`pom.xml`), del frontend (`package.json`) y de la guía de despliegue, y reúne lo que se fusionó en `develop` desde la 1.1.0:
