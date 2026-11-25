@@ -5,6 +5,8 @@ import type { FotoInmueble as Foto } from '../api/tipos'
 export type Tamano = 'miniatura' | 'grande'
 
 // Una foto se descarga una vez por sesión y versión: el hash cambia cuando se sube otra, así que nunca queda una vieja.
+// La versión también viaja en la dirección (`v=`): así el caché del navegador, que guarda por dirección, no puede
+// devolver una foto anterior aunque haya quedado guardada de antes.
 const cache = new Map<string, Promise<string>>()
 
 export function urlDeFoto(inmuebleId: number, version: string, tam: Tamano, base?: string): Promise<string> {
@@ -12,7 +14,7 @@ export function urlDeFoto(inmuebleId: number, version: string, tam: Tamano, base
   const clave = `${ruta}:${version}`
   let url = cache.get(clave)
   if (!url) {
-    url = apiBlob(ruta).then((b) => URL.createObjectURL(b))
+    url = apiBlob(`${ruta}&v=${encodeURIComponent(version)}`).then((b) => URL.createObjectURL(b))
     url.catch(() => cache.delete(clave))
     cache.set(clave, url)
   }

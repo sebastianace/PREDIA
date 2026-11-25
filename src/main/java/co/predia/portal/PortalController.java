@@ -5,7 +5,6 @@ import co.predia.inventario.foto.FotoInmuebleRepositorio;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import co.predia.inventario.foto.RespuestaImagen;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 /** El portal del propietario: solo el rol PROPIETARIO entra aquí (lo exige ConfiguracionSeguridad). */
 @RestController
@@ -63,10 +64,11 @@ public class PortalController {
 
     @GetMapping("/negocios/{id}/foto")
     @Operation(summary = "La foto del inmueble de la venta, si tiene")
-    public ResponseEntity<byte[]> foto(@PathVariable Long id, @RequestParam(defaultValue = "grande") String tam) {
-        FotoInmuebleRepositorio.Bytes foto = servicio.foto(sesion.usuario(), id, "miniatura".equals(tam));
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
-                .header("X-Content-Type-Options", "nosniff").body(foto.contenido());
+    public ResponseEntity<byte[]> foto(@PathVariable Long id, @RequestParam(defaultValue = "grande") String tam,
+                                       @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String sinCambios) {
+        boolean miniatura = "miniatura".equals(tam);
+        FotoInmuebleRepositorio.Bytes foto = servicio.foto(sesion.usuario(), id, miniatura);
+        // La portada cambia detrás de la misma dirección: se revalida siempre (ver RespuestaImagen).
+        return RespuestaImagen.portada(foto.contenido(), foto.hash(), miniatura, sinCambios);
     }
 }

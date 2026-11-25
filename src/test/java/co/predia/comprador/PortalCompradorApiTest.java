@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -258,6 +259,53 @@ class PortalCompradorApiTest extends PruebaIntegracion {
         // Una imagen que no es de ese inmueble no se alcanza con un id ajeno.
         mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId() + "/imagenes/999999")
                 .header("Authorization", bearer(e.comprador()))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void laPortadaQueVeElCompradorSeRevalidaYSeActualizaCuandoElAsesorCambiaLaFoto() throws Exception {
+        Escenario e = escenario("Portada caché");
+        String ruta = "/api/inmuebles/" + e.inmueble().getId() + "/imagenes";
+        long primera = subirImagen(e, ruta, "FOTO", "Primera");
+        compartir(e, "x");
+        String portada = "/api/comprador/inmuebles/" + e.inmueble().getId() + "/foto";
+
+        org.springframework.test.web.servlet.MvcResult antes = mvc.perform(get(portada).param("tam", "miniatura")
+                        .header("Authorization", bearer(e.comprador())))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-cache")))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("max-age")))).andReturn();
+        String etagAntes = antes.getResponse().getHeader("ETag");
+        assertThat(etagAntes).isNotBlank();
+        mvc.perform(get(portada).param("tam", "miniatura").header("If-None-Match", etagAntes)
+                .header("Authorization", bearer(e.comprador()))).andExpect(status().isNotModified());
+
+        // El asesor pone otra foto de primera: el comprador recibe la nueva, no la que tenía guardada.
+        long segunda = subirImagenColor(e, ruta, "Segunda");
+        mvc.perform(put(ruta + "/orden").header("Authorization", bearer(e.asesor())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\":[" + segunda + "," + primera + "]}")).andExpect(status().is2xxSuccessful());
+        mvc.perform(get(portada).param("tam", "miniatura").header("If-None-Match", etagAntes)
+                        .header("Authorization", bearer(e.comprador())))
+                .andExpect(status().isOk())
+                .andExpect(header().string("ETag", org.hamcrest.Matchers.not(etagAntes)));
+        // Y la ficha anuncia la versión nueva, que es la que el navegador pone en la dirección de la imagen.
+        mvc.perform(get("/api/comprador/inmuebles/" + e.inmueble().getId()).header("Authorization", bearer(e.comprador())))
+                .andExpect(jsonPath("$.foto.version").isNotEmpty());
+    }
+
+    private long subirImagenColor(Escenario e, String ruta, String etiqueta) throws Exception {
+        BufferedImage img = new BufferedImage(40, 30, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = img.createGraphics();
+        g.setColor(java.awt.Color.ORANGE);
+        g.fillRect(0, 0, 40, 30);
+        g.dispose();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(img, "png", out);
+        MockMultipartFile imagen = new MockMultipartFile("archivo", "y.png", "image/png", out.toByteArray());
+        String cuerpo = mvc.perform(multipart(org.springframework.http.HttpMethod.POST, ruta).file(imagen)
+                        .param("tipo", "FOTO").param("etiqueta", etiqueta).header("Authorization", bearer(e.asesor())))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return ((Number) com.jayway.jsonpath.JsonPath.read(cuerpo, "$.id")).longValue();
     }
 
     private long subirImagen(Escenario e, String ruta, String tipo, String etiqueta) throws Exception {

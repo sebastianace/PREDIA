@@ -68,6 +68,42 @@ class GaleriaInmuebleApiTest extends PruebaIntegracion {
     }
 
     @Test
+    void laPortadaSeRevalidaSiempreYCambiaCuandoCambiaLaFotoPrincipal() throws Exception {
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Portada Caché");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        Inmueble apto = crearInmueble(inmobiliaria, "GAL-CACHE");
+        long primera = agregar(apto, asesor, "FOTO", 30, "Primera");
+        String portada = "/api/inmuebles/" + apto.getId() + "/foto";
+
+        // La portada tiene siempre la misma dirección pero la imagen cambia: nunca se guarda sin preguntar.
+        MvcResult antes = mvc.perform(get(portada).param("tam", "miniatura").header("Authorization", bearer(asesor)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-cache")))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.not(containsString("immutable"))))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.not(containsString("max-age"))))
+                .andReturn();
+        String etagAntes = antes.getResponse().getHeader("ETag");
+        assertThat(etagAntes).isNotBlank();
+        mvc.perform(get(portada).param("tam", "miniatura").header("If-None-Match", etagAntes)
+                .header("Authorization", bearer(asesor))).andExpect(status().isNotModified());
+
+        // Otra foto pasa a ser la portada: con el ETag anterior ya no responde 304, entrega la nueva.
+        long segunda = agregar(apto, asesor, "FOTO", 200, "Segunda");
+        mvc.perform(put(url(apto) + "/orden").header("Authorization", bearer(asesor)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\":[" + segunda + "," + primera + "]}")).andExpect(status().is2xxSuccessful());
+        MvcResult despues = mvc.perform(get(portada).param("tam", "miniatura").header("If-None-Match", etagAntes)
+                        .header("Authorization", bearer(asesor)))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(despues.getResponse().getHeader("ETag")).isNotEqualTo(etagAntes);
+        assertThat(despues.getResponse().getContentAsByteArray()).isNotEqualTo(antes.getResponse().getContentAsByteArray());
+
+        // Una imagen de la galería por su id, en cambio, nunca cambia: sí se guarda.
+        mvc.perform(get(url(apto) + "/" + primera).header("Authorization", bearer(asesor)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("immutable")));
+    }
+
+    @Test
     void lasImagenesQuedanEnElOrdenEnQueSeSubenYLaPrimeraFotoEsLaPortada() throws Exception {
         Inmobiliaria inmobiliaria = crearInmobiliaria("Galería Orden");
         Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);

@@ -9,8 +9,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.springframework.http.CacheControl;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,8 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.List;
+import co.predia.inventario.foto.RespuestaImagen;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 /** El portal del comprador: solo el rol COMPRADOR entra aquí (lo exige ConfiguracionSeguridad). */
 @RestController
@@ -71,9 +71,12 @@ public class CompradorController {
 
     @GetMapping("/inmuebles/{id}/foto")
     @Operation(summary = "La foto de un inmueble compartido")
-    public ResponseEntity<byte[]> foto(@PathVariable Long id, @RequestParam(defaultValue = "grande") String tam) {
-        FotoInmuebleRepositorio.Bytes foto = servicio.foto(sesion.usuario(), id, "miniatura".equals(tam));
-        return imagen(foto.contenido());
+    public ResponseEntity<byte[]> foto(@PathVariable Long id, @RequestParam(defaultValue = "grande") String tam,
+                                       @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String sinCambios) {
+        boolean miniatura = "miniatura".equals(tam);
+        FotoInmuebleRepositorio.Bytes foto = servicio.foto(sesion.usuario(), id, miniatura);
+        // La portada cambia detrás de la misma dirección: se revalida siempre (ver RespuestaImagen).
+        return RespuestaImagen.portada(foto.contenido(), foto.hash(), miniatura, sinCambios);
     }
 
     @GetMapping("/inmuebles/{id}/imagenes/{imagenId}")
@@ -81,7 +84,7 @@ public class CompradorController {
     public ResponseEntity<byte[]> imagenDeGaleria(@PathVariable Long id, @PathVariable Long imagenId,
                                                   @RequestParam(defaultValue = "grande") String tam) {
         ImagenInmuebleRepositorio.Bytes imagen = servicio.imagen(sesion.usuario(), id, imagenId, "miniatura".equals(tam));
-        return imagen(imagen.contenido());
+        return RespuestaImagen.deGaleria(imagen.contenido());
     }
 
     @PostMapping("/solicitudes")
@@ -94,12 +97,6 @@ public class CompradorController {
     @Operation(summary = "Sus mensajes al asesor y si ya los atendieron")
     public List<ServicioComprador.SolicitudDto> solicitudes() {
         return servicio.solicitudes(sesion.usuario());
-    }
-
-    private static ResponseEntity<byte[]> imagen(byte[] bytes) {
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
-                .header("X-Content-Type-Options", "nosniff").body(bytes);
     }
 
     public record SolicitudSimulacion(@NotNull BigDecimal cuotaInicial, Integer plazoAnios) {
