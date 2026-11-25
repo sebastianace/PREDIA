@@ -52,7 +52,8 @@ public class ProcesadorIndexacion {
         this.estadoIa = estadoIa;
     }
 
-    @Scheduled(fixedDelayString = "5000", initialDelayString = "3000")
+    @Scheduled(fixedDelayString = "${predia.expedientes.intervalo-indexacion-ms:5000}",
+            initialDelayString = "${predia.expedientes.espera-inicial-indexacion-ms:3000}")
     public void procesarPendientes() {
         for (int i = 0; i < TRABAJOS_POR_CICLO; i++) {
             Optional<TrabajoClaim> claim = transacciones.tomarSiguiente();

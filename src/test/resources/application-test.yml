@@ -9,3 +9,7 @@ predia:
     horas-validez: 1
   demo:
     habilitada: false
+  expedientes:
+    # Las pruebas procesan la cola a mano (procesarPendientes): el procesador programado no debe competir con ellas.
+    intervalo-indexacion-ms: 3600000
+    espera-inicial-indexacion-ms: 3600000

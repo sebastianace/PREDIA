@@ -25,6 +25,7 @@ Verificación antes de publicar: suite completa (264 pruebas) y `npm run build` 
 - **Temperatura de Ollama en 0,2** (`OLLAMA_TEMPERATURE`): uso factual, respuestas más estables. En «¿La venta del 1102 incluye parqueadero?» pasó de 3 «sí» de 5 a 5 de 6; la variación restante sale de qué fragmentos recupera.
 - **Vigencia del paz y salvo:** es «del mes en curso» y la firma tentativa es en diciembre, así que un paz y salvo de noviembre queda «por vencer» y el negocio sigue en «Faltan 2». Es la regla funcionando; se explica en el guion de demo.
 - Todo se hizo en bases nuevas (borradas al terminar) y Mailpit quedó vacío; la base de desarrollo no se tocó.
+- **Prueba intermitente corregida (en la release):** `IndexacionAsincronaTest` falló una vez de ocho corridas porque el procesador programado (cada 5 s) competía con la llamada manual de la prueba y el documento aún estaba en PROCESANDO. El intervalo ahora es configurable (`predia.expedientes.intervalo-indexacion-ms`, 5.000 por defecto) y el perfil de pruebas lo sube a una hora. Tres corridas completas seguidas: 264 pruebas, sin fallos.
 
 ## Preparación de la presentación ✅ (25/11/2026)
 
