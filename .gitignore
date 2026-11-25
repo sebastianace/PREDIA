@@ -29,3 +29,6 @@ frontend/.vite/
 
 # Memoria de trabajo de Claude Code: es solo local, no se versiona
 CLAUDE.md
+
+# Registros del arranque (los escribe arrancar.sh)
+logs/

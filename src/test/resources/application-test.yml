@@ -1,6 +1,11 @@
 # Perfil de pruebas: nunca llama a OpenAI ni siembra la demo. La base la levanta Testcontainers.
 spring:
   ai:
+    # Las pruebas no deben depender del .env de quien las corre: siempre OpenAI y sin clave (modo manual), aunque el
+    # .env diga PREDIA_IA_PROVEEDOR=ollama.
+    model:
+      chat: openai
+      embedding: openai
     openai:
       api-key: sin-configurar
 predia:
