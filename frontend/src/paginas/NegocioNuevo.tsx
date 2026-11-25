@@ -4,6 +4,7 @@ import { api, ErrorApi } from '../api/cliente'
 import type { Cliente, EstadoCivil, HipotecaVigente, Inmueble, Negocio, Propietario, TipoPersona } from '../api/tipos'
 import { Avatar } from '../componentes/Avatar'
 import { Autorizacion, Aviso, Campo, Segmentado, claseBotonPrimario, claseInput } from '../componentes/Formulario'
+import { CampoFotoPerfil, aplicarCambioFoto, type CambioFoto } from '../componentes/CampoFotoPerfil'
 import { PanelAzul } from '../componentes/PanelAzul'
 
 const estadosCiviles: [EstadoCivil, string][] = [
@@ -40,6 +41,7 @@ export function NegocioNuevo() {
   const [telefono, setTelefono] = useState('')
   const [estadoCivil, setEstadoCivil] = useState<EstadoCivil>('SOLTERO')
   const [autorizacion, setAutorizacion] = useState(false)
+  const [cambioFoto, setCambioFoto] = useState<CambioFoto>(null)
 
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,17 +58,23 @@ export function NegocioNuevo() {
     setError(null)
     try {
       let idVendedor = propietarioId
+      let avisoFoto: string | undefined
       if (nuevoVendedor) {
         const creado = await api<Propietario>('/propietarios', { method: 'POST', body: JSON.stringify({
           tipoPersona, nombre, tipoDocumento, numeroDocumento, email, telefono,
           estadoCivil: tipoPersona === 'NATURAL' ? estadoCivil : null, autorizacionDatos: autorizacion }) })
         idVendedor = String(creado.id)
+        try {
+          await aplicarCambioFoto(`/propietarios/${creado.id}/foto`, cambioFoto)
+        } catch (e) {
+          avisoFoto = `El vendedor se guardó, pero su foto no: ${e instanceof ErrorApi ? e.message : 'inténtalo de nuevo.'}`
+        }
       }
       const negocio = await api<Negocio>('/negocios', { method: 'POST', body: JSON.stringify({
         inmuebleId: Number(inmuebleId), propietarioId: Number(idVendedor),
         clienteCompradorId: clienteId ? Number(clienteId) : null, fechaFirmaTentativa: fechaFirma || null,
         actuaPorApoderado: apoderado, hipotecaVigente: hipoteca }) })
-      navegar(`/negocios/${negocio.id}`)
+      navegar(`/negocios/${negocio.id}`, avisoFoto ? { state: { avisoFoto } } : undefined)
     } catch (err) {
       setError(err instanceof ErrorApi ? err.message : 'No se pudo abrir el negocio.')
       setGuardando(false)
@@ -112,7 +120,8 @@ export function NegocioNuevo() {
           <aside className="lg:order-2 lg:sticky lg:top-6" aria-label="Vista del vendedor">
             <PanelAzul semilla={31} className="rounded-panel p-4">
               <div className="relative">
-                <Avatar nombre={vista.nombre || 'Vendedor'} tono="blanco" tamano="enorme" />
+                <Avatar nombre={vista.nombre || 'Vendedor'} tono="blanco" tamano="enorme"
+                  foto={!nuevoVendedor && existente ? { ruta: `/propietarios/${existente.id}/foto`, version: existente.fotoVersion } : undefined} />
                 <div className="rotulo mt-2 text-sm text-trazo">Vendedor</div>
                 <div className="ancha break-words text-lg font-semibold">
                   {vista.nombre || (nuevoVendedor ? (juridica ? 'Sin razón social aún' : 'Sin nombre aún') : 'Elige un propietario')}
@@ -144,6 +153,8 @@ export function NegocioNuevo() {
                 <Segmentado etiqueta="Tipo de persona" valor={tipoPersona}
                   opciones={[{ valor: 'NATURAL', texto: 'Persona natural' }, { valor: 'JURIDICA', texto: 'Persona jurídica' }]}
                   onChange={cambiarTipo} />
+                <CampoFotoPerfil nombre={nombre} valor={cambioFoto} onChange={setCambioFoto}
+                  ayuda="Opcional. Se recorta en círculo; solo se guarda con la autorización de datos del vendedor." />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Campo etiqueta={juridica ? 'Razón social' : 'Nombre completo'}>
                     {(id) => <input id={id} value={nombre} onChange={(e) => setNombre(e.target.value)} className={claseInput} />}

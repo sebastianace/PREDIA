@@ -1,6 +1,8 @@
 package co.predia.cierre.negocio;
 
 import co.predia.cierre.reglas.EstadoDocumental;
+import co.predia.perfil.FotoPerfilRepositorio;
+import co.predia.perfil.SujetoFoto;
 import co.predia.cierre.reglas.ServicioEstadoDocumental;
 import co.predia.clientes.Cliente;
 import co.predia.clientes.ClienteRepository;
@@ -43,11 +45,13 @@ public class NegocioController {
     private final ClienteRepository clientes;
     private final UsuarioRepository usuarios;
     private final SesionActual sesion;
+    private final FotoPerfilRepositorio fotos;
 
     public NegocioController(NegocioRepository negocios, NegocioService servicio,
                              ServicioEstadoDocumental estadoDocumental, InmuebleRepository inmuebles,
                              PropietarioRepository propietarios, ClienteRepository clientes,
-                             UsuarioRepository usuarios, SesionActual sesion) {
+                             UsuarioRepository usuarios, SesionActual sesion, FotoPerfilRepositorio fotos) {
+        this.fotos = fotos;
         this.negocios = negocios;
         this.servicio = servicio;
         this.estadoDocumental = estadoDocumental;
@@ -120,7 +124,11 @@ public class NegocioController {
         return new NegocioDto(n.getId(), n.getInmuebleId(), inmueble.getTitulo(), n.getPropietarioId(),
                 propietario.getNombre(), n.getClienteCompradorId(), comprador, n.getAsesorId(), asesor,
                 n.getFechaFirmaTentativa(), n.isActuaPorApoderado(), n.getHipotecaVigente(), n.getEstado(),
-                ed.listoParaFirmar(), ed.semaforo(), ed.faltan(), ed.porcentajeAvance());
+                ed.listoParaFirmar(), ed.semaforo(), ed.faltan(), ed.porcentajeAvance(),
+                fotos.version(n.getInmobiliariaId(), SujetoFoto.PROPIETARIO, n.getPropietarioId()).orElse(null),
+                n.getClienteCompradorId() == null ? null
+                        : fotos.version(n.getInmobiliariaId(), SujetoFoto.CLIENTE, n.getClienteCompradorId()).orElse(null),
+                fotos.version(n.getInmobiliariaId(), SujetoFoto.USUARIO, n.getAsesorId()).orElse(null));
     }
 
     public record SolicitudNegocio(Long inmuebleId, @NotNull Long propietarioId, Long clienteCompradorId,
@@ -140,6 +148,7 @@ public class NegocioController {
                              String propietarioNombre, Long clienteCompradorId, String clienteCompradorNombre,
                              Long asesorId, String asesorNombre, LocalDate fechaFirmaTentativa,
                              boolean actuaPorApoderado, HipotecaVigente hipotecaVigente, EstadoNegocio estado,
-                             boolean listoParaFirmar, String semaforo, int faltan, int porcentajeAvance) {
+                             boolean listoParaFirmar, String semaforo, int faltan, int porcentajeAvance,
+                             String propietarioFotoVersion, String clienteCompradorFotoVersion, String asesorFotoVersion) {
     }
 }

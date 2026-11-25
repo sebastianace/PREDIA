@@ -1,5 +1,7 @@
 package co.predia.cierre.negocio;
 
+import co.predia.perfil.FotoPerfilRepositorio;
+import co.predia.perfil.SujetoFoto;
 import co.predia.comun.seguridad.SesionActual;
 import co.predia.comun.seguridad.UsuarioActual;
 import co.predia.comun.web.RecursoNoEncontradoException;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /** Propietarios-vendedores. No se guardan sin la autorización de tratamiento de datos. */
 @RestController
@@ -32,23 +35,30 @@ public class PropietarioController {
 
     private final PropietarioRepository propietarios;
     private final SesionActual sesion;
+    private final FotoPerfilRepositorio fotos;
 
-    public PropietarioController(PropietarioRepository propietarios, SesionActual sesion) {
+    public PropietarioController(PropietarioRepository propietarios, SesionActual sesion, FotoPerfilRepositorio fotos) {
+        this.fotos = fotos;
         this.propietarios = propietarios;
         this.sesion = sesion;
+    }
+
+    private PropietarioDto conFoto(Propietario p) {
+        return PropietarioDto.desde(p, fotos.version(sesion.inmobiliariaId(), SujetoFoto.PROPIETARIO, p.getId()).orElse(null));
     }
 
     @GetMapping
     @Operation(summary = "Lista los propietarios-vendedores de la inmobiliaria")
     public List<PropietarioDto> listar() {
+        Map<Long, String> fotoDe = fotos.versiones(sesion.inmobiliariaId(), SujetoFoto.PROPIETARIO);
         return propietarios.findByInmobiliariaIdOrderByNombreAsc(sesion.inmobiliariaId()).stream()
-                .map(PropietarioDto::desde).toList();
+                .map(p -> PropietarioDto.desde(p, fotoDe.get(p.getId()))).toList();
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Detalle de un propietario")
     public PropietarioDto detalle(@PathVariable Long id) {
-        return PropietarioDto.desde(buscar(id));
+        return conFoto(buscar(id));
     }
 
     @PostMapping
@@ -62,7 +72,7 @@ public class PropietarioController {
         UsuarioActual usuario = sesion.usuario();
         Propietario p = new Propietario(usuario.inmobiliariaId(), usuario.id());
         aplicar(p, s);
-        return PropietarioDto.desde(propietarios.save(p));
+        return conFoto(propietarios.save(p));
     }
 
     @PutMapping("/{id}")
@@ -70,7 +80,7 @@ public class PropietarioController {
     public PropietarioDto actualizar(@PathVariable Long id, @Valid @RequestBody SolicitudPropietario s) {
         Propietario p = buscar(id);
         aplicar(p, s);
-        return PropietarioDto.desde(propietarios.save(p));
+        return conFoto(propietarios.save(p));
     }
 
     private Propietario buscar(Long id) {
@@ -97,11 +107,11 @@ public class PropietarioController {
 
     public record PropietarioDto(Long id, TipoPersona tipoPersona, String nombre, String tipoDocumento,
                                  String numeroDocumento, String email, String telefono, EstadoCivil estadoCivil,
-                                 boolean autorizacionDatos, Instant autorizacionFecha) {
-        static PropietarioDto desde(Propietario p) {
+                                 boolean autorizacionDatos, Instant autorizacionFecha, String fotoVersion) {
+        static PropietarioDto desde(Propietario p, String fotoVersion) {
             return new PropietarioDto(p.getId(), p.getTipoPersona(), p.getNombre(), p.getTipoDocumento(),
                     p.getNumeroDocumento(), p.getEmail(), p.getTelefono(), p.getEstadoCivil(),
-                    p.isAutorizacionDatos(), p.getAutorizacionFecha());
+                    p.isAutorizacionDatos(), p.getAutorizacionFecha(), fotoVersion);
         }
     }
 }

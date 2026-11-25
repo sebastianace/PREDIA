@@ -7,6 +7,8 @@ export interface PerfilUsuario {
   rol: Rol
   inmobiliariaId: number
   inmobiliaria: string
+  /** El hash de su foto de perfil; null si no tiene. Cambia cuando sube otra. */
+  fotoVersion?: string | null
 }
 
 export interface RespuestaLogin {
@@ -134,6 +136,7 @@ export interface Cliente {
   /** Solo en la lista y solo para quien quiere comprar: lo calcula el backend con las reglas. */
   topeDeCompra?: number | null
   limitadoPor?: 'AHORRO' | 'CAPACIDAD_DE_PAGO' | null
+  fotoVersion?: string | null
 }
 
 /** Lo que la IA propone a partir de lo que dijo el cliente: solo una sugerencia que el asesor confirma. */
@@ -236,6 +239,7 @@ export interface Propietario {
   estadoCivil: EstadoCivil | null
   autorizacionDatos: boolean
   autorizacionFecha: string
+  fotoVersion?: string | null
 }
 
 export interface Negocio {
@@ -256,6 +260,9 @@ export interface Negocio {
   semaforo: string
   faltan: number
   porcentajeAvance: number
+  propietarioFotoVersion?: string | null
+  clienteCompradorFotoVersion?: string | null
+  asesorFotoVersion?: string | null
 }
 
 export interface ItemDocumental {

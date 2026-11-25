@@ -1,5 +1,7 @@
 package co.predia.auth;
 
+import co.predia.perfil.FotoPerfilRepositorio;
+import co.predia.perfil.SujetoFoto;
 import co.predia.comun.seguridad.ServicioJwt;
 import co.predia.comun.seguridad.SesionActual;
 import co.predia.comun.seguridad.UsuarioActual;
@@ -36,11 +38,13 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final ServicioJwt servicioJwt;
     private final SesionActual sesion;
+    private final FotoPerfilRepositorio fotos;
     private final ServicioInvitaciones invitaciones;
 
     public AuthController(UsuarioRepository usuarios, InmobiliariaRepository inmobiliarias,
                           PasswordEncoder passwordEncoder, ServicioJwt servicioJwt, SesionActual sesion,
-                          ServicioInvitaciones invitaciones) {
+                          ServicioInvitaciones invitaciones, FotoPerfilRepositorio fotos) {
+        this.fotos = fotos;
         this.invitaciones = invitaciones;
         this.usuarios = usuarios;
         this.inmobiliarias = inmobiliarias;
@@ -95,7 +99,8 @@ public class AuthController {
 
     private PerfilUsuario perfil(Long id, Long inmobiliariaId, String nombre, String email, Rol rol) {
         String nombreInmobiliaria = inmobiliarias.findById(inmobiliariaId).map(i -> i.getNombre()).orElse("");
-        return new PerfilUsuario(id, nombre, email, rol, inmobiliariaId, nombreInmobiliaria);
+        return new PerfilUsuario(id, nombre, email, rol, inmobiliariaId, nombreInmobiliaria,
+                fotos.version(inmobiliariaId, SujetoFoto.USUARIO, id).orElse(null));
     }
 
     public record SolicitudLogin(@NotBlank @Email String email, @NotBlank String password) {
@@ -105,6 +110,6 @@ public class AuthController {
     }
 
     public record PerfilUsuario(Long id, String nombre, String email, Rol rol, Long inmobiliariaId,
-                                String inmobiliaria) {
+                                String inmobiliaria, String fotoVersion) {
     }
 }

@@ -28,7 +28,7 @@ function TarjetaCliente({ c }: { c: Cliente }) {
         <PanelAzul semilla={c.id * 37 + 11} ancho={1000} alto={160} niveles={9} className="px-4 py-4 md:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3.5">
-              <Avatar nombre={c.nombre} tono="blanco" tamano="enorme" />
+              <Avatar nombre={c.nombre} tono="blanco" tamano="enorme" foto={{ ruta: `/clientes/${c.id}/foto`, version: c.fotoVersion }} />
               <div className="min-w-0">
                 <div className="ancha truncate text-xl font-semibold">{c.nombre}</div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">

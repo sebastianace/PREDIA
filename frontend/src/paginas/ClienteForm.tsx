@@ -6,6 +6,7 @@ import {
   Aviso, Autorizacion, Campo, CampoEtiquetas, CampoPesos, Contador, Segmentado, SeccionNumerada,
   claseBotonPrimario, claseBotonSecundario, claseInput,
 } from '../componentes/Formulario'
+import { CampoFotoPerfil, aplicarCambioFoto, type CambioFoto } from '../componentes/CampoFotoPerfil'
 import { Icono } from '../componentes/Iconos'
 import { PanelAzul } from '../componentes/PanelAzul'
 import { useSesion } from '../sesion/Sesion'
@@ -38,6 +39,8 @@ export function ClienteForm() {
   const [zonas, setZonas] = useState<string[]>([])
   const [preferencias, setPreferencias] = useState('')
   const [autorizacion, setAutorizacion] = useState(false)
+  const [fotoActual, setFotoActual] = useState<string | null>(null)
+  const [cambioFoto, setCambioFoto] = useState<CambioFoto>(null)
 
   const [textoLibre, setTextoLibre] = useState('')
   const [extrayendo, setExtrayendo] = useState(false)
@@ -53,7 +56,7 @@ export function ClienteForm() {
       setNombre(c.nombre); setEmail(c.email ?? ''); setTelefono(c.telefono ?? '')
       setIngreso(c.ingresoFamiliar); setAhorro(c.ahorro); setDeudas(c.deudasMensuales)
       setIntencion(c.intencion); setHabitaciones(c.habitacionesMin); setZonas(c.zonas)
-      setPreferencias(c.preferencias)
+      setPreferencias(c.preferencias); setFotoActual(c.fotoVersion ?? null)
     }).catch((e) => setError(e.message))
   }, [edicion, id])
 
@@ -101,7 +104,14 @@ export function ClienteForm() {
       const guardado = await api<Cliente>(edicion ? `/clientes/${id}` : '/clientes', {
         method: edicion ? 'PUT' : 'POST', body: JSON.stringify(cuerpo),
       })
-      navegar(`/clientes/${guardado.id}`)
+      // El cliente ya quedó guardado: si la foto falla, no se pierde nada; se avisa en su ficha.
+      let avisoFoto: string | undefined
+      try {
+        await aplicarCambioFoto(`/clientes/${guardado.id}/foto`, cambioFoto)
+      } catch (e) {
+        avisoFoto = `El cliente se guardó, pero su foto no: ${e instanceof ErrorApi ? e.message : 'inténtalo de nuevo desde «Editar».'}`
+      }
+      navegar(`/clientes/${guardado.id}`, avisoFoto ? { state: { avisoFoto } } : undefined)
     } catch (err) {
       setError(err instanceof ErrorApi ? err.message : 'No se pudo guardar el cliente.')
       setGuardando(false)
@@ -175,6 +185,9 @@ export function ClienteForm() {
         <form onSubmit={guardar} className="space-y-4 lg:order-1">
           <SeccionNumerada numero={1} titulo="Contacto">
             <div className="space-y-4">
+              <CampoFotoPerfil nombre={nombre} valor={cambioFoto} onChange={setCambioFoto}
+                actual={id ? { ruta: `/clientes/${id}/foto`, version: fotoActual } : undefined}
+                ayuda="Opcional. Se recorta en círculo; solo se guarda con la autorización de datos del cliente." />
               <Campo etiqueta="Nombre" sugerido={es('nombre')}>
                 {(idc) => <input id={idc} value={nombre} required className={claseInput}
                   onChange={(e) => { setNombre(e.target.value); editado('nombre') }} />}
