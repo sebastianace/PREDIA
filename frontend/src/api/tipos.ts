@@ -131,6 +131,9 @@ export interface Cliente {
   preferencias: string
   autorizacionDatos: boolean
   autorizacionFecha: string
+  /** Solo en la lista y solo para quien quiere comprar: lo calcula el backend con las reglas. */
+  topeDeCompra?: number | null
+  limitadoPor?: 'AHORRO' | 'CAPACIDAD_DE_PAGO' | null
 }
 
 /** Lo que la IA propone a partir de lo que dijo el cliente: solo una sugerencia que el asesor confirma. */
