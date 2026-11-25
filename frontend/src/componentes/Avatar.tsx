@@ -6,9 +6,9 @@ export function iniciales(nombre: string): string {
 }
 
 /** Un círculo con las iniciales: azul de Prusia lleno para el cliente, suave para el propietario. */
-export function Avatar({ nombre, tono = 'prusia', tamano = 'normal' }: { nombre: string; tono?: 'prusia' | 'suave'; tamano?: 'normal' | 'grande' }) {
-  const color = tono === 'prusia' ? 'bg-prusia text-white' : 'bg-cobalto-suave text-cobalto-hondo'
-  const medida = tamano === 'grande' ? 'size-11 text-base' : 'size-8 text-xs'
+export function Avatar({ nombre, tono = 'prusia', tamano = 'normal' }: { nombre: string; tono?: 'prusia' | 'suave' | 'blanco'; tamano?: 'normal' | 'grande' | 'enorme' }) {
+  const color = tono === 'prusia' ? 'bg-prusia text-white' : tono === 'blanco' ? 'bg-white text-prusia' : 'bg-cobalto-suave text-cobalto-hondo'
+  const medida = tamano === 'enorme' ? 'size-12 text-base' : tamano === 'grande' ? 'size-11 text-base' : 'size-8 text-xs'
   return (
     <span className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${color} ${medida}`} aria-hidden="true">
       {iniciales(nombre)}

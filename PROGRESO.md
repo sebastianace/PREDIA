@@ -1,5 +1,22 @@
 # Progreso de Predia
 
+## Versión 1.2.0 ✅ (25/11/2026)
+
+**Rama:** `release/1.2.0` (sale de `develop`). Sube la versión del backend (`pom.xml`), del frontend (`package.json`) y de la guía de despliegue, y reúne lo que se fusionó en `develop` desde la 1.1.0:
+
+- Fase 8: usuarios, invitaciones y portal del propietario (PR #14) y la revisión del portal (#16); Swagger con autenticación (#15).
+- Modelo de embeddings por fragmento y regeneración de vectores (#13).
+- Fase 9: portal del comprador (#17), galería de imágenes de los inmuebles (#18) y pulido visual (#19).
+- Escaneo de archivos: revisión del PDF y ClamAV opcional (#20).
+- IA local con Ollama como proveedor elegible (#21).
+- Citas con el rango de secciones y pulido de la demo (#22).
+- Asistente completo en «¿Qué les alcanza?» y temperatura de Ollama (#23).
+- Correcciones tras la presentación: temas ajenos del asistente, imágenes de portada que se quedaban viejas, pruebas independientes del `.env` y procesador de indexación sin carreras.
+- Hoja impresa del estudio de reducción de crédito (una página, con la marca de la inmobiliaria).
+- Rediseño de Clientes y del alta del vendedor, con el tope de compra en la lista.
+
+Verificación antes de publicar: suite completa y `npm run build` del frontend, y recorrido de la demo con Ollama en la instancia real (ver «Preparación de la presentación»).
+
 ## Correcciones tras la presentación al profesor ✅ (25/11/2026)
 
 Al probar Predia por completo, el profesor y Sebastián encontraron dos fallas reales. Se corrigieron en `release/1.2.0` antes de publicarla.
@@ -13,19 +30,6 @@ Al probar Predia por completo, el profesor y Sebastián encontraron dos fallas r
 
 **Pendiente (pedido por el profesor, con boceto primero):** rediseñar la impresión de la reducción de crédito (con el ejemplo que dio), y mejorar el diseño de Clientes y de los formularios de crear cliente y vendedor.
 
-## Versión 1.2.0 ✅ (25/11/2026)
-
-**Rama:** `release/1.2.0` (sale de `develop`). Sube la versión del backend (`pom.xml`), del frontend (`package.json`) y de la guía de despliegue, y reúne lo que se fusionó en `develop` desde la 1.1.0:
-
-- Fase 8: usuarios, invitaciones y portal del propietario (PR #14) y la revisión del portal (#16); Swagger con autenticación (#15).
-- Modelo de embeddings por fragmento y regeneración de vectores (#13).
-- Fase 9: portal del comprador (#17), galería de imágenes de los inmuebles (#18) y pulido visual (#19).
-- Escaneo de archivos: revisión del PDF y ClamAV opcional (#20).
-- IA local con Ollama como proveedor elegible (#21).
-- Citas con el rango de secciones y pulido de la demo (#22).
-- Asistente completo en «¿Qué les alcanza?» y temperatura de Ollama (#23).
-
-Verificación antes de publicar: suite completa (264 pruebas) y `npm run build` del frontend. Ensayo de la demo con Ollama en la instancia real (ver «Preparación de la presentación»).
 
 ## Extra — Hoja impresa del estudio de reducción de crédito ✅ (25/11/2026)
 
@@ -36,6 +40,18 @@ Verificación antes de publicar: suite completa (264 pruebas) y `npm run build` 
 - **Defecto de la impresión anterior, corregido:** lo que no era el estudio solo se ocultaba (`visibility`), pero su altura seguía ocupando páginas: el PDF salía con **3 páginas, 2 en blanco**. Ahora se quita del diseño al imprimir y sale **1 página**. También se activó `print-color-adjust` para que las franjas de color salgan en papel.
 - **Verificado** generando el PDF real con el navegador en modo impresión: plazo/cuota, abono mensual/anual, con y sin cliente y con seguro. Con los abonos del ejemplo (`$104.700`, `$149.571`, `$209.399`) las cuotas y los desembolsos coinciden con el PDF del profesor; los ahorros difieren por unos pesos (p. ej. `$44.766.975` frente a `$44.767.103`) porque Predia redondea cada mes al peso y los totales son la suma de la tabla. El ingreso requerido usa el porcentaje máximo de cuota que configura la inmobiliaria (30 %), no el 33,33 % del ejemplo.
 - **Fuera por ahora (sin decidir):** honorarios del asesor (3 % del ahorro + IVA, modelo de corredor), «estudio válido por 20 días» y la fila «# de veces pagada la deuda / cuotas pagas» del ejemplo, que no se entendió.
+
+## Extra — Rediseño de Clientes y del alta del vendedor ✅ (25/11/2026)
+
+**Rama:** `feature/rediseno-clientes` (sale de `develop`). Pedido por el profesor. Boceto aprobado antes de programar (tres versiones: cifras que no se desbordan, secciones en tarjetas y curvas animadas en los paneles azules).
+
+- **Lista de clientes:** tarjetas a todo el ancho con cabecera de azul de plano y curvas de nivel blancas que se trazan una vez al entrar (el mismo `Terreno` del inicio, ahora dentro de un `PanelAzul` reutilizable). Cada tarjeta muestra ingreso, ahorro y **«Puede comprar hasta»** con lo que lo limita; contacto, autorización de datos, buscador por nombre, zona o correo, y filtros Comprar/Arrendar. Quien quiere arrendar no lleva tope.
+- **Backend:** `GET /api/clientes` devuelve `topeDeCompra` y `limitadoPor` para los compradores, calculados por `PresupuestoService`/`CalculadoraPresupuesto` (el mismo cálculo de la ficha); sin una tasa vigente la lista sigue funcionando sin tope. 2 pruebas nuevas en `ClienteApiTest`.
+- **Nuevo cliente:** cuatro secciones numeradas en tarjetas (contacto, situación económica, qué busca, autorización), con el bloque «Lo que dijo el cliente» arriba y un panel de resumen que muestra qué falta para guardar. Comprar/Arrendar y habitaciones son controles táctiles, las zonas son etiquetas, y **lo que propone la IA queda marcado «Sugerido por IA» hasta que el asesor lo edita**. La barra de guardar queda fija sobre la navegación en el celular.
+- **Vendedor (en «Nuevo negocio»):** «Elegir uno existente / Registrar uno nuevo», persona natural o jurídica, tipo de documento como lista (CC, CE, pasaporte, NIT) junto al número, aviso de firma del cónyuge solo si es casado o en unión marital, y una vista previa azul de cómo queda el vendedor.
+- **Componentes nuevos** en `Formulario.tsx`: `SeccionNumerada`, `Segmentado`, `Contador`, `CampoEtiquetas`, `Autorizacion` y la marca `MarcaIa`; íconos nuevos (`buscar`, `escudo`, `telefono`, `chispa`, `usuarioMas`, `circulo`, `circuloCheck`).
+- **Verificado en el navegador** contra una copia de la base de desarrollo (borrada al terminar): la lista con el tope real de Paola y Juan ($300.000.000); un cliente nuevo leído con la IA real (Ollama), con sus marcas, editado y guardado; el vendedor natural y jurídico; y las tres pantallas a 375 px sin desbordes. Defectos corregidos al probar: la marca «Sugerido por IA» partía las etiquetas de los campos de pesos (ahora va dentro del campo) y el título del vendedor quedaba separado del primer campo.
+- **No cambia** ningún dato ni regla: solo presentación y el tope en la lista.
 
 ## Prueba completa antes de la release 1.2.0 ✅ (25/11/2026)
 
