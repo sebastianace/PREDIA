@@ -25,7 +25,7 @@ function TarjetaCliente({ c }: { c: Cliente }) {
   return (
     <li className="overflow-hidden rounded-panel border border-linea bg-white">
       <Link to={`/clientes/${c.id}`} className="block transition-colors hover:bg-papel/40">
-        <PanelAzul semilla={c.id * 37 + 11} className="px-4 py-4 md:px-5">
+        <PanelAzul semilla={c.id * 37 + 11} ancho={1000} alto={160} niveles={9} className="px-4 py-4 md:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3.5">
               <Avatar nombre={c.nombre} tono="blanco" tamano="enorme" />
@@ -77,7 +77,7 @@ function TarjetaCliente({ c }: { c: Cliente }) {
           {!c.email && !c.telefono && <span className="text-niebla">Sin datos de contacto</span>}
         </span>
         <span className="flex items-center gap-4 font-medium text-cobalto">
-          <Link to={`/clientes/${c.id}`} className="hover:text-cobalto-hondo">Ver presupuesto</Link>
+          <Link to={`/clientes/${c.id}`} className="hover:text-cobalto-hondo">{compra ? 'Ver presupuesto' : 'Ver ficha'}</Link>
           <Link to={`/reduccion?cliente=${c.id}`} className="hover:text-cobalto-hondo">Reducir su crédito</Link>
         </span>
       </div>

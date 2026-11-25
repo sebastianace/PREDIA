@@ -97,7 +97,7 @@ export function NegocioNuevo() {
       <h1 className="ancha mt-2 text-[32px] font-semibold leading-[1.05] md:text-5xl">Nuevo negocio</h1>
 
       <form onSubmit={guardar} className="mt-6 space-y-5">
-        <div className="max-w-2xl">
+        <div className="lg:pr-[17.5rem]">
           <Campo etiqueta="Inmueble en venta">
             {(id) => (
               <select id={id} value={inmuebleId} onChange={(e) => setInmuebleId(e.target.value)} required className={claseInput}>
@@ -125,7 +125,8 @@ export function NegocioNuevo() {
           </aside>
 
           <fieldset className="space-y-4 rounded-panel border border-linea bg-white p-4 md:p-5 lg:order-1">
-            <legend className="px-1 text-base font-semibold text-tinta">Vendedor</legend>
+            <legend className="sr-only">Vendedor</legend>
+            <h2 className="text-base font-semibold text-tinta" aria-hidden="true">Vendedor</h2>
             <Segmentado etiqueta="¿Quién vende?" valor={nuevoVendedor ? 'nuevo' : 'existente'}
               opciones={[{ valor: 'existente', texto: 'Elegir uno existente' }, { valor: 'nuevo', texto: 'Registrar uno nuevo' }]}
               onChange={(v) => setNuevoVendedor(v === 'nuevo')} />
@@ -192,7 +193,7 @@ export function NegocioNuevo() {
           </fieldset>
         </div>
 
-        <div className="max-w-2xl space-y-5">
+        <div className="space-y-5 lg:pr-[17.5rem]">
           <Campo etiqueta="Cliente comprador (opcional)">
             {(id) => (
               <select id={id} value={clienteId} onChange={(e) => setClienteId(e.target.value)} className={claseInput}>

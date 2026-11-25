@@ -1,5 +1,17 @@
 # Progreso de Predia
 
+## Extra — Rediseño de Clientes y del alta del vendedor ✅ (25/11/2026)
+
+**Rama:** `feature/rediseno-clientes` (sale de `develop`). Pedido por el profesor. Boceto aprobado antes de programar (tres versiones: cifras que no se desbordan, secciones en tarjetas y curvas animadas en los paneles azules).
+
+- **Lista de clientes:** tarjetas a todo el ancho con cabecera de azul de plano y curvas de nivel blancas que se trazan una vez al entrar (el mismo `Terreno` del inicio, ahora dentro de un `PanelAzul` reutilizable). Cada tarjeta muestra ingreso, ahorro y **«Puede comprar hasta»** con lo que lo limita; contacto, autorización de datos, buscador por nombre, zona o correo, y filtros Comprar/Arrendar. Quien quiere arrendar no lleva tope.
+- **Backend:** `GET /api/clientes` devuelve `topeDeCompra` y `limitadoPor` para los compradores, calculados por `PresupuestoService`/`CalculadoraPresupuesto` (el mismo cálculo de la ficha); sin una tasa vigente la lista sigue funcionando sin tope. 2 pruebas nuevas en `ClienteApiTest`.
+- **Nuevo cliente:** cuatro secciones numeradas en tarjetas (contacto, situación económica, qué busca, autorización), con el bloque «Lo que dijo el cliente» arriba y un panel de resumen que muestra qué falta para guardar. Comprar/Arrendar y habitaciones son controles táctiles, las zonas son etiquetas, y **lo que propone la IA queda marcado «Sugerido por IA» hasta que el asesor lo edita**. La barra de guardar queda fija sobre la navegación en el celular.
+- **Vendedor (en «Nuevo negocio»):** «Elegir uno existente / Registrar uno nuevo», persona natural o jurídica, tipo de documento como lista (CC, CE, pasaporte, NIT) junto al número, aviso de firma del cónyuge solo si es casado o en unión marital, y una vista previa azul de cómo queda el vendedor.
+- **Componentes nuevos** en `Formulario.tsx`: `SeccionNumerada`, `Segmentado`, `Contador`, `CampoEtiquetas`, `Autorizacion` y la marca `MarcaIa`; íconos nuevos (`buscar`, `escudo`, `telefono`, `chispa`, `usuarioMas`, `circulo`, `circuloCheck`).
+- **Verificado en el navegador** contra una copia de la base de desarrollo (borrada al terminar): la lista con el tope real de Paola y Juan ($300.000.000); un cliente nuevo leído con la IA real (Ollama), con sus marcas, editado y guardado; el vendedor natural y jurídico; y las tres pantallas a 375 px sin desbordes. Defectos corregidos al probar: la marca «Sugerido por IA» partía las etiquetas de los campos de pesos (ahora va dentro del campo) y el título del vendedor quedaba separado del primer campo.
+- **No cambia** ningún dato ni regla: solo presentación y el tope en la lista.
+
 ## Prueba completa antes de la release 1.2.0 ✅ (25/11/2026)
 
 **Rama:** `fix/asistente-completo`. Antes de publicar la 1.2.0 se probó todo junto en una **base nueva** (arranque desde cero: 9 migraciones y demo sembrada) con la rama de la release y Ollama, con un script que recorre 90 comprobaciones por rol (sin Ollama el script no aplica: usa los cuatro roles y el asistente real).

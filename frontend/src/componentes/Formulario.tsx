@@ -47,7 +47,7 @@ const miles = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
 /** Campo de dinero en pesos: se escribe con o sin puntos, se muestra con separador de miles. */
 export function CampoPesos({ etiqueta, valor, onChange, ayuda, sugerido }: PropsPesos) {
   return (
-    <Campo etiqueta={etiqueta} ayuda={ayuda} sugerido={sugerido}>
+    <Campo etiqueta={etiqueta} ayuda={ayuda}>
       {(id) => (
         <div className="relative">
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-niebla">$</span>
@@ -56,7 +56,13 @@ export function CampoPesos({ etiqueta, valor, onChange, ayuda, sugerido }: Props
               const soloDigitos = e.target.value.replace(/\D/g, '')
               onChange(soloDigitos === '' ? null : Number(soloDigitos))
             }}
-            className={`${claseInput} pl-7`} />
+            className={`${claseInput} pl-7 ${sugerido ? 'pr-12' : ''}`} />
+          {/* En los campos angostos la marca va dentro del campo: en la etiqueta la partiría en dos líneas. */}
+          {sugerido && (
+            <span title="Sugerido por IA" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full bg-cobalto-suave px-2 py-px text-[11px] text-cobalto-hondo">
+              IA<span className="sr-only"> (sugerido por IA)</span>
+            </span>
+          )}
         </div>
       )}
     </Campo>
