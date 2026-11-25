@@ -1,5 +1,17 @@
 # Progreso de Predia
 
+## Prueba completa antes de la release 1.2.0 ✅ (25/11/2026)
+
+**Rama:** `fix/asistente-completo`. Antes de publicar la 1.2.0 se probó todo junto en una **base nueva** (arranque desde cero: 9 migraciones y demo sembrada) con la rama de la release y Ollama, con un script que recorre 90 comprobaciones por rol (sin Ollama el script no aplica: usa los cuatro roles y el asistente real).
+
+- **Cubre:** permisos de los cuatro roles (sin token 401; asesor sin acceso a usuarios, parámetros ni tasas; propietario y comprador solo a lo suyo, y 404 ante lo ajeno), cálculos (presupuesto, cuota de $2.438.073 a 15 años, reducción de crédito, tasa mal escrita rechazada), búsqueda por significado, indexación y RAG con cita y sin evidencia, escaneo de archivos (imagen disfrazada de PDF, `.txt`, sin archivo), galería de imágenes, cierre (la IA deja SUGERIDO y el asesor confirma o reabre), recordatorio redactado y aprobado (llega a Mailpit), las tres preguntas del asistente y ambos portales completos (invitación por correo, enlace de un solo uso, activación, login, subida del propietario, ficha del comprador sin código ni datos del propietario, simulador, solicitud y atención).
+- **Resultado:** 89 de 90 comprobaciones. Las fallas de la primera corrida (84 comprobaciones) eran del script, no de la aplicación: la forma de la respuesta del estado documental y que el simulador del comprador exige `cuotaInicial`; el asistente, en cambio, sí tenía una inconsistencia real (ver más abajo). La comprobación que queda en rojo («tras confirmar el paz y salvo, faltan 1») no es un error: es la regla de vigencia del paz y salvo (ver más abajo); el resto de la cadena SUGERIDO → RECIBIDO → reabrir sí se verificó.
+- **Interfaz:** las 10 pantallas del asesor sin desbordar a 375 px de ancho, pantalla de ingreso y cierre del negocio revisados en celular.
+- **Asistente más consistente (hallazgo):** «¿Qué les alcanza?» solo usaba `buscarInmuebles` en 3 de 5 corridas y una vez respondió solo con el tope, sin inmuebles. La instrucción ahora manda siempre `buscarInmuebles` con `paraCliente` (ya devuelve el tope): 12 de 12 respuestas completas, sin cifras sin respaldo.
+- **Temperatura de Ollama en 0,2** (`OLLAMA_TEMPERATURE`): uso factual, respuestas más estables. En «¿La venta del 1102 incluye parqueadero?» pasó de 3 «sí» de 5 a 5 de 6; la variación restante sale de qué fragmentos recupera.
+- **Vigencia del paz y salvo:** es «del mes en curso» y la firma tentativa es en diciembre, así que un paz y salvo de noviembre queda «por vencer» y el negocio sigue en «Faltan 2». Es la regla funcionando; se explica en el guion de demo.
+- Todo se hizo en bases nuevas (borradas al terminar) y Mailpit quedó vacío; la base de desarrollo no se tocó.
+
 ## Preparación de la presentación ✅ (25/11/2026)
 
 **Rama:** `fix/seccion-en-citas` (sale de `develop`). Ensayo completo del recorrido de la demo en la instancia real (Ollama, PostgreSQL y Mailpit), por la API y por la interfaz.

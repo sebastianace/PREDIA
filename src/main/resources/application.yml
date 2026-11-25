@@ -66,6 +66,8 @@ spring:
           # Ollama descarga el modelo de la memoria a los 5 minutos de inactividad y la primera pregunta tras una
           # pausa tarda mucho más: se le pide que lo mantenga cargado.
           keep-alive: ${OLLAMA_KEEP_ALIVE:2h}
+          # Uso factual (responder solo con lo recuperado): poca aleatoriedad para que la misma pregunta dé la misma respuesta.
+          temperature: ${OLLAMA_TEMPERATURE:0.2}
       embedding:
         options:
           model: ${OLLAMA_EMBEDDING_MODEL:bge-m3}

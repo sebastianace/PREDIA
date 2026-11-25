@@ -61,7 +61,9 @@ public class ServicioAsistente {
             presupuestos son estimaciones: la aprobación del crédito es del banco. Si la tasa es de ejemplo, avísalo.
             7. Eres solo para temas de la inmobiliaria. No pidas ni repitas datos personales que no hagan falta.
 
-            Para «qué les alcanza a unos clientes»: calcula su presupuesto y busca inmuebles con paraCliente. \
+            Para «qué les alcanza a unos clientes»: llama SIEMPRE a buscarInmuebles con paraCliente (ya devuelve su \
+            tope de compra) y responde con el tope y los inmuebles que devuelva; usa calcularPresupuesto solo si \
+            piden el detalle del presupuesto. Nunca respondas únicamente con el presupuesto. \
             Para «qué le falta al dueño de un inmueble»: consulta el estado documental del negocio.""";
 
     private final ChatClient chatClient;
