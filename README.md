@@ -219,10 +219,18 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 
 Para probar cada sección a fondo (qué hacer, qué deberías ver y qué explicar), y para consultar la base de datos, está la [guía de pruebas](docs/GUIA_DE_PRUEBAS.md). Este es el recorrido corto:
 
-Recorrido de unos 8 minutos. Requiere `docker compose up -d`, `./mvnw spring-boot:run` y `npm run dev`; los pasos 2 y 8 necesitan `OPENAI_API_KEY` (sin ella, Predia sigue funcionando en modo manual: la búsqueda es por texto y el recordatorio sale de una plantilla). Entra como `laura@altos.test`.
+Recorrido de unos 8 minutos. Requiere `docker compose up -d`, `./mvnw spring-boot:run` y `npm run dev` (o `./arrancar.sh`, que levanta todo). Los pasos 2, 6, 7 y 8 usan IA: con OpenAI (`OPENAI_API_KEY`) o con modelos locales (`PREDIA_IA_PROVEEDOR=ollama`, ver «IA local con Ollama»). Sin IA, Predia sigue funcionando en modo manual: la búsqueda es por texto y el recordatorio sale de una plantilla. Entra como `laura@altos.test`.
+
+**Antes de presentar (con Ollama):**
+
+1. Docker abierto y `ollama serve` corriendo, con `qwen3:8b` y `bge-m3` descargados (`ollama list`).
+2. `PREDIA_IA_PROVEEDOR=ollama ./arrancar.sh` (o la variable en el `.env`). `GET /api/sistema/estado` debe decir `"proveedor":"ollama"`.
+3. Umbral de similitud en `0,35` (*Requisitos y parámetros*, como ADMIN). Con el `0,30` de OpenAI, `bge-m3` deja pasar preguntas ajenas.
+4. Calienta los modelos con una pregunta cualquiera: la primera tras arrancar tarda más (después, de 5 a 15 s por respuesta; Predia pide a Ollama que los mantenga cargados 2 horas).
+5. Estado limpio: solo `contrato-demo.pdf` en el inmueble 1102, el borrador de recordatorio en la bandeja y Mailpit vacío (<http://localhost:8026>).
 
 1. **Inicio.** Muestra el inventario del día y los inmuebles para ofrecer.
-2. **Expedientes (RAG).** En *Expedientes* elige el *Apto 1102 Cañaveral*, sube `demo/pdfs/contrato-arrendamiento.pdf` y espera a que pase a «Indexado». Pregunta «¿el inmueble incluye parqueadero?»: la respuesta trae la cita (documento, página y sección). Pregunta algo que el contrato no diga: responde que no tiene información, sin llamar al modelo. (El PDF de ejemplo es un contrato de arrendamiento ficticio.)
+2. **Expedientes (RAG).** En *Expedientes* elige el *Apto 1102 Cañaveral*, sube `demo/pdfs/contrato-arrendamiento.pdf` y espera a que pase a «Indexado». Pregunta «¿el inmueble incluye parqueadero?»: la respuesta trae la cita (documento, página y sección; si el fragmento abarca varias cláusulas, el rango «primera — última»). Pregunta algo que el contrato no diga: responde que no tiene información, sin llamar al modelo. (El PDF de ejemplo es un contrato de arrendamiento ficticio.)
 3. **Cliente y presupuesto.** Abre *Clientes → Paola y Juan*: cuota máxima y tope de compra (`$300.000.000`, limitado por el ahorro), con la tasa de ejemplo que se usó.
 4. **Inmuebles para el cliente.** «Buscar inmuebles dentro del presupuesto»: aparece el Apto 1102 Cañaveral, en Floridablanca y dentro del tope.
 5. **Simulador de crédito.** Simula el 1102 a 15 años: la cuota (`$2.438.073`) supera la cuota máxima y la pantalla lo advierte. En *Reducción*, para un crédito que el cliente ya tiene (por ejemplo `$150.000.000` al 11 % E.A. a 240 cuotas), compara abonos de `$500.000`, `$700.000` y `$1.000.000` al mes: con el primero se paga en 123 cuotas y se ahorran `$113.751.687` en intereses. «Imprimir estudio» genera el documento para el cliente.
