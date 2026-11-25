@@ -33,6 +33,7 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 8 | Usuarios, invitaciones y portal del propietario | ✅ Listo |
 | 9 | Portal del comprador: inmuebles compartidos y simulador de compra | ✅ Listo |
 | Extra | Reducción de crédito con abonos extraordinarios (Ley 546 de 1999) | ✅ Listo |
+| Extra | Escaneo de archivos: revisión del PDF y antivirus ClamAV opcional | ✅ Listo |
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
 
@@ -61,7 +62,8 @@ También se usa desde el celular (el asesor la abre en las visitas):
 ```mermaid
 flowchart LR
     U[Asesor<br/>React + Vite] -- HTTPS + JWT --> API[Spring Boot 3.5<br/>Spring Security]
-    API -- PDF temporal --> TMP[(Disco temporal)]
+    API -- valida y escanea --> AV[Revisión del PDF<br/>+ ClamAV opcional]
+    AV -- PDF temporal --> TMP[(Disco temporal)]
     API --> JOB[Procesador asíncrono<br/>@Scheduled]
     JOB -- texto / OCR --> FR[Fragmentador<br/>500–1.000 tokens]
     FR --> EMB[Embeddings<br/>OpenAI]
@@ -162,10 +164,26 @@ Nadie se registra solo: se entra por invitación. Desactivar a alguien cierra su
 | `OPENAI_API_KEY` | Clave de OpenAI; vacía = modo manual | vacía |
 | `OPENAI_CHAT_MODEL` | Modelo de chat | `gpt-5.4-mini` |
 | `OPENAI_EMBEDDING_MODEL` | Modelo de embeddings (1536 dimensiones) | `text-embedding-3-small` |
+| `ESCANEO_MODO` | Antivirus de los PDF: `DESACTIVADO` o `CLAMAV` (ver «Escaneo de archivos») | `DESACTIVADO` |
+| `CLAMAV_HOST`, `CLAMAV_PUERTO` | Dónde escucha ClamAV (`clamd`) | `localhost`, `3310` |
+| `ESCANEO_OBLIGATORIO` | Con `CLAMAV`, si el antivirus no responde el archivo se rechaza (503) en vez de aceptarse sin verificar | `true` |
 | `MAIL_HOST`, `MAIL_PORT`, `MAILPIT_UI_PORT` | SMTP de desarrollo (Mailpit) | `localhost`, `1026`, `8026` |
 | `DEMO_HABILITADA`, `DEMO_PASSWORD` | Siembra de los datos ficticios | `true`, — |
 | `PREDIA_URL_PUBLICA` | Dirección de la interfaz, para los enlaces de invitación | `http://localhost:5173` |
 | `PREDIA_ADMIN_EMAIL`, `PREDIA_ADMIN_NOMBRE`, `PREDIA_INMOBILIARIA_NOMBRE`, `PREDIA_INMOBILIARIA_NIT` | Primer administrador de una instalación nueva (ver [DESPLIEGUE.md](docs/DESPLIEGUE.md)) | vacías |
+
+### Escaneo de archivos
+
+Todo PDF que sube un asesor o un propietario pasa por dos revisiones antes de guardarse, y si alguna lo rechaza no queda nada: ni el documento, ni el trabajo de indexación, ni el archivo temporal.
+
+1. **Revisión del PDF (siempre activa).** Debe empezar con la firma `%PDF-` (no basta con la extensión) y no puede traer JavaScript, acciones que abren otros programas ni archivos incrustados. Se recorren todos los objetos del documento con PDFBox, incluidos los que van comprimidos. Un contrato o un certificado legítimos no llevan nada de eso.
+2. **Antivirus ClamAV (opcional).** Cada archivo se envía al servicio `clamd` antes de abrirlo. Por defecto está apagado para que Predia arranque con solo PostgreSQL; para activarlo:
+   ```bash
+   docker compose --profile escaneo up -d clamav
+   ```
+   Espera a que el contenedor esté `healthy` (la primera vez tarda unos minutos en cargar las firmas) y arranca la API con `ESCANEO_MODO=CLAMAV`. Con `ESCANEO_OBLIGATORIO=true` (por defecto), si ClamAV no responde el archivo se rechaza con 503 en vez de darlo por limpio.
+
+Cuando algo se rechaza, el usuario ve que fue «por seguridad» y, si es la revisión del PDF, el motivo; el nombre de la amenaza solo queda en el registro del servidor, junto con el hash del archivo y nunca con su contenido ni datos del cliente.
 
 ## Producción y HTTPS
 
@@ -219,7 +237,7 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 - **No se conserva el PDF original.** Predia no puede mostrar ni verificar firmas, sellos, imágenes o tablas complejas del original. Si cambia la extracción o el OCR, hay que volver a subir el archivo; los embeddings, en cambio, se pueden regenerar desde el texto guardado.
 - **Dependencia del OCR:** la calidad de las páginas escaneadas depende de Tesseract y de la nitidez del documento.
 - Las vigencias de los documentos dependen de la fecha de expedición que confirma el asesor.
-- No hay antivirus: se valida el tipo, la estructura y el tamaño del archivo.
+- **Antivirus opcional:** viene apagado por defecto (se activa con ClamAV, ver «Escaneo de archivos»). ClamAV detecta lo que su base de firmas conoce, así que no sustituye las buenas prácticas del servidor; la revisión del PDF sí está siempre activa. La imagen de ClamAV pesa unos 560 MB y usa cerca de 1–2 GB de memoria.
 - La columna de vectores es de 1536 dimensiones. Cambiar a un proveedor de embeddings con otra dimensión exige una migración y reindexar.
 - **Cambiar de modelo de embeddings** (`OPENAI_EMBEDDING_MODEL`) no mezcla vectores: la búsqueda solo compara contra fragmentos indexados con el mismo modelo, y avisa cuántos quedaron fuera. Un ADMIN los regenera desde el texto guardado con `POST /api/documentos/regenerar-vectores` (por tandas de 300; se repite hasta que `pendientes` sea 0), sin volver a subir los PDF. Los inmuebles se recalculan solos en la siguiente búsqueda.
 - La lista de documentos para el cierre es de referencia. **Predia no da asesoría legal**: confirma los requisitos con la notaría.

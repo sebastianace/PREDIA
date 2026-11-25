@@ -78,6 +78,11 @@ public class ManejadorErrores {
         return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 
+    @ExceptionHandler(EscaneoNoDisponibleException.class)
+    ProblemDetail escaneoNoDisponible(EscaneoNoDisponibleException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+    }
+
     @ExceptionHandler(FalloDeIaException.class)
     ProblemDetail falloDeIa(FalloDeIaException e) {
         // Se registra solo el tipo de la causa: el mensaje del proveedor podría traer fragmentos de la consulta.

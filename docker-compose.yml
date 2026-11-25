@@ -24,5 +24,23 @@ services:
       - "127.0.0.1:${MAIL_PORT:-1026}:1025"   # SMTP
       - "127.0.0.1:${MAILPIT_UI_PORT:-8026}:8025"   # Interfaz web: http://localhost:8026
 
+  # Antivirus opcional (perfil «escaneo»): docker compose --profile escaneo up -d
+  # Luego arrancar la API con ESCANEO_MODO=CLAMAV. Tarda unos minutos en cargar las firmas la primera vez.
+  clamav:
+    image: clamav/clamav-debian:1.4
+    container_name: predia-clamav
+    profiles: ["escaneo"]
+    ports:
+      - "127.0.0.1:${CLAMAV_PUERTO:-3310}:3310"
+    volumes:
+      - predia-clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
 volumes:
   predia-pgdata:
+  predia-clamav:

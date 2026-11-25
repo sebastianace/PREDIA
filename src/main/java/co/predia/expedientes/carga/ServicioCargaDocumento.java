@@ -13,6 +13,8 @@ import co.predia.expedientes.indexacion.TipoDocumentoSugerido;
 import co.predia.cierre.negocio.NegocioRepository;
 import co.predia.inventario.InmuebleRepository;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,8 @@ import java.util.UUID;
 @Service
 public class ServicioCargaDocumento {
 
+    private static final Logger log = LoggerFactory.getLogger(ServicioCargaDocumento.class);
+
     private static final Set<String> TIPOS_CONTENIDO_VALIDOS = Set.of("application/pdf", "application/x-pdf");
 
     private final PropiedadesExpedientes propiedades;
@@ -49,11 +53,16 @@ public class ServicioCargaDocumento {
     private final RegistroDocumentoTrabajo registro;
     private final NegocioRepository negocios;
     private final ApplicationEventPublisher eventos;
+    private final EscanerArchivos escaner;
+    private final InspectorPdf inspector;
 
     public ServicioCargaDocumento(PropiedadesExpedientes propiedades, DocumentoRepository documentos,
                                   InmuebleRepository inmuebles, ExtractorPdf extractorPdf,
                                   RegistroDocumentoTrabajo registro, NegocioRepository negocios,
-                                  ApplicationEventPublisher eventos) {
+                                  ApplicationEventPublisher eventos, EscanerArchivos escaner,
+                                  InspectorPdf inspector) {
+        this.escaner = escaner;
+        this.inspector = inspector;
         this.negocios = negocios;
         this.eventos = eventos;
         this.propiedades = propiedades;
@@ -76,6 +85,8 @@ public class ServicioCargaDocumento {
 
         ArchivoGuardado guardado = guardarTemporalConHash(archivo);
         try {
+            // Primero el antivirus, antes de que PDFBox abra el archivo; después la revisión del propio PDF.
+            escanearAntivirus(guardado);
             validarEsPdfLegible(guardado.ruta());
 
             Optional<Documento> existente =
@@ -133,7 +144,26 @@ public class ServicioCargaDocumento {
         }
     }
 
+    /** Un archivo con una amenaza no se acepta; en el log solo queda su hash y el nombre de la amenaza. */
+    private void escanearAntivirus(ArchivoGuardado guardado) {
+        EscanerArchivos.Resultado resultado = escaner.escanear(guardado.ruta());
+        if (resultado.estaInfectado()) {
+            log.warn("Archivo rechazado por el antivirus: sha256={} amenaza={}", guardado.hash(), resultado.amenaza());
+            throw new ReglaNegocioException("El archivo fue rechazado por seguridad: se detectó contenido malicioso.");
+        }
+        if (!resultado.verificado()) {
+            log.debug("Archivo aceptado sin escaneo antivirus: sha256={}", guardado.hash());
+        }
+    }
+
     private void validarEsPdfLegible(Path ruta) {
+        try {
+            if (!inspector.tieneFirmaPdf(ruta)) {
+                throw new ReglaNegocioException("El archivo no es un PDF válido.");
+            }
+        } catch (IOException e) {
+            throw new ReglaNegocioException("El archivo no es un PDF válido.");
+        }
         try (PDDocument documento = extractorPdf.abrir(ruta.toFile())) {
             if (extractorPdf.esEncriptado(documento)) {
                 throw new ReglaNegocioException("El PDF está protegido con contraseña; súbelo sin cifrar.");
@@ -141,6 +171,9 @@ public class ServicioCargaDocumento {
             if (extractorPdf.contarPaginas(documento) == 0) {
                 throw new ReglaNegocioException("El PDF no tiene páginas.");
             }
+            inspector.motivoDeRechazo(documento).ifPresent(motivo -> {
+                throw new ReglaNegocioException("El archivo fue rechazado por seguridad. " + motivo);
+            });
         } catch (IOException e) {
             throw new ReglaNegocioException("El archivo no es un PDF válido.");
         }
