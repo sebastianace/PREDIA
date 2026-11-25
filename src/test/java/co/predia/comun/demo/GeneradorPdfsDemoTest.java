@@ -48,8 +48,8 @@ class GeneradorPdfsDemoTest {
         var reglamento = fragmentador.fragmentar(List.of(new PaginaTexto(1,
                 textoDe(temporal.resolve("reglamento-propiedad-horizontal.pdf")), false)));
 
-        // La sección de un fragmento es el último encabezado visto: con todo en un fragmento, la última cláusula.
-        assertThat(contrato.get(contrato.size() - 1).seccion()).startsWith("CLÁUSULA QUINTA");
-        assertThat(reglamento.get(reglamento.size() - 1).seccion()).startsWith("ARTÍCULO 6");
+        // Con todo el documento en un fragmento, la cita abarca desde el título hasta la última cláusula o artículo.
+        assertThat(contrato.get(contrato.size() - 1).seccion()).contains("CLÁUSULA").endsWith("CLÁUSULA QUINTA. DEPÓSITO");
+        assertThat(reglamento.get(reglamento.size() - 1).seccion()).contains("ARTÍCULO").contains("ARTÍCULO 6");
     }
 }

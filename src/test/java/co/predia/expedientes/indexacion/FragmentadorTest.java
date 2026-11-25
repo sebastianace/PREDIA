@@ -61,7 +61,7 @@ class FragmentadorTest {
     }
 
     @Test
-    void detectaLaSeccionPorEncabezadoLegalYLaConservaHastaElSiguiente() {
+    void unFragmentoQueCruzaSeccionesCitaElRangoYNoSoloLaUltima() {
         String pagina = """
                 CLÁUSULA PRIMERA. OBJETO
 
@@ -75,8 +75,8 @@ class FragmentadorTest {
         List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(new PaginaTexto(1, pagina, false)));
 
         assertThat(resultado).hasSize(1);
-        // La sección vigente al cerrar el único fragmento es la última encabezada vista.
-        assertThat(resultado.get(0).seccion()).isEqualTo("CLÁUSULA SEGUNDA. PRECIO");
+        // El único fragmento contiene las dos cláusulas: la cita no puede señalar solo la segunda.
+        assertThat(resultado.get(0).seccion()).isEqualTo("CLÁUSULA PRIMERA. OBJETO — CLÁUSULA SEGUNDA. PRECIO");
     }
 
     @Test
@@ -92,7 +92,29 @@ class FragmentadorTest {
         List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(new PaginaTexto(1, pagina, false)));
 
         assertThat(resultado).hasSize(1);
-        assertThat(resultado.get(0).seccion()).isEqualTo("CLÁUSULA SEGUNDA. CANON");
+        assertThat(resultado.get(0).seccion()).isEqualTo("CONTRATO DE ARRENDAMIENTO — CLÁUSULA SEGUNDA. CANON");
+    }
+
+    @Test
+    void unFragmentoDentroDeUnaSolaSeccionCitaEsaSeccion() {
+        String pagina = "CLÁUSULA PRIMERA. OBJETO\n\n" + parrafoDe(60) + "\n\n" + parrafoDe(60);
+
+        List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(new PaginaTexto(1, pagina, false)));
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).seccion()).isEqualTo("CLÁUSULA PRIMERA. OBJETO");
+    }
+
+    @Test
+    void elEncabezadoDelSiguienteBloqueNoSeLeAtribuyeAlFragmentoQueSeCierra() {
+        // Dos secciones largas: el primer fragmento se cierra por tamaño justo antes del encabezado de la segunda.
+        String pagina = "CLÁUSULA PRIMERA. OBJETO\n\n" + parrafoDe(985) + "\n\nCLÁUSULA SEGUNDA. PRECIO\n\n" + parrafoDe(985);
+
+        List<FragmentoCandidato> resultado = fragmentador.fragmentar(List.of(new PaginaTexto(1, pagina, false)));
+
+        assertThat(resultado.size()).isGreaterThanOrEqualTo(2);
+        assertThat(resultado.get(0).seccion()).isEqualTo("CLÁUSULA PRIMERA. OBJETO");
+        assertThat(resultado.get(resultado.size() - 1).seccion()).endsWith("CLÁUSULA SEGUNDA. PRECIO");
     }
 
     @Test
