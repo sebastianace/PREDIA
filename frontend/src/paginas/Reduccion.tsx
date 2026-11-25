@@ -281,7 +281,7 @@ export function Reduccion() {
           </section>
 
           <p className="mt-6 text-xs text-niebla">{sim.aviso}</p>
-          {conAbonos && usuario && <Estudio sim={sim} columnas={columnas} filas={filas} inmobiliaria={usuario.inmobiliaria} asesor={usuario.nombre} />}
+          {conAbonos && usuario && <Estudio sim={sim} columnas={columnas} inmobiliaria={usuario.inmobiliaria} asesor={usuario.nombre} />}
         </div>
       )}
     </div>
@@ -289,58 +289,125 @@ export function Reduccion() {
 }
 
 /** Versión para imprimir: solo visible al imprimir (ver index.css). Sin marca ajena: la de la inmobiliaria del asesor. */
-function Estudio({ sim, columnas, filas, inmobiliaria, asesor }: {
+type EstiloFila = 'banda' | 'ahorro' | 'total'
+interface FilaHoja { nombre: string; valores: string[]; estilo?: EstiloFila }
+
+const claseFila: Record<EstiloFila | 'normal', string> = {
+  normal: 'border-b border-linea text-grafito',
+  banda: 'bg-cobalto-suave font-medium text-prusia',
+  ahorro: 'border-b border-linea text-grafito',
+  total: 'bg-prusia font-medium text-white',
+}
+
+/** Un bloque de la hoja impresa: franja azul con el título y los escenarios, y debajo sus filas. */
+function BloqueHoja({ titulo, encabezados, filas }: { titulo: string; encabezados: string[]; filas: FilaHoja[] }) {
+  return (
+    <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
+      <colgroup><col className="w-[34%]" />{encabezados.map((_, i) => <col key={i} />)}</colgroup>
+      <thead>
+        <tr className="bg-prusia text-white">
+          <th scope="col" className="px-2 py-1.5 text-left font-medium">{titulo}</th>
+          {encabezados.map((h, i) => <th key={i} scope="col" className="px-2 py-1.5 text-right font-medium">{h}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {filas.map((f) => (
+          <tr key={f.nombre} className={claseFila[f.estilo ?? 'normal']}>
+            <th scope="row" className="px-2 py-1 text-left font-normal">{f.nombre}</th>
+            {f.valores.map((v, i) => (
+              <td key={i} className={`px-2 py-1 text-right ${f.estilo === 'ahorro' ? 'font-medium text-prusia-claro' : ''}`}>{v}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+/**
+ * La hoja que se imprime (solo se ve al imprimir): un estudio de una página con las condiciones actuales y los
+ * escenarios de abono lado a lado, lo ahorrado y las firmas. Todas las cifras vienen de la simulación del backend.
+ */
+function Estudio({ sim, columnas, inmobiliaria, asesor }: {
   sim: SimulacionReduccion
   columnas: { titulo: string; e: EscenarioReduccion }[]
-  filas: { nombre: string; valor: (e: EscenarioReduccion) => string | null }[]
   inmobiliaria: string
   asesor: string
 }) {
   const hoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+  const todos = (v: string) => columnas.map(() => v)
+  const porEscenario = (f: (e: EscenarioReduccion) => string) => columnas.map((c) => f(c.e))
+  const solo = (f: (e: EscenarioReduccion) => string | null) => columnas.map((c, i) => (i === 0 ? '' : f(c.e) ?? ''))
+  const mensual = sim.frecuencia === 'MENSUAL'
+  const cuando = { MENSUAL: 'cada mes', ANUAL: 'una vez al año', UNICO: 'en un solo pago' }[sim.frecuencia]
+
+  const condiciones: FilaHoja[] = [
+    { nombre: 'Saldo del crédito', valores: todos(formatoPesos(sim.saldo)) },
+    { nombre: 'Cuotas pendientes', valores: porEscenario((e) => String(e.cuotas)) },
+    { nombre: 'Tiempo pendiente', valores: porEscenario((e) => formatoMeses(e.cuotas)) },
+    { nombre: 'Tasa de interés cobrada', valores: todos(formatoTasaEa(sim.tasaEa)) },
+    { nombre: `Abono adicional a la cuota (${cuando})`, estilo: 'banda', valores: porEscenario((e) => (e.abono == null ? '—' : formatoPesos(e.abono))) },
+    { nombre: 'Valor de la cuota', valores: porEscenario((e) => formatoPesos(e.cuotaInicial)) },
+    ...(sim.modo === 'REDUCIR_CUOTA'
+      ? [{ nombre: 'Cuota al final del crédito', valores: porEscenario((e) => formatoPesos(e.cuotaFinal)) }]
+      : []),
+    { nombre: 'Valor del seguro', valores: todos(formatoPesos(sim.seguroMensual)) },
+    {
+      nombre: mensual ? `Nueva cuota aproximada${sim.seguroMensual > 0 ? ' (con seguro)' : ''}` : 'Cuota mensual (sin el abono)',
+      estilo: 'banda',
+      valores: porEscenario((e) => formatoPesos(e.desembolsoMensual)),
+    },
+    { nombre: 'Total deuda aproximada', valores: porEscenario((e) => formatoPesos(e.totalPagado)) },
+    { nombre: 'Abono a capital (1.ª cuota)', valores: todos(formatoPesos(sim.primeraCuotaCapital)) },
+    { nombre: 'Abono a intereses (1.ª cuota)', valores: todos(formatoPesos(sim.primeraCuotaIntereses)) },
+  ]
+  const ahorro: FilaHoja[] = [
+    { nombre: 'Dinero ahorrado en intereses', estilo: 'ahorro', valores: solo((e) => (e.ahorroIntereses == null ? null : formatoPesos(e.ahorroIntereses))) },
+    { nombre: 'Dinero ahorrado en seguros', valores: solo((e) => (e.ahorroSeguro == null ? null : formatoPesos(e.ahorroSeguro))) },
+    { nombre: 'Total dinero ahorrado', estilo: 'total', valores: solo((e) => (e.ahorroTotal == null ? null : formatoPesos(e.ahorroTotal))) },
+    { nombre: 'Cuotas reducidas', valores: solo((e) => (e.cuotasReducidas == null ? null : String(e.cuotasReducidas))) },
+    { nombre: 'Tiempo ahorrado', estilo: 'ahorro', valores: solo((e) => (e.cuotasReducidas == null ? null : formatoMeses(e.cuotasReducidas))) },
+    {
+      nombre: `Ingreso requerido (cuota ≤ ${formatoPorcentaje(sim.pctCuotaMaxIngreso, 0)})`,
+      valores: solo((e) => (e.ingresoRequerido == null ? null
+        : `${formatoPesos(e.ingresoRequerido)}${e.cumpleIngreso == null ? '' : e.cumpleIngreso ? ' · cumple' : ' · no cumple'}`)),
+    },
+  ]
+
   return (
     <section id="estudio" className="hidden bg-white p-2 text-black print:block">
       <header className="flex items-start justify-between border-b-2 border-prusia pb-3">
         <div>
-          <div className="ancha text-xl font-bold text-prusia">{inmobiliaria}</div>
-          <h1 className="ancha mt-1 text-2xl font-semibold">Estudio de reducción de crédito</h1>
+          <div className="ancha text-xl font-semibold text-prusia">{inmobiliaria}</div>
+          <div className="text-[11px] text-niebla">Estudio hecho con Predia</div>
+          <h1 className="ancha mt-2 text-xl font-semibold">Estudio de reducción de crédito</h1>
         </div>
-        <div className="text-right text-sm">
+        <div className="text-right text-[11px] leading-snug text-grafito">
+          <svg width="120" height="34" viewBox="0 0 120 34" aria-hidden="true" className="ml-auto block">
+            <g fill="none" stroke="#a9c2f2" strokeWidth="1">
+              <ellipse cx="86" cy="17" rx="32" ry="14" /><ellipse cx="88" cy="17" rx="22" ry="9" /><ellipse cx="90" cy="17" rx="12" ry="4.5" />
+            </g>
+          </svg>
           <div>{hoy}</div>
-          <div>Ley 546 de 1999</div>
+          <div>Ley 546 de 1999 · Colombia</div>
         </div>
       </header>
-      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-        {sim.clienteNombre && <><dt className="text-grafito">Cliente</dt><dd className="font-medium">{sim.clienteNombre}</dd></>}
-        {sim.banco && <><dt className="text-grafito">Banco</dt><dd className="font-medium">{sim.banco}</dd></>}
-        <dt className="text-grafito">Saldo del crédito</dt><dd className="font-medium">{formatoPesos(sim.saldo)}</dd>
-        <dt className="text-grafito">Tasa</dt><dd className="font-medium">{formatoTasaEa(sim.tasaEa)}</dd>
-        <dt className="text-grafito">Cuotas pendientes</dt><dd className="font-medium">{sim.cuotasPendientes} ({formatoMeses(sim.cuotasPendientes)})</dd>
-        <dt className="text-grafito">El abono reduce</dt><dd className="font-medium">{sim.modo === 'REDUCIR_PLAZO' ? 'el plazo' : 'la cuota'}</dd>
+      <dl className="mb-3.5 mt-3 grid grid-cols-3 gap-2.5 text-[11px]">
+        <div><dt className="text-niebla">Cliente</dt><dd className="font-medium">{sim.clienteNombre ?? '—'}</dd></div>
+        <div><dt className="text-niebla">Banco</dt><dd className="font-medium">{sim.banco ?? '—'}</dd></div>
+        <div><dt className="text-niebla">El abono reduce</dt><dd className="font-medium">{sim.modo === 'REDUCIR_PLAZO' ? 'El plazo' : 'La cuota'}, {cuando}</dd></div>
       </dl>
-      <table className="mt-5 w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-prusia text-right">
-            <th className="py-2 text-left font-semibold"></th>
-            {columnas.map((c) => (
-              <th key={c.titulo} className="py-2 font-semibold">{c.titulo}{c.e.abono != null && <div className="text-xs font-normal">{formatoPesos(c.e.abono)}</div>}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((f) => (
-            <tr key={f.nombre} className="border-b border-gray-300 text-right">
-              <th scope="row" className="py-1.5 text-left font-normal">{f.nombre}</th>
-              {columnas.map((c) => <td key={c.titulo} className="py-1.5">{f.valor(c.e) ?? '—'}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-5 text-xs text-gray-700">{sim.aviso}</p>
-      <div className="mt-14 grid grid-cols-2 gap-10 text-sm">
+      <BloqueHoja titulo="Condiciones actuales con el banco" encabezados={columnas.map((c) => c.titulo)} filas={condiciones} />
+      <div className="mt-3">
+        <BloqueHoja titulo="Dinero y tiempo ahorrado" encabezados={columnas.map((c, i) => (i === 0 ? '' : c.titulo))} filas={ahorro} />
+      </div>
+      <p className="mt-3 text-[10.5px] leading-snug text-grafito">
+        {sim.aviso} El ingreso requerido se calcula con una cuota máxima del {formatoPorcentaje(sim.pctCuotaMaxIngreso, 0)} del ingreso.
+      </p>
+      <div className="mt-9 grid grid-cols-2 gap-9 text-[11px]">
         <div className="border-t border-black pt-1">Firma del cliente</div>
-        <div className="border-t border-black pt-1">Asesor: {asesor}</div>
+        <div className="border-t border-black pt-1">Asesor: {asesor} · {inmobiliaria}</div>
       </div>
     </section>
   )
 }
-

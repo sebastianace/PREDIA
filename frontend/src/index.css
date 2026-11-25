@@ -82,7 +82,8 @@
 @media print {
   body * { visibility: hidden; }
   #estudio, #estudio * { visibility: visible; }
-  #estudio { position: absolute; inset: 0 auto auto 0; width: 100%; }
+  #estudio { position: absolute; inset: 0 auto auto 0; width: 100%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #estudio table, #estudio tr { break-inside: avoid; }
   @page { margin: 14mm; }
 }
 
