@@ -10,11 +10,13 @@ import java.util.List;
 /**
  * Resultado de simular abonos extraordinarios sobre un crédito que el cliente ya tiene. Todos los números
  * salen de {@link CalculadoraReduccion}; el cliente va en null si la simulación no se hizo para uno.
+ * {@code primeraCuotaCapital} y {@code primeraCuotaIntereses} son cómo se reparte la primera cuota del crédito tal como está
+ * hoy (la misma en todos los escenarios, porque el primer abono se aplica después de pagarla); la hoja impresa las muestra.
  */
 public record SimulacionReduccion(
         Long clienteId, String clienteNombre, String banco, BigDecimal saldo, BigDecimal tasaEa, int cuotasPendientes,
         BigDecimal seguroMensual, Modo modo, Frecuencia frecuencia, BigDecimal pctCuotaMaxIngreso,
-        Escenario actual, List<Escenario> escenarios, int escenarioDeLaTabla, List<Fila> tabla, String aviso) {
+        BigDecimal primeraCuotaCapital, BigDecimal primeraCuotaIntereses, Escenario actual, List<Escenario> escenarios, int escenarioDeLaTabla, List<Fila> tabla, String aviso) {
 
     public static final String AVISO =
             "Es una simulación con fines informativos; no es una oferta ni una aprobación del banco. "

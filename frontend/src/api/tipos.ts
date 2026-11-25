@@ -408,6 +408,9 @@ export interface SimulacionReduccion {
   modo: ModoReduccion
   frecuencia: FrecuenciaAbono
   pctCuotaMaxIngreso: number
+  /** Cómo se reparte la primera cuota del crédito actual (la misma en todos los escenarios). */
+  primeraCuotaCapital: number
+  primeraCuotaIntereses: number
   actual: EscenarioReduccion
   escenarios: EscenarioReduccion[]
   escenarioDeLaTabla: number

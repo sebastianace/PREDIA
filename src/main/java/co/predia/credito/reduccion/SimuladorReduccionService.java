@@ -93,7 +93,7 @@ public class SimuladorReduccionService {
         return new SimulacionReduccion(cliente == null ? null : cliente.getId(),
                 cliente == null ? null : cliente.getNombre(), s.banco() == null || s.banco().isBlank() ? null
                         : s.banco().trim(), s.saldo(), s.tasaEa(), s.cuotasPendientes(), seguro, modo, frecuencia,
-                pctMax, base(actual, seguro), escenarios, escenarioTabla, deLaTabla.filas(),
+                pctMax, actual.filas().get(0).capital(), actual.filas().get(0).intereses(), base(actual, seguro), escenarios, escenarioTabla, deLaTabla.filas(),
                 SimulacionReduccion.AVISO);
     }
 
