@@ -40,6 +40,9 @@ spring:
         max-interval: 5s
     # Predia solo usa chat y embeddings; se desactivan los demás modelos de OpenAI.
     model:
+      # Proveedor de IA: openai (por defecto) u ollama (modelos locales, sin enviar nada a internet).
+      chat: ${PREDIA_IA_PROVEEDOR:openai}
+      embedding: ${PREDIA_IA_PROVEEDOR:openai}
       audio:
         speech: none
         transcription: none
@@ -54,6 +57,15 @@ spring:
       embedding:
         options:
           model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    ollama:
+      # Solo se usa con PREDIA_IA_PROVEEDOR=ollama. Los modelos se descargan a mano (ollama pull): Predia no descarga nada.
+      base-url: ${OLLAMA_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_CHAT_MODEL:qwen3:8b}
+      embedding:
+        options:
+          model: ${OLLAMA_EMBEDDING_MODEL:bge-m3}
 
 springdoc:
   swagger-ui:
