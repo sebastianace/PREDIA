@@ -369,9 +369,12 @@ function Estudio({ sim, columnas, inmobiliaria, asesor }: {
     { nombre: 'Tiempo ahorrado', estilo: 'ahorro', valores: solo((e) => (e.cuotasReducidas == null ? null : formatoMeses(e.cuotasReducidas))) },
     {
       nombre: `Ingreso requerido (cuota ≤ ${formatoPorcentaje(sim.pctCuotaMaxIngreso, 0)})`,
-      valores: solo((e) => (e.ingresoRequerido == null ? null
-        : `${formatoPesos(e.ingresoRequerido)}${e.cumpleIngreso == null ? '' : e.cumpleIngreso ? ' · cumple' : ' · no cumple'}`)),
+      valores: solo((e) => (e.ingresoRequerido == null ? null : formatoPesos(e.ingresoRequerido))),
     },
+    // Solo si la simulación se hizo para un cliente: compara su ingreso con el requerido.
+    ...(columnas.some((c) => c.e.cumpleIngreso != null)
+      ? [{ nombre: 'El ingreso del cliente alcanza', valores: solo((e) => (e.cumpleIngreso == null ? null : e.cumpleIngreso ? 'Sí' : 'No')) }]
+      : []),
   ]
 
   return (

@@ -1,5 +1,15 @@
 # Progreso de Predia
 
+## Extra — Hoja impresa del estudio de reducción de crédito ✅ (25/11/2026)
+
+**Rama:** `feature/impresion-estudio-reduccion` (sale de `develop`). Pedido por el profesor, que dio como ejemplo la impresión del simulador original del autor. Boceto aprobado antes de programar.
+
+- **Nueva hoja** (una página A4): encabezado con la marca de la inmobiliaria y los datos del cliente, un bloque «Condiciones actuales con el banco» con el crédito actual y hasta tres escenarios lado a lado (saldo, cuotas y tiempo pendientes, tasa, abono, valor de la cuota y del seguro, nueva cuota, total de la deuda, abono a capital e intereses de la primera cuota), un bloque «Dinero y tiempo ahorrado» (intereses, seguros, total, cuotas reducidas, tiempo ahorrado, ingreso requerido y si el ingreso del cliente alcanza) y las firmas. Identidad de Predia (azul de Prusia, Archivo, curvas de nivel suaves); no se copió la marca del ejemplo.
+- **Backend:** la simulación devuelve `primeraCuotaCapital` y `primeraCuotaIntereses` (cómo se reparte la primera cuota), calculados por `CalculadoraReduccion`; el frontend no calcula nada.
+- **Defecto de la impresión anterior, corregido:** lo que no era el estudio solo se ocultaba (`visibility`), pero su altura seguía ocupando páginas: el PDF salía con **3 páginas, 2 en blanco**. Ahora se quita del diseño al imprimir y sale **1 página**. También se activó `print-color-adjust` para que las franjas de color salgan en papel.
+- **Verificado** generando el PDF real con el navegador en modo impresión: plazo/cuota, abono mensual/anual, con y sin cliente y con seguro. Con los abonos del ejemplo (`$104.700`, `$149.571`, `$209.399`) las cuotas y los desembolsos coinciden con el PDF del profesor; los ahorros difieren por unos pesos (p. ej. `$44.766.975` frente a `$44.767.103`) porque Predia redondea cada mes al peso y los totales son la suma de la tabla. El ingreso requerido usa el porcentaje máximo de cuota que configura la inmobiliaria (30 %), no el 33,33 % del ejemplo.
+- **Fuera por ahora (sin decidir):** honorarios del asesor (3 % del ahorro + IVA, modelo de corredor), «estudio válido por 20 días» y la fila «# de veces pagada la deuda / cuotas pagas» del ejemplo, que no se entendió.
+
 ## Prueba completa antes de la release 1.2.0 ✅ (25/11/2026)
 
 **Rama:** `fix/asistente-completo`. Antes de publicar la 1.2.0 se probó todo junto en una **base nueva** (arranque desde cero: 9 migraciones y demo sembrada) con la rama de la release y Ollama, con un script que recorre 90 comprobaciones por rol (sin Ollama el script no aplica: usa los cuatro roles y el asistente real).

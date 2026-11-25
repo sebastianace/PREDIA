@@ -81,6 +81,10 @@
 /* Estudio de reducción: al imprimir solo sale el estudio, no la aplicación. */
 @media print {
   body * { visibility: hidden; }
+  /* Lo que no es la hoja ni un contenedor suyo se quita del todo (no solo se oculta): si no, su altura sigue
+     ocupando páginas y salen hojas en blanco. */
+  body *:not(#estudio):not(#estudio *):not(:has(#estudio)) { display: none !important; }
+  html, body { height: auto !important; min-height: 0 !important; overflow: visible !important; }
   #estudio, #estudio * { visibility: visible; }
   #estudio { position: absolute; inset: 0 auto auto 0; width: 100%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   #estudio table, #estudio tr { break-inside: avoid; }
