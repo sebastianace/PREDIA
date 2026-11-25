@@ -74,6 +74,10 @@ springdoc:
     persist-authorization: true
 
 predia:
+  ia:
+    ollama:
+      # qwen3 y otros modelos «piensan» antes de responder: con false se desactiva (diez veces menos tokens).
+      pensar: ${OLLAMA_PENSAR:false}
   jwt:
     secreto: ${JWT_SECRET:}
     horas-validez: ${JWT_HORAS_VALIDEZ:8}
