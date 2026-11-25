@@ -94,7 +94,9 @@ public class AuthController {
     @Operation(summary = "Datos del usuario autenticado")
     public PerfilUsuario yo() {
         UsuarioActual u = sesion.usuario();
-        return perfil(u.id(), u.inmobiliariaId(), u.nombre(), u.email(), u.rol());
+        // El nombre del token puede estar viejo si cambió después de iniciar sesión: se lee el actual.
+        String nombre = usuarios.findByIdAndInmobiliariaId(u.id(), u.inmobiliariaId()).map(Usuario::getNombre).orElse(u.nombre());
+        return perfil(u.id(), u.inmobiliariaId(), nombre, u.email(), u.rol());
     }
 
     private PerfilUsuario perfil(Long id, Long inmobiliariaId, String nombre, String email, Rol rol) {

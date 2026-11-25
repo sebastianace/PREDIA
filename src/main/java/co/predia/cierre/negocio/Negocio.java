@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -80,6 +81,63 @@ public class Negocio {
         this.hipotecaVigente = hipotecaVigente;
         this.estado = estado;
     }
+
+    // --- Cierre ---------------------------------------------------------------------------------------------------
+
+    @Column(name = "firmado_en")
+    private Instant firmadoEn;
+
+    @Column(name = "firmado_por")
+    private Long firmadoPor;
+
+    @Column(name = "valor_cierre")
+    private BigDecimal valorCierre;
+
+    @Column(name = "nota_cierre")
+    private String notaCierre;
+
+    @Column(name = "cancelado_en")
+    private Instant canceladoEn;
+
+    /** La venta se firmó: queda registrado cuándo, quién lo confirmó y por qué valor. */
+    public void cerrar(Long usuarioId, BigDecimal valor, String nota, Instant cuando) {
+        this.estado = EstadoNegocio.FIRMADO;
+        this.firmadoEn = cuando;
+        this.firmadoPor = usuarioId;
+        this.valorCierre = valor;
+        this.notaCierre = nota;
+        this.canceladoEn = null;
+    }
+
+    /** El negocio se cayó: pasa a CANCELADO y anota cuándo (cuenta para la tasa de cierre de su asesor). */
+    public void cancelar(Instant cuando) {
+        cambiarEstadoSinCierre(EstadoNegocio.CANCELADO, cuando);
+    }
+
+    /** Deshace un cierre (solo lo hace un administrador): el negocio vuelve a estar abierto y deja de contar como venta. */
+    public void reabrir() {
+        this.estado = EstadoNegocio.ABIERTO;
+        this.firmadoEn = null;
+        this.firmadoPor = null;
+        this.valorCierre = null;
+        this.notaCierre = null;
+    }
+
+    /** Pasa a CANCELADO (anota cuándo) o vuelve a ABIERTO; el cierre FIRMADO solo se hace con {@link #cerrar}. */
+    void cambiarEstadoSinCierre(EstadoNegocio nuevo, Instant cuando) {
+        if (nuevo == EstadoNegocio.CANCELADO && this.estado != EstadoNegocio.CANCELADO) {
+            this.canceladoEn = cuando;
+        } else if (nuevo != EstadoNegocio.CANCELADO) {
+            this.canceladoEn = null;
+        }
+        this.estado = nuevo;
+    }
+
+    public Instant getFirmadoEn() { return firmadoEn; }
+    public Long getFirmadoPor() { return firmadoPor; }
+    public BigDecimal getValorCierre() { return valorCierre; }
+    public String getNotaCierre() { return notaCierre; }
+    public Instant getCanceladoEn() { return canceladoEn; }
 
     public Long getId() { return id; }
     public Long getInmobiliariaId() { return inmobiliariaId; }

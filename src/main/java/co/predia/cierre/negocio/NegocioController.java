@@ -1,5 +1,9 @@
 package co.predia.cierre.negocio;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.DecimalMin;
+import java.time.Instant;
+import java.math.BigDecimal;
 import co.predia.cierre.reglas.EstadoDocumental;
 import co.predia.perfil.FotoPerfilRepositorio;
 import co.predia.perfil.SujetoFoto;
@@ -46,11 +50,14 @@ public class NegocioController {
     private final UsuarioRepository usuarios;
     private final SesionActual sesion;
     private final FotoPerfilRepositorio fotos;
+    private final ServicioCierreNegocio cierre;
 
     public NegocioController(NegocioRepository negocios, NegocioService servicio,
                              ServicioEstadoDocumental estadoDocumental, InmuebleRepository inmuebles,
                              PropietarioRepository propietarios, ClienteRepository clientes,
-                             UsuarioRepository usuarios, SesionActual sesion, FotoPerfilRepositorio fotos) {
+                             UsuarioRepository usuarios, SesionActual sesion, FotoPerfilRepositorio fotos,
+                             ServicioCierreNegocio cierre) {
+        this.cierre = cierre;
         this.fotos = fotos;
         this.negocios = negocios;
         this.servicio = servicio;
@@ -107,6 +114,19 @@ public class NegocioController {
         return estadoDocumental.calcular(buscar(id));
     }
 
+    @PostMapping("/{id}/cerrar")
+    @Operation(summary = "Cierra el negocio: la venta se firmó. Lo confirma el asesor del negocio (o un administrador); "
+            + "exige la lista de documentos completa y deja el inmueble como vendido")
+    public NegocioDto cerrar(@PathVariable Long id, @Valid @RequestBody SolicitudCierre s) {
+        return dto(cierre.cerrar(sesion.usuario(), id, s.valorCierre(), s.nota()));
+    }
+
+    @PostMapping("/{id}/reabrir")
+    @Operation(summary = "Deshace el cierre de un negocio (solo administrador, con una nota)")
+    public NegocioDto reabrir(@PathVariable Long id, @Valid @RequestBody SolicitudReapertura s) {
+        return dto(cierre.reabrir(sesion.usuario(), id, s.nota()));
+    }
+
     private Negocio buscar(Long id) {
         return negocios.findByIdAndInmobiliariaId(id, sesion.inmobiliariaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Negocio", id));
@@ -128,7 +148,10 @@ public class NegocioController {
                 fotos.version(n.getInmobiliariaId(), SujetoFoto.PROPIETARIO, n.getPropietarioId()).orElse(null),
                 n.getClienteCompradorId() == null ? null
                         : fotos.version(n.getInmobiliariaId(), SujetoFoto.CLIENTE, n.getClienteCompradorId()).orElse(null),
-                fotos.version(n.getInmobiliariaId(), SujetoFoto.USUARIO, n.getAsesorId()).orElse(null));
+                fotos.version(n.getInmobiliariaId(), SujetoFoto.USUARIO, n.getAsesorId()).orElse(null),
+                n.getFirmadoEn(), n.getValorCierre(), n.getNotaCierre(), inmueble.getPrecioVenta(),
+                n.getEstado() == EstadoNegocio.ABIERTO && (sesion.usuario().esAdmin()
+                        || n.getAsesorId().equals(sesion.usuario().id())));
     }
 
     public record SolicitudNegocio(Long inmuebleId, @NotNull Long propietarioId, Long clienteCompradorId,
@@ -144,11 +167,20 @@ public class NegocioController {
                                   @Size(max = 500) String nota) {
     }
 
+    public record SolicitudCierre(@DecimalMin(value = "0", inclusive = false) BigDecimal valorCierre,
+                                  @Size(max = 500) String nota) {
+    }
+
+    public record SolicitudReapertura(@NotBlank @Size(max = 500) String nota) {
+    }
+
     public record NegocioDto(Long id, Long inmuebleId, String inmuebleTitulo, Long propietarioId,
                              String propietarioNombre, Long clienteCompradorId, String clienteCompradorNombre,
                              Long asesorId, String asesorNombre, LocalDate fechaFirmaTentativa,
                              boolean actuaPorApoderado, HipotecaVigente hipotecaVigente, EstadoNegocio estado,
                              boolean listoParaFirmar, String semaforo, int faltan, int porcentajeAvance,
-                             String propietarioFotoVersion, String clienteCompradorFotoVersion, String asesorFotoVersion) {
+                             String propietarioFotoVersion, String clienteCompradorFotoVersion, String asesorFotoVersion,
+                             Instant firmadoEn, BigDecimal valorCierre, String notaCierre, BigDecimal precioPublicado,
+                             boolean puedeCerrar) {
     }
 }

@@ -32,6 +32,11 @@ import co.predia.inventario.Inmueble;
 import co.predia.inventario.InmuebleRepository;
 import co.predia.inventario.Operacion;
 import co.predia.inventario.TipoInmueble;
+import co.predia.cierre.negocio.EstadoNegocio;
+import org.springframework.jdbc.core.JdbcTemplate;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +66,8 @@ public class DatosDemo implements ApplicationRunner {
     public static final String NIT_ALTOS = "900000001-1";
     public static final String EMAIL_ADMIN = "admin@altos.test";
     public static final String EMAIL_LAURA = "laura@altos.test";
+    public static final String EMAIL_ANDRES = "andres@altos.test";
+    public static final String EMAIL_CAMILA = "camila@altos.test";
 
     private static final Logger log = LoggerFactory.getLogger(DatosDemo.class);
 
@@ -77,6 +84,7 @@ public class DatosDemo implements ApplicationRunner {
     private final CatalogoService catalogoService;
     private final ServicioRecordatorios recordatorios;
     private final Clock reloj;
+    private final JdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
     private final String passwordDemo;
 
@@ -85,7 +93,7 @@ public class DatosDemo implements ApplicationRunner {
                      ClienteRepository clientes, TasaCreditoRepository tasas, NegocioRepository negocios,
                      NegocioService negocioService, PropietarioRepository propietarios,
                      RequisitoNegocioRepository requisitosNegocio, CatalogoService catalogoService,
-                     ServicioRecordatorios recordatorios, Clock reloj,
+                     ServicioRecordatorios recordatorios, Clock reloj, JdbcTemplate jdbc,
                      PasswordEncoder passwordEncoder, @Value("${predia.demo.password:}") String passwordDemo) {
         this.inmobiliarias = inmobiliarias;
         this.usuarios = usuarios;
@@ -100,6 +108,7 @@ public class DatosDemo implements ApplicationRunner {
         this.catalogoService = catalogoService;
         this.recordatorios = recordatorios;
         this.reloj = reloj;
+        this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
         this.passwordDemo = passwordDemo;
     }
@@ -117,6 +126,86 @@ public class DatosDemo implements ApplicationRunner {
         }
         sembrarClientesYTasas(altos.getId());
         sembrarNegocioDelApto1102(altos.getId());
+        sembrarEquipoYVentas(altos.getId());
+    }
+
+    /**
+     * Un equipo ficticio con su historial de ventas, para que la pantalla «Equipo» tenga qué comparar. Todo es de ejemplo:
+     * los asesores, los inmuebles «(ejemplo)» y los propietarios son inventados, y cada cierre lo dice en su nota. Las
+     * ventas se registran con el mismo modelo que un cierre real (estado FIRMADO con quién, cuándo y por cuánto).
+     */
+    private void sembrarEquipoYVentas(Long id) {
+        if (usuarios.findByEmailIgnoreCaseAndActivoTrue(EMAIL_ANDRES).isPresent() || passwordDemo == null || passwordDemo.isBlank()) {
+            return;
+        }
+        Usuario laura = usuarios.findByEmailIgnoreCaseAndActivoTrue(EMAIL_LAURA).orElse(null);
+        if (laura == null) {
+            return;
+        }
+        String hash = passwordEncoder.encode(passwordDemo);
+        Usuario andres = usuarios.save(new Usuario(id, "Andrés Pardo", EMAIL_ANDRES, hash, Rol.ASESOR));
+        Usuario camila = usuarios.save(new Usuario(id, "Camila Ríos", EMAIL_CAMILA, hash, Rol.ASESOR));
+
+        // Apto Cabecera ya estaba como vendido en el inventario: ahora tiene su negocio cerrado por Laura.
+        Inmueble cabecera = inmuebles.findByInmobiliariaIdOrderByTituloAsc(id).stream()
+                .filter(i -> "APT-CAB".equals(i.getCodigo())).findFirst().orElse(null);
+        if (cabecera != null) {
+            registrarVenta(id, laura, cabecera, "Marta Lucía Gómez", 100, 41);
+        }
+        registrarVenta(id, laura, nuevoVendido(id, "EJ-LAURA-1", "Casa Los Pinos (ejemplo)", TipoInmueble.CASA, "Floridablanca", "520000000"),
+                "Ricardo Salcedo", 62, 28);
+        registrarVenta(id, laura, nuevoVendido(id, "EJ-LAURA-2", "Apto Mirador (ejemplo)", TipoInmueble.APARTAMENTO, "Bucaramanga", "410000000"),
+                "Lucía Fernández", 6, 33);
+        registrarVenta(id, andres, nuevoVendido(id, "EJ-ANDRES-1", "Apto Prado (ejemplo)", TipoInmueble.APARTAMENTO, "Bucaramanga", "345000000"),
+                "Héctor Olarte", 118, 47);
+        registrarVenta(id, andres, nuevoVendido(id, "EJ-ANDRES-2", "Casa Real de Minas (ejemplo)", TipoInmueble.CASA, "Bucaramanga", "410000000"),
+                "Sandra Villamizar", 20, 38);
+        registrarVenta(id, camila, nuevoVendido(id, "EJ-CAMILA-1", "Apto Lagos (ejemplo)", TipoInmueble.APARTAMENTO, "Floridablanca", "295000000"),
+                "Néstor Quintero", 200, 52);
+
+        // Dos negocios que no se dieron, para que la tasa de cierre no sea siempre del 100 %.
+        negocioCaido(id, andres, "APT-PRO", "Gabriel Mantilla", 45);
+        negocioCaido(id, camila, "APT-CIU", "Patricia Cárdenas", 30);
+        log.info("Equipo de demo sembrado: 2 asesores ficticios y 6 ventas de ejemplo (ficticias).");
+    }
+
+    private Inmueble nuevoVendido(Long id, String codigo, String titulo, TipoInmueble tipo, String ciudad, String precio) {
+        return inmuebles.save(venta(id, codigo, titulo, tipo, "Dirección de ejemplo", "Barrio de ejemplo", ciudad, 4, "80",
+                3, 2, 1, true, "250000", precio, false, EstadoInmueble.VENDIDO, "Inmueble ficticio de la demo del equipo."));
+    }
+
+    /** Un negocio ya firmado hace {@code haceDias} días, que tardó {@code diasDeCierre} días desde que se abrió. */
+    private void registrarVenta(Long id, Usuario asesor, Inmueble inmueble, String vendedor, int haceDias, int diasDeCierre) {
+        Negocio negocio = negocioDeEjemplo(id, asesor, inmueble, vendedor);
+        Instant firmado = LocalDate.now(reloj).minusDays(haceDias).atTime(15, 0).atZone(reloj.getZone()).toInstant();
+        negocio.cerrar(asesor.getId(), inmueble.getPrecioVenta(), "Dato de ejemplo de la demo.", firmado);
+        negocios.save(negocio);
+        jdbc.update("UPDATE negocio SET creado_en = ? WHERE id = ?",
+                Timestamp.from(firmado.minus(diasDeCierre, ChronoUnit.DAYS)), negocio.getId());
+    }
+
+    private void negocioCaido(Long id, Usuario asesor, String codigoInmueble, String vendedor, int haceDias) {
+        Inmueble inmueble = inmuebles.findByInmobiliariaIdOrderByTituloAsc(id).stream()
+                .filter(i -> codigoInmueble.equals(i.getCodigo())).findFirst().orElse(null);
+        if (inmueble == null) {
+            return;
+        }
+        Negocio negocio = negocioDeEjemplo(id, asesor, inmueble, vendedor);
+        Instant cuando = LocalDate.now(reloj).minusDays(haceDias).atTime(11, 0).atZone(reloj.getZone()).toInstant();
+        negocio.cancelar(cuando);
+        negocios.save(negocio);
+        jdbc.update("UPDATE negocio SET creado_en = ? WHERE id = ?", Timestamp.from(cuando.minus(20, ChronoUnit.DAYS)), negocio.getId());
+    }
+
+    /** Un negocio sin lista de documentos: el historial de ejemplo no necesita pasar por el semáforo. */
+    private Negocio negocioDeEjemplo(Long id, Usuario asesor, Inmueble inmueble, String nombreVendedor) {
+        Propietario vendedor = new Propietario(id, asesor.getId());
+        vendedor.actualizar(TipoPersona.NATURAL, nombreVendedor + " (ejemplo)", "CC", String.valueOf(1_000_000_000L + inmueble.getId() * 7_919L),
+                "ejemplo@ejemplo.test", "3000000000", EstadoCivil.SOLTERO);
+        propietarios.save(vendedor);
+        Negocio negocio = new Negocio(id, inmueble.getId(), asesor.getId());
+        negocio.actualizar(vendedor.getId(), null, null, false, HipotecaVigente.NO, EstadoNegocio.ABIERTO);
+        return negocios.save(negocio);
     }
 
     private Inmobiliaria crearBase() {
