@@ -21,7 +21,7 @@ cd frontend && npm ci && npm run build      # deja los archivos estáticos en fr
 export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home   # en Linux: la ruta de tu JDK 21
 export SERVER_FORWARD_HEADERS_STRATEGY=framework    # confía en las cabeceras X-Forwarded-* del proxy
 export DEMO_HABILITADA=false                        # sin los datos ficticios
-java -jar target/predia-1.1.0.jar                   # tras ./mvnw -DskipTests package
+java -jar target/predia-1.2.0.jar                   # tras ./mvnw -DskipTests package
 ```
 
 ### El primer administrador

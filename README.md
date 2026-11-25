@@ -34,6 +34,9 @@ Un asistente conversacional usa todo lo anterior como herramientas.
 | 9 | Portal del comprador: inmuebles compartidos y simulador de compra | ✅ Listo |
 | Extra | Reducción de crédito con abonos extraordinarios (Ley 546 de 1999) | ✅ Listo |
 | Extra | Escaneo de archivos: revisión del PDF y antivirus ClamAV opcional | ✅ Listo |
+| Extra | IA local con Ollama (`qwen3:8b` + `bge-m3`) como alternativa a OpenAI | ✅ Listo |
+
+**Versión 1.2.0.** Sobre la 1.1.0 suma: portales del propietario y del comprador, galería de imágenes de los inmuebles, escaneo de archivos, IA local con Ollama y citas que indican el rango de secciones de cada fragmento.
 
 El detalle de cada fase y cómo probarla está en [PROGRESO.md](PROGRESO.md). El diseño (modelo de datos, endpoints y reglas) está en [docs/DISENO.md](docs/DISENO.md).
 

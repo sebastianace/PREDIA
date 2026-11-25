@@ -1,5 +1,18 @@
 # Progreso de Predia
 
+## Versión 1.2.0 ✅ (25/11/2026)
+
+**Rama:** `release/1.2.0` (sale de `develop`). Sube la versión del backend (`pom.xml`), del frontend (`package.json`) y de la guía de despliegue, y reúne lo que se fusionó en `develop` desde la 1.1.0:
+
+- Fase 8: usuarios, invitaciones y portal del propietario (PR #14) y la revisión del portal (#16); Swagger con autenticación (#15).
+- Modelo de embeddings por fragmento y regeneración de vectores (#13).
+- Fase 9: portal del comprador (#17), galería de imágenes de los inmuebles (#18) y pulido visual (#19).
+- Escaneo de archivos: revisión del PDF y ClamAV opcional (#20).
+- IA local con Ollama como proveedor elegible (#21).
+- Citas con el rango de secciones y pulido de la demo (#22).
+
+Verificación antes de publicar: suite completa (264 pruebas) y `npm run build` del frontend. Ensayo de la demo con Ollama en la instancia real (ver «Preparación de la presentación»).
+
 ## Preparación de la presentación ✅ (25/11/2026)
 
 **Rama:** `fix/seccion-en-citas` (sale de `develop`). Ensayo completo del recorrido de la demo en la instancia real (Ollama, PostgreSQL y Mailpit), por la API y por la interfaz.
