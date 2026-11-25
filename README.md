@@ -66,7 +66,7 @@ flowchart LR
     AV -- PDF temporal --> TMP[(Disco temporal)]
     API --> JOB[Procesador asíncrono<br/>@Scheduled]
     JOB -- texto / OCR --> FR[Fragmentador<br/>500–1.000 tokens]
-    FR --> EMB[Embeddings<br/>OpenAI]
+    FR --> EMB[Embeddings<br/>OpenAI u Ollama]
     EMB --> PG[(PostgreSQL 16<br/>+ pgvector)]
     JOB -. borra tras verificar .-> TMP
     API -- búsqueda híbrida<br/>vector + tsvector --> PG
@@ -161,6 +161,8 @@ Nadie se registra solo: se entra por invitación. Desactivar a alguien cierra su
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL | `localhost`, `5434`, `predia`… |
 | `JWT_SECRET` | Firma de los tokens (mínimo 32 caracteres) | **obligatoria** |
 | `JWT_HORAS_VALIDEZ` | Duración de la sesión | `8` |
+| `PREDIA_IA_PROVEEDOR` | Proveedor de IA: `openai` u `ollama` (modelos locales, ver «IA local con Ollama») | `openai` |
+| `OLLAMA_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBEDDING_MODEL`, `OLLAMA_PENSAR` | Servidor, modelos y modo de pensar de Ollama (solo con `ollama`) | `http://localhost:11434`, `qwen3:8b`, `bge-m3`, `false` |
 | `OPENAI_API_KEY` | Clave de OpenAI; vacía = modo manual | vacía |
 | `OPENAI_CHAT_MODEL` | Modelo de chat | `gpt-5.4-mini` |
 | `OPENAI_EMBEDDING_MODEL` | Modelo de embeddings (1536 dimensiones) | `text-embedding-3-small` |
@@ -238,12 +240,24 @@ Los PDF de `demo/pdfs` son ficticios; se regeneran con `GeneradorPdfsDemo` (ver 
 - **Dependencia del OCR:** la calidad de las páginas escaneadas depende de Tesseract y de la nitidez del documento.
 - Las vigencias de los documentos dependen de la fecha de expedición que confirma el asesor.
 - **Antivirus opcional:** viene apagado por defecto (se activa con ClamAV, ver «Escaneo de archivos»). ClamAV detecta lo que su base de firmas conoce, así que no sustituye las buenas prácticas del servidor; la revisión del PDF sí está siempre activa. La imagen de ClamAV pesa unos 560 MB y usa cerca de 1–2 GB de memoria.
-- La columna de vectores es de 1536 dimensiones. Cambiar a un proveedor de embeddings con otra dimensión exige una migración y reindexar.
+- La columna de vectores es de 1536 dimensiones. Un modelo con menos (como `bge-m3`, de 1024) se rellena con ceros hasta 1536, lo que no cambia la similitud coseno; uno con más dimensiones se rechaza.
 - **Cambiar de modelo de embeddings** (`OPENAI_EMBEDDING_MODEL`) no mezcla vectores: la búsqueda solo compara contra fragmentos indexados con el mismo modelo, y avisa cuántos quedaron fuera. Un ADMIN los regenera desde el texto guardado con `POST /api/documentos/regenerar-vectores` (por tandas de 300; se repite hasta que `pendientes` sea 0), sin volver a subir los PDF. Los inmuebles se recalculan solos en la siguiente búsqueda.
 - La lista de documentos para el cierre es de referencia. **Predia no da asesoría legal**: confirma los requisitos con la notaría.
 - Las tasas de crédito son de ejemplo; la simulación no es una aprobación del banco.
 - **Reducción de crédito:** supone cuota fija, intereses calculados sobre el saldo de cada mes y el abono aplicado en la misma cuota, con cada valor redondeado al peso. Cada banco puede aplicar los abonos con pequeñas diferencias; el estudio es una estimación, no una oferta.
 - **El asistente depende de la IA:** sin `OPENAI_API_KEY` queda deshabilitado (el resto de Predia funciona). Un modelo de lenguaje puede equivocarse al redactar: por eso las cifras salen de las herramientas y Predia señala cualquier número de la respuesta que ninguna herramienta haya entregado. Las conversaciones se guardan en memoria y se pierden al reiniciar el servidor.
+
+### IA local con Ollama
+
+Con `PREDIA_IA_PROVEEDOR=ollama` el chat, el asistente y los embeddings corren en tu equipo: los fragmentos de los documentos no viajan a ningún servicio externo y no hay costo por uso.
+
+```bash
+ollama pull qwen3:8b   # chat y herramientas del asistente (~5 GB)
+ollama pull bge-m3     # embeddings multilingües (~1,2 GB)
+ollama serve           # si no está corriendo ya
+```
+
+Luego, en el `.env`: `PREDIA_IA_PROVEEDOR=ollama`. `qwen3` «piensa» antes de responder, lo que multiplica el tiempo por cinco o más: Predia lo apaga por defecto (`OLLAMA_PENSAR=false`). Predia no descarga modelos por su cuenta. Al cambiar de proveedor, los vectores anteriores quedan fuera de la búsqueda hasta que un ADMIN los regenere con `POST /api/documentos/regenerar-vectores`. **Recalibra el umbral de similitud** (parámetro de la inmobiliaria) al cambiar de modelo: con `bge-m3`, 0,35–0,40 funcionó mejor que el 0,30 de OpenAI. Un modelo de 8 000 millones de parámetros puede equivocarse más que uno en la nube: las cifras siguen saliendo de Java, y el asistente señala cualquier número que ninguna herramienta haya entregado.
 
 ## Créditos
 
