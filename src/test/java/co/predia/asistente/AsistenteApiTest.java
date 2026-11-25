@@ -456,6 +456,80 @@ class AsistenteApiTest extends PruebaIntegracion {
                         org.hamcrest.Matchers.containsString("sk-secreta"))));
     }
 
+    // ------------------------------------------------------------------ temas ajenos
+
+    private static org.springframework.ai.chat.model.ChatResponse respuestaDe(String texto) {
+        return new org.springframework.ai.chat.model.ChatResponse(List.of(new org.springframework.ai.chat.model.Generation(
+                new org.springframework.ai.chat.messages.AssistantMessage(texto))));
+    }
+
+    /** Un modelo que clasifica «messi» como ajeno y, con herramientas, conversa; anota los mensajes que le llegan. */
+    private List<List<String>> modeloQueClasificaMessiComoAjeno() {
+        when(chatModel.getDefaultOptions()).thenReturn(
+                org.springframework.ai.model.tool.ToolCallingChatOptions.builder().build());
+        List<List<String>> conHerramientas = new java.util.ArrayList<>();
+        when(chatModel.call(any(Prompt.class))).thenAnswer(inv -> {
+            Prompt prompt = inv.getArgument(0);
+            boolean asistente = prompt.getOptions() instanceof org.springframework.ai.model.tool.ToolCallingChatOptions o
+                    && !o.getToolCallbacks().isEmpty();
+            List<String> usuario = prompt.getInstructions().stream().filter(m ->
+                    m.getMessageType() == org.springframework.ai.chat.messages.MessageType.USER)
+                    .map(org.springframework.ai.chat.messages.Message::getText).toList();
+            if (!asistente) {
+                return respuestaDe(usuario.get(usuario.size() - 1).toLowerCase().contains("messi") ? "AJENO" : "INMOBILIARIA");
+            }
+            conHerramientas.add(usuario);
+            return respuestaDe("Entendido.");
+        });
+        return conHerramientas;
+    }
+
+    @Test
+    void unTemaAjenoSeRechazaConElAvisoFijoSinLlamarAlAsistenteNiGuardarseEnElHistorial() throws Exception {
+        iaDisponible();
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Asistente Tema Ajeno");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        List<List<String>> conHerramientas = modeloQueClasificaMessiComoAjeno();
+        String conversacion = UUID.randomUUID().toString();
+
+        preguntar(asesor, "Hablemos de Paola y Juan", conversacion);
+        JsonNode ajeno = preguntar(asesor, "cuántos años tiene Messi", conversacion);
+        JsonNode despues = preguntar(asesor, "¿Y cuánto ganan?", conversacion);
+
+        // Un aviso fijo de Java: sin herramientas, sin citas, sin recordatorios y sin cifras.
+        assertThat(ajeno.get("respuesta").asText()).isEqualTo(ServicioAsistente.FUERA_DE_TEMA);
+        assertThat(ajeno.get("herramientas")).isEmpty();
+        assertThat(ajeno.get("citas")).isEmpty();
+        assertThat(ajeno.get("cifrasSinRespaldo")).isEmpty();
+        // La conversación sigue normal después, y el tema ajeno nunca llegó al asistente ni quedó en el historial.
+        assertThat(despues.get("respuesta").asText()).isEqualTo("Entendido.");
+        assertThat(conHerramientas).hasSize(2);
+        assertThat(conHerramientas.get(0)).containsExactly("Hablemos de Paola y Juan");
+        assertThat(conHerramientas.get(1)).containsExactly("Hablemos de Paola y Juan", "¿Y cuánto ganan?");
+    }
+
+    @Test
+    void siElFiltroFallaElMensajePasaAlAsistenteEnVezDeBloquearse() throws Exception {
+        iaDisponible();
+        Inmobiliaria inmobiliaria = crearInmobiliaria("Asistente Filtro Falla");
+        Usuario asesor = crearUsuario(inmobiliaria, Rol.ASESOR);
+        when(chatModel.getDefaultOptions()).thenReturn(
+                org.springframework.ai.model.tool.ToolCallingChatOptions.builder().build());
+        when(chatModel.call(any(Prompt.class))).thenAnswer(inv -> {
+            Prompt prompt = inv.getArgument(0);
+            boolean asistente = prompt.getOptions() instanceof org.springframework.ai.model.tool.ToolCallingChatOptions o
+                    && !o.getToolCallbacks().isEmpty();
+            if (!asistente) {
+                throw new RuntimeException("el clasificador no respondió");
+            }
+            return respuestaDe("Aquí estoy.");
+        });
+
+        JsonNode r = preguntar(asesor, "¿Qué inmuebles tengo?", null);
+
+        assertThat(r.get("respuesta").asText()).isEqualTo("Aquí estoy.");
+    }
+
     // ------------------------------------------------------------------ apoyo de datos
 
     private Long crearDocumento(Inmobiliaria inmobiliaria, Inmueble inmueble, Usuario usuario, String nombre) {

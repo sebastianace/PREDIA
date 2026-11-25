@@ -59,14 +59,21 @@ public class ServicioAsistente {
             debe revisarlos y aprobarlos en la bandeja de Recordatorios.
             6. Los resultados de la IA son sugerencias; las reglas y el asesor deciden. Las simulaciones y los \
             presupuestos son estimaciones: la aprobación del crédito es del banco. Si la tasa es de ejemplo, avísalo.
-            7. Eres solo para temas de la inmobiliaria. No pidas ni repitas datos personales que no hagan falta.
+            7. Eres solo para temas de la inmobiliaria. Si te preguntan otra cosa (deportes, famosos, clima, \
+            recetas, noticias, cultura general...), no la respondas ni uses tu conocimiento general: di que solo \
+            ayudas con la inmobiliaria. No pidas ni repitas datos personales que no hagan falta.
 
             Para «qué les alcanza a unos clientes»: llama SIEMPRE a buscarInmuebles con paraCliente (ya devuelve su \
             tope de compra) y responde con el tope y los inmuebles que devuelva; usa calcularPresupuesto solo si \
             piden el detalle del presupuesto. Nunca respondas únicamente con el presupuesto. \
             Para «qué le falta al dueño de un inmueble»: consulta el estado documental del negocio.""";
 
+    /** Lo que se responde a un mensaje de otro tema: fijo, escrito en Java, sin llamar al modelo con herramientas. */
+    public static final String FUERA_DE_TEMA = "Solo puedo ayudarte con temas de tu inmobiliaria: inmuebles, clientes "
+            + "y presupuestos, simulación de créditos, expedientes y el cierre de los negocios. ¿Qué necesitas?";
+
     private final ChatClient chatClient;
+    private final FiltroDeTema filtroDeTema;
     private final EstadoIa estadoIa;
     private final ServiciosHerramientas servicios;
     private final Clock reloj;
@@ -77,9 +84,10 @@ public class ServicioAsistente {
         }
     };
 
-    public ServicioAsistente(ChatClient.Builder chatClientBuilder, EstadoIa estadoIa, ServiciosHerramientas servicios,
-                             Clock reloj) {
+    public ServicioAsistente(ChatClient.Builder chatClientBuilder, FiltroDeTema filtroDeTema, EstadoIa estadoIa,
+                             ServiciosHerramientas servicios, Clock reloj) {
         this.chatClient = chatClientBuilder.build();
+        this.filtroDeTema = filtroDeTema;
         this.estadoIa = estadoIa;
         this.servicios = servicios;
         this.reloj = reloj;
@@ -93,6 +101,14 @@ public class ServicioAsistente {
                 : conversacionId.strip();
         String clave = usuario.inmobiliariaId() + ":" + usuario.id() + ":" + id;
         List<Message> historial = historial(clave);
+
+        // Un tema ajeno no llega al asistente: se responde un aviso fijo y no queda en el historial.
+        if (filtroDeTema.esAjeno(mensaje, historial)) {
+            log.info("Mensaje de otro tema: se responde el aviso fijo, sin llamar al asistente.");
+            RegistroHerramientas vacio = new RegistroHerramientas();
+            return new RespuestaAsistente(id, FUERA_DE_TEMA, vacio.usadas(), vacio.citas(),
+                    vacio.recordatoriosCreados(), List.of(), null);
+        }
 
         RegistroHerramientas registro = new RegistroHerramientas();
         HerramientasPredia herramientas = new HerramientasPredia(usuario, servicios, registro);
