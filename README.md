@@ -162,7 +162,7 @@ Nadie se registra solo: se entra por invitación. Desactivar a alguien cierra su
 | `JWT_SECRET` | Firma de los tokens (mínimo 32 caracteres) | **obligatoria** |
 | `JWT_HORAS_VALIDEZ` | Duración de la sesión | `8` |
 | `PREDIA_IA_PROVEEDOR` | Proveedor de IA: `openai` u `ollama` (modelos locales, ver «IA local con Ollama») | `openai` |
-| `OLLAMA_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBEDDING_MODEL` | Servidor y modelos de Ollama (solo con `ollama`) | `http://localhost:11434`, `qwen3:8b`, `bge-m3` |
+| `OLLAMA_URL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBEDDING_MODEL`, `OLLAMA_PENSAR` | Servidor, modelos y modo de pensar de Ollama (solo con `ollama`) | `http://localhost:11434`, `qwen3:8b`, `bge-m3`, `false` |
 | `OPENAI_API_KEY` | Clave de OpenAI; vacía = modo manual | vacía |
 | `OPENAI_CHAT_MODEL` | Modelo de chat | `gpt-5.4-mini` |
 | `OPENAI_EMBEDDING_MODEL` | Modelo de embeddings (1536 dimensiones) | `text-embedding-3-small` |
@@ -257,7 +257,7 @@ ollama pull bge-m3     # embeddings multilingües (~1,2 GB)
 ollama serve           # si no está corriendo ya
 ```
 
-Luego, en el `.env`: `PREDIA_IA_PROVEEDOR=ollama`. Predia no descarga modelos por su cuenta. Al cambiar de proveedor, los vectores anteriores quedan fuera de la búsqueda hasta que un ADMIN los regenere con `POST /api/documentos/regenerar-vectores`. Un modelo de 8 000 millones de parámetros puede equivocarse más que uno en la nube: las cifras siguen saliendo de Java, y el asistente señala cualquier número que ninguna herramienta haya entregado.
+Luego, en el `.env`: `PREDIA_IA_PROVEEDOR=ollama`. `qwen3` «piensa» antes de responder, lo que multiplica el tiempo por cinco o más: Predia lo apaga por defecto (`OLLAMA_PENSAR=false`). Predia no descarga modelos por su cuenta. Al cambiar de proveedor, los vectores anteriores quedan fuera de la búsqueda hasta que un ADMIN los regenere con `POST /api/documentos/regenerar-vectores`. **Recalibra el umbral de similitud** (parámetro de la inmobiliaria) al cambiar de modelo: con `bge-m3`, 0,35–0,40 funcionó mejor que el 0,30 de OpenAI. Un modelo de 8 000 millones de parámetros puede equivocarse más que uno en la nube: las cifras siguen saliendo de Java, y el asistente señala cualquier número que ninguna herramienta haya entregado.
 
 ## Créditos
 

@@ -1,5 +1,33 @@
 # Progreso de Predia
 
+## Extra — IA local con Ollama ✅ (25/11/2026)
+
+**Rama:** `feature/proveedor-ollama` (sale de `develop`). Diseño aprobado antes de programar. Predia puede correr con modelos locales: nada de lo que se indexa o se pregunta sale del equipo y no hay costo por uso.
+
+- **Selector de proveedor:** `PREDIA_IA_PROVEEDOR=openai|ollama` (por defecto `openai`). Se usan `spring.ai.model.chat` y `spring.ai.model.embedding` de Spring AI; `EstadoIa` ya no depende de propiedades de OpenAI, expone el `proveedor` y falla al arrancar si chat y embeddings no coinciden o el valor es desconocido. `GET /api/sistema/estado` incluye ahora `proveedor`.
+- **Modelos por defecto:** chat `qwen3:8b` y embeddings `bge-m3` (1.024 dimensiones). Predia no descarga modelos: se bajan con `ollama pull`.
+- **Sin migración:** `AjusteDimension` rellena con ceros los vectores de menos de 1.536 dimensiones. Con el relleno la similitud coseno no cambia; un vector más largo se rechaza en vez de recortarse. Volver a OpenAI sigue siendo posible regenerando los vectores.
+- **Modo de pensar:** `qwen3` «piensa» antes de responder y gasta unas diez veces más tokens (40–78 s por respuesta). `AjustesOllama` lo apaga por defecto (`OLLAMA_PENSAR=false`); Spring no permite enlazar ese valor desde `application.yml`.
+- **Renombrado:** `OpenAiProveedorEmbeddings` pasó a `SpringAiProveedorEmbeddings`, porque sirve para cualquier proveedor.
+
+### Pruebas (12 nuevas, 262 en total; no necesitan Ollama ni OpenAI)
+- `AjusteDimensionTest` (4): la dimensión exacta no se toca, un vector de 1.024 se rellena con ceros, el coseno no cambia, uno de 3.072 se rechaza.
+- `EstadoIaTest` (5): OpenAI sin clave = modo manual, con clave disponible, el marcador no cuenta, Ollama sin clave y con sus modelos, proveedor desconocido o mezclado impide arrancar.
+- `AjustesOllamaTest` (3): pensar apagado y encendido, y los demás beans quedan igual.
+
+### Probado en vivo con Ollama real (M5, 16 GB)
+- Indexación de la escritura y el reglamento con `bge-m3`: vectores de 1.536 dimensiones en `fragmento` y documentos clasificados bien (`ESCRITURA_PUBLICA`, `REGLAMENTO_PROPIEDAD_HORIZONTAL`).
+- **Las tres preguntas del profesor con `qwen3:8b`** (8–17 s cada una con el modo de pensar apagado): el estado del negocio 1102 (certificado vencido el 04/11 y paz y salvo pendiente), lo que alcanza Paola y Juan (herramienta `calcularPresupuesto`: $300.000.000, y el Apto 1102) y el parqueadero (sí, con cita al reglamento). `cifrasSinRespaldo` vacío en las tres.
+- **Con el modo de pensar encendido**, la misma pregunta de presupuesto no usó `calcularPresupuesto` y recomendó una casa de $330.000.000, por encima del tope; con él apagado sí la usó. Es variación normal de un modelo de 8.000 millones de parámetros: conviene volver a probar antes de la demo.
+- **`llama3.1`** respondió más corto, no usó `calcularPresupuesto` en la pregunta de presupuesto y dudó en la del parqueadero: se queda como alternativa, no como valor por defecto.
+
+### Umbral de similitud (por modelo)
+Con `bge-m3` el umbral por defecto de 0,30 deja pasar preguntas ajenas («capital de Francia» devolvió citas aunque el modelo dijo que no sabía). En el conjunto de la demo, **0,35–0,40** corta lo ajeno y conserva las paráfrasis («¿dónde puedo dejar mi carro?» encuentra el parqueadero); 0,45 ya pierde paráfrasis y 0,50 pierde preguntas directas. El umbral es un parámetro de cada inmobiliaria (lo cambia un ADMIN): al cambiar de modelo hay que recalibrarlo. Los valores salen de una demo de dos documentos; con más documentos conviene medir de nuevo.
+
+### Lo que no se hizo
+- No hay comprobación de que el servidor de Ollama esté encendido al arrancar: si está apagado, el asistente responde 502 y la indexación reintenta, igual que con un proveedor en la nube caído.
+- La prueba se hizo en una copia de la base de desarrollo (borrada al terminar), sin tocar el 8080 ni enviar correos.
+
 ## Extra — Escaneo de archivos ✅ (24/11/2026)
 
 **Rama:** `feature/escaneo-archivos` (sale de `develop`). Diseño aprobado antes de programar. Cierra lo que faltaba del punto 4 del flujo («límites de tamaño, validación y escaneo de archivos»).

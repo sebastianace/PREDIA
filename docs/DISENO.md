@@ -540,3 +540,11 @@ El punto 4 del flujo pide «límites de tamaño, validación y escaneo de archiv
 - Un archivo infectado → 422 («rechazado por seguridad»; sin el nombre de la amenaza). Antivirus caído y `obligatorio=true` → 503. Antivirus caído y `obligatorio=false` → se acepta y queda sin verificar.
 - ClamAV va en `docker-compose.yml` bajo el perfil `escaneo` (imagen `clamav/clamav-debian`, porque la imagen principal no publica arm64 para Apple Silicon).
 
+## 12. IA local con Ollama (aprobado el 25/11/2026)
+
+- **Selector:** `PREDIA_IA_PROVEEDOR=openai|ollama` fija `spring.ai.model.chat` y `spring.ai.model.embedding`. Ambos starters de Spring AI están en el classpath; solo uno se activa. `EstadoIa` expone `proveedor`, `modeloChat` y `modeloEmbeddings` y no permite mezclar proveedores.
+- **Disponibilidad:** con OpenAI, sin clave = modo manual. Con Ollama no hay clave, así que la IA se da por disponible; si el servidor está apagado, cada uso falla con los avisos de siempre (502 en el asistente, reintentos en la indexación).
+- **Vectores:** las columnas siguen en `vector(1536)`. `AjusteDimension` rellena con ceros los vectores más cortos (la similitud coseno no cambia) y rechaza los más largos. Se descartó migrar a `vector(1024)`: borraría los vectores existentes y ataría la base a un solo tamaño.
+- **Modelos:** `qwen3:8b` para chat y herramientas, `bge-m3` para embeddings. Predia no descarga modelos.
+- **Modo de pensar:** apagado por defecto (`predia.ia.ollama.pensar`), por tiempo de respuesta.
+- **Umbral de similitud:** depende del modelo; es un parámetro de la inmobiliaria y se recalibra al cambiar de proveedor.
