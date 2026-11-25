@@ -9,7 +9,7 @@
 - **Efecto de un rechazo:** 422 «rechazado por seguridad» (sin el nombre de la amenaza) y no queda documento, trabajo ni temporal. En el log solo van el hash y el nombre de la amenaza.
 - **Docker:** servicio `clamav` bajo el perfil `escaneo` (`docker compose --profile escaneo up -d clamav`). Se usa `clamav/clamav-debian` porque la imagen `clamav/clamav` solo publica amd64 y el Mac de desarrollo es Apple Silicon.
 
-### Pruebas (nuevas; no llaman a OpenAI ni necesitan ClamAV)
+### Pruebas (19 nuevas, 250 en total; no llaman a OpenAI ni necesitan ClamAV)
 - `InspectorPdfTest` (8): un PDF normal y un enlace web pasan; JavaScript al abrir, JavaScript dentro de una anotación, `Launch` y archivos incrustados se rechazan; la firma distingue un PDF de una imagen o un ejecutable con extensión `.pdf` y tolera basura corta antes de la firma.
 - `EscanerClamAvTest` (6): el protocolo `INSTREAM` contra un `clamd` falso en un socket (el archivo llega completo; `OK`, `FOUND` con el nombre de la amenaza, `ERROR` nunca se da por limpio; sin antivirus, obligatorio o no).
 - `CargaSeguraApiTest` (5, PostgreSQL real): archivo limpio → 202; amenaza → 422 sin documento ni temporal y sin nombrar la amenaza; antivirus caído → 503 sin documento ni temporal; PDF con JavaScript → 422 aunque el antivirus no lo vea; un PNG con extensión `.pdf` → 422.
