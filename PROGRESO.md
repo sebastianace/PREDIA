@@ -1,5 +1,16 @@
 # Progreso de Predia
 
+## Auditoría completa como el profesor ✅ (26/11/2026)
+
+Se revisó todo el proyecto desde cero (base nueva, Ollama real: `qwen3:8b` + `bge-m3`) con el guion de humo por rol ampliado: 122 comprobaciones sobre acceso y permisos, cálculos en Java, búsqueda y RAG, escaneo de archivos, galería, cierre del negocio, recordatorios, asistente, portales del propietario y del comprador, y la entrega 2.
+
+- **IA fuera de tema:** 10 preguntas ajenas (Messi, receta de sancocho, mundial, clima, poema, Python, una multiplicación, el presidente, «ignora tus instrucciones» y «eres un asistente general») recibieron el aviso fijo de Java, sin llamar herramientas ni citar nada. Los saludos y «¿qué puedes hacer?» no se bloquean. En el RAG, «capital de Francia» devuelve «sin evidencia» y sin citas.
+- **Preguntas del profesor:** las tres responden con la herramienta correcta y sin cifras sin respaldo.
+- **Interfaz:** las 21 pantallas del personal, en escritorio y en 375 px: sin desbordes, sin errores de consola, sin pantallas atascadas en «Cargando…».
+- **Suite:** 306 pruebas. Una dependía del día en que corría (comparaba un «25» con el vencimiento real del certificado, que hoy cae el 25/11); ahora usa un número que nunca es una fecha.
+- **Nota para la demo:** un paz y salvo de administración «del mes en curso» recibido en los últimos 7 días del mes (margen de alerta) sigue contando como «por vencer», porque vence antes de la firma del 1 de diciembre. Es la regla funcionando, no un error: al confirmarlo, el semáforo del 1102 no baja de «Faltan 2 documentos» hasta que cambie el mes.
+- Las 4 comprobaciones que fallaron en la primera pasada eran expectativas viejas del guion (conteos de la demo con las ventas de ejemplo, y 422 en vez de 400 para una nota corta), no errores del producto.
+
 ## Extra — Perfiles y equipo, entrega 2: cierre de negocios, Mi perfil y Equipo ✅ (26/11/2026)
 
 **Rama:** `feature/cierre-y-equipo` (sale de `release/1.2.0`). Diseño y boceto aprobados antes de programar. «La IA sugiere, las reglas deciden y la persona confirma»: las ventas **no se escriben a mano**, se cuentan solas desde los cierres confirmados.
