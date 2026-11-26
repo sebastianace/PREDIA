@@ -208,11 +208,12 @@ class RecordatoriosApiTest extends PruebaIntegracion {
     }
 
     @Test
+    // El 99 nunca puede ser un día del calendario: con una fecha real (p. ej. 25) la prueba dependería del día en que corra.
     void siElAsesorMencionaAlgoDeMasSeLeAvisaPeroNoSeLeBloquea() throws Exception {
         Caso c = caso("Recordatorio Advertencia", "jorge@ejemplo.test");
         Long id = generar(c);
         String texto = "Necesitamos el certificado de tradición y libertad, el paz y salvo de administración, la "
-                + "promesa de compraventa y también la carta de la hipoteca antes del 25 de diciembre.";
+                + "promesa de compraventa y también la carta de la hipoteca en los próximos 99 días.";
 
         mvc.perform(put("/api/recordatorios/" + id).header("Authorization", bearer(c.asesor()))
                         .contentType(MediaType.APPLICATION_JSON).content(EDICION.formatted(texto)))
