@@ -1,6 +1,11 @@
 # Perfil de pruebas: nunca llama a OpenAI ni siembra la demo. La base la levanta Testcontainers.
 spring:
   ai:
+    # Las pruebas no deben depender del .env de quien las corre: siempre OpenAI y sin clave (modo manual), aunque el
+    # .env diga PREDIA_IA_PROVEEDOR=ollama.
+    model:
+      chat: openai
+      embedding: openai
     openai:
       api-key: sin-configurar
 predia:
@@ -9,3 +14,7 @@ predia:
     horas-validez: 1
   demo:
     habilitada: false
+  expedientes:
+    # Las pruebas procesan la cola a mano (procesarPendientes): el procesador programado no debe competir con ellas.
+    intervalo-indexacion-ms: 3600000
+    espera-inicial-indexacion-ms: 3600000

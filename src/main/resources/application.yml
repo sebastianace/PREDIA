@@ -40,6 +40,9 @@ spring:
         max-interval: 5s
     # Predia solo usa chat y embeddings; se desactivan los demás modelos de OpenAI.
     model:
+      # Proveedor de IA: openai (por defecto) u ollama (modelos locales, sin enviar nada a internet).
+      chat: ${PREDIA_IA_PROVEEDOR:openai}
+      embedding: ${PREDIA_IA_PROVEEDOR:openai}
       audio:
         speech: none
         transcription: none
@@ -54,12 +57,33 @@ spring:
       embedding:
         options:
           model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    ollama:
+      # Solo se usa con PREDIA_IA_PROVEEDOR=ollama. Los modelos se descargan a mano (ollama pull): Predia no descarga nada.
+      base-url: ${OLLAMA_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_CHAT_MODEL:qwen3:8b}
+          # Ollama descarga el modelo de la memoria a los 5 minutos de inactividad y la primera pregunta tras una
+          # pausa tarda mucho más: se le pide que lo mantenga cargado.
+          keep-alive: ${OLLAMA_KEEP_ALIVE:2h}
+          # Uso factual (responder solo con lo recuperado): poca aleatoriedad para que la misma pregunta dé la misma respuesta.
+          temperature: ${OLLAMA_TEMPERATURE:0.2}
+      embedding:
+        options:
+          model: ${OLLAMA_EMBEDDING_MODEL:bge-m3}
+          keep-alive: ${OLLAMA_KEEP_ALIVE:2h}
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    # El token pegado en «Authorize» se conserva al recargar la página (solo en tu navegador).
+    persist-authorization: true
 
 predia:
+  ia:
+    ollama:
+      # qwen3 y otros modelos «piensan» antes de responder: con false se desactiva (diez veces menos tokens).
+      pensar: ${OLLAMA_PENSAR:false}
   jwt:
     secreto: ${JWT_SECRET:}
     horas-validez: ${JWT_HORAS_VALIDEZ:8}
@@ -73,6 +97,26 @@ predia:
     # El PDF solo vive aquí mientras se indexa; se borra al terminar (ver ProcesadorIndexacion).
     directorio-temporal: ${EXPEDIENTES_TMP_DIR:${java.io.tmpdir}/predia/documentos}
     tamano-maximo-mb: 20
+    # Antivirus opcional (ClamAV): DESACTIVADO (por defecto) o CLAMAV. Con CLAMAV, si el antivirus no responde y
+    # «obligatorio» es true, el archivo se rechaza con 503 en vez de aceptarse sin verificar.
+    escaneo:
+      modo: ${ESCANEO_MODO:DESACTIVADO}
+      host: ${CLAMAV_HOST:localhost}
+      puerto: ${CLAMAV_PUERTO:3310}
+      obligatorio: ${ESCANEO_OBLIGATORIO:true}
+      tiempo-maximo-segundos: 30
+  usuarios:
+    # Dirección pública de la interfaz: con ella se arman los enlaces de invitación que llegan por correo.
+    url-publica: ${PREDIA_URL_PUBLICA:http://localhost:5173}
+    remitente: ${PREDIA_CORREO_REMITENTE:notificaciones@predia.local}
+    # Primer administrador (solo si no existe ningún ADMIN): se crea sin contraseña y el enlace para crearla
+    # se escribe una vez en el log. Ninguna contraseña viaja en variables de entorno.
+    primer-admin:
+      email: ${PREDIA_ADMIN_EMAIL:}
+      nombre: ${PREDIA_ADMIN_NOMBRE:}
+      inmobiliaria: ${PREDIA_INMOBILIARIA_NOMBRE:}
+      nit: ${PREDIA_INMOBILIARIA_NIT:}
+      ciudad: ${PREDIA_INMOBILIARIA_CIUDAD:Bucaramanga}
   ocr:
     idioma: spa
     # macOS: brew install tesseract tesseract-lang (ver README). Linux: suele ser /usr/share/tesseract-ocr/*/tessdata.

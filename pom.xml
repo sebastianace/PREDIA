@@ -12,7 +12,7 @@
 
     <groupId>co.predia</groupId>
     <artifactId>predia</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <name>Predia</name>
     <description>Asistente con IA (RAG) para inmobiliarias en Colombia</description>
 
@@ -83,10 +83,14 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- IA: embeddings, chat y tool calling con OpenAI -->
+        <!-- IA: embeddings, chat y tool calling. Se elige proveedor con PREDIA_IA_PROVEEDOR (openai u ollama) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
 
         <!-- Expedientes: extracción de PDF, OCR y conteo de tokens para fragmentar -->

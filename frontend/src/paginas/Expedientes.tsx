@@ -194,6 +194,10 @@ export function Expedientes() {
               <p className="whitespace-pre-line text-grafito">{respuesta.respuesta}</p>
             )}
 
+            {respuesta.aviso && (
+              <p role="status" className="mt-4 border-l-2 border-ambar bg-ambar-suave px-3 py-2 text-sm text-ambar">{respuesta.aviso}</p>
+            )}
+
             {respuesta.citas.length > 0 && (
               <ol className="mt-4 space-y-2">
                 {respuesta.citas.map((c: Cita) => (

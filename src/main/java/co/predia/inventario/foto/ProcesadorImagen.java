@@ -34,6 +34,9 @@ public final class ProcesadorImagen {
     /** Tope de píxeles decodificados: evita que una imagen diminuta en bytes pero enorme en píxeles agote la memoria. */
     static final long MAX_PIXELES = 50_000_000L;
     private static final float CALIDAD = 0.82f;
+    /** Un plano lleva líneas finas y texto pequeño: se conserva más grande y con más calidad que una foto. */
+    public static final int LADO_PLANO = 2000;
+    private static final float CALIDAD_PLANO = 0.92f;
 
     public record Imagen(byte[] grande, byte[] miniatura, int ancho, int alto, String hash) {
     }
@@ -47,6 +50,39 @@ public final class ProcesadorImagen {
         BufferedImage miniatura = reducir(origen, LADO_MINIATURA);
         byte[] bytesGrande = codificar(grande);
         return new Imagen(bytesGrande, codificar(miniatura), grande.getWidth(), grande.getHeight(), sha256(bytesGrande));
+    }
+
+    /** Una foto de perfil es un cuadrado: la copia grande sirve para la ficha y la miniatura para las listas. */
+    public static final int LADO_PERFIL = 512;
+    public static final int LADO_PERFIL_MINIATURA = 128;
+
+    /**
+     * Una foto de perfil: se recorta el mayor cuadrado posible alrededor del punto de interés (0 a 100 en cada eje,
+     * 50 = centro) y se reduce. Igual que las demás: se decodifica, se descartan los metadatos y no se conserva el
+     * archivo original.
+     */
+    public static Imagen procesarPerfil(byte[] original, int focoX, int focoY) {
+        BufferedImage origen = leer(original);
+        int lado = Math.min(origen.getWidth(), origen.getHeight());
+        int x = (int) Math.round((origen.getWidth() - lado) * Math.max(0, Math.min(100, focoX)) / 100.0);
+        int y = (int) Math.round((origen.getHeight() - lado) * Math.max(0, Math.min(100, focoY)) / 100.0);
+        BufferedImage cuadrado = aRgb(origen.getSubimage(x, y, lado, lado));
+        BufferedImage grande = reducir(cuadrado, LADO_PERFIL);
+        byte[] bytesGrande = codificar(grande);
+        return new Imagen(bytesGrande, codificar(reducir(cuadrado, LADO_PERFIL_MINIATURA)), grande.getWidth(),
+                grande.getHeight(), sha256(bytesGrande));
+    }
+
+    /**
+     * Un plano: la copia grande se conserva a mayor resolución y con más calidad (lleva líneas finas y medidas que el
+     * comprador debe poder leer al ampliarlo); la miniatura es solo para la tira del carrusel. Nunca se recorta.
+     */
+    public static Imagen procesarPlano(byte[] original) {
+        BufferedImage origen = leer(original);
+        BufferedImage grande = reducir(origen, LADO_PLANO);
+        byte[] bytesGrande = codificar(grande, CALIDAD_PLANO);
+        return new Imagen(bytesGrande, codificar(reducir(origen, LADO_MINIATURA)), grande.getWidth(), grande.getHeight(),
+                sha256(bytesGrande));
     }
 
     private static BufferedImage leer(byte[] bytes) {
@@ -124,12 +160,16 @@ public final class ProcesadorImagen {
     }
 
     private static byte[] codificar(BufferedImage imagen) {
+        return codificar(imagen, CALIDAD);
+    }
+
+    private static byte[] codificar(BufferedImage imagen, float calidad) {
         ImageWriter escritor = ImageIO.getImageWritersByFormatName("jpeg").next();
         try (ByteArrayOutputStream salida = new ByteArrayOutputStream();
              MemoryCacheImageOutputStream flujo = new MemoryCacheImageOutputStream(salida)) {
             ImageWriteParam parametros = escritor.getDefaultWriteParam();
             parametros.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            parametros.setCompressionQuality(CALIDAD);
+            parametros.setCompressionQuality(calidad);
             parametros.setProgressiveMode(ImageWriteParam.MODE_DEFAULT);
             escritor.setOutput(flujo);
             escritor.write(null, new IIOImage(imagen, null, null), parametros);

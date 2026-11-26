@@ -4,6 +4,8 @@ import co.predia.comun.seguridad.SesionActual;
 import co.predia.comun.seguridad.UsuarioActual;
 import co.predia.comun.web.RecursoNoEncontradoException;
 import co.predia.comun.web.ReglaNegocioException;
+import co.predia.perfil.FotoPerfilRepositorio;
+import co.predia.perfil.SujetoFoto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Clientes compradores. No se guarda ninguno sin la autorización de tratamiento de datos. Los datos
@@ -42,9 +45,11 @@ public class ClienteController {
     private final PresupuestoService presupuestos;
     private final ExtractorPerfil extractor;
     private final SesionActual sesion;
+    private final FotoPerfilRepositorio fotos;
 
     public ClienteController(ClienteRepository clientes, PresupuestoService presupuestos, ExtractorPerfil extractor,
-                             SesionActual sesion) {
+                             SesionActual sesion, FotoPerfilRepositorio fotos) {
+        this.fotos = fotos;
         this.clientes = clientes;
         this.presupuestos = presupuestos;
         this.extractor = extractor;
@@ -54,14 +59,32 @@ public class ClienteController {
     @GetMapping
     @Operation(summary = "Lista los clientes de la inmobiliaria")
     public List<ClienteDto> listar() {
+        Map<Long, String> fotoDe = fotos.versiones(sesion.inmobiliariaId(), SujetoFoto.CLIENTE);
         return clientes.findByInmobiliariaIdOrderByNombreAsc(sesion.inmobiliariaId()).stream()
-                .map(ClienteDto::desde).toList();
+                .map(c -> ClienteDto.desde(c, topeDe(c), fotoDe.get(c.getId()))).toList();
+    }
+
+    private ClienteDto conFoto(Cliente c) {
+        return ClienteDto.desde(c, null, fotos.version(sesion.inmobiliariaId(), SujetoFoto.CLIENTE, c.getId()).orElse(null));
+    }
+
+    /** El presupuesto de un comprador con el plazo y la tasa por defecto; null si no aplica o no hay tasa configurada. */
+    private CalculadoraPresupuesto.Presupuesto topeDe(Cliente cliente) {
+        if (cliente.getIntencion() != Intencion.COMPRAR) {
+            return null;
+        }
+        try {
+            return presupuestos.calcular(sesion.inmobiliariaId(), cliente.getId(), null, null, false).presupuesto();
+        } catch (RuntimeException e) {
+            // Sin una tasa vigente la lista sigue funcionando: la tarjeta simplemente no muestra el tope.
+            return null;
+        }
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Detalle de un cliente")
     public ClienteDto detalle(@PathVariable Long id) {
-        return ClienteDto.desde(buscar(id));
+        return conFoto(buscar(id));
     }
 
     @PostMapping("/extraer-perfil")
@@ -81,7 +104,7 @@ public class ClienteController {
         UsuarioActual usuario = sesion.usuario();
         Cliente cliente = new Cliente(usuario.inmobiliariaId(), usuario.id());
         aplicar(cliente, s);
-        return ClienteDto.desde(clientes.save(cliente));
+        return conFoto(clientes.save(cliente));
     }
 
     @PutMapping("/{id}")
@@ -89,14 +112,17 @@ public class ClienteController {
     public ClienteDto actualizar(@PathVariable Long id, @Valid @RequestBody SolicitudCliente s) {
         Cliente cliente = buscar(id);
         aplicar(cliente, s);
-        return ClienteDto.desde(clientes.save(cliente));
+        return conFoto(clientes.save(cliente));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Elimina a un cliente y sus datos (derecho de supresión, Ley 1581 de 2012)")
     public void eliminar(@PathVariable Long id) {
-        clientes.delete(buscar(id));
+        Cliente cliente = buscar(id);
+        // La supresión incluye su foto: es un dato personal y no puede quedar huérfana.
+        fotos.borrar(sesion.inmobiliariaId(), SujetoFoto.CLIENTE, cliente.getId());
+        clientes.delete(cliente);
     }
 
     @GetMapping("/{id}/presupuesto")

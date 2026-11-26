@@ -31,6 +31,9 @@ class ReduccionApiTest extends PruebaIntegracion {
                         .content(CUERPO.formatted("")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actual.cuotaInicial").value(1495708))
+                // Cómo se reparte la primera cuota (la hoja impresa la muestra): intereses del primer mes y el resto a capital.
+                .andExpect(jsonPath("$.primeraCuotaIntereses").value(1310189))
+                .andExpect(jsonPath("$.primeraCuotaCapital").value(185519))
                 .andExpect(jsonPath("$.actual.cuotas").value(240))
                 .andExpect(jsonPath("$.actual.totalSeguro").value(14400000))
                 .andExpect(jsonPath("$.escenarios", hasSize(3)))

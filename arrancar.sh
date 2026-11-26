@@ -92,7 +92,18 @@ info "Esperando al backend (puede tardar 20-40 s)..."
 esperar "El backend" http://localhost:8080/swagger-ui.html "$BACKEND" logs/backend.log 90
 esperar "El frontend" http://localhost:5173 "$FRONTEND" logs/frontend.log 30
 
-if grep -qE '^OPENAI_API_KEY=.+' .env; then
+# Proveedor de IA: la variable del entorno manda sobre el .env (igual que en la aplicación).
+valor_env() { grep -E "^$1=" .env 2>/dev/null | tail -1 | cut -d= -f2-; }
+PROVEEDOR="${PREDIA_IA_PROVEEDOR:-$(valor_env PREDIA_IA_PROVEEDOR)}"
+if [[ "${PROVEEDOR:-openai}" == "ollama" ]]; then
+  OLLAMA="${OLLAMA_URL:-$(valor_env OLLAMA_URL)}"; OLLAMA="${OLLAMA:-http://localhost:11434}"
+  if curl -s -m 3 "$OLLAMA" >/dev/null 2>&1; then
+    IA="con IA local (Ollama, ${OLLAMA_CHAT_MODEL:-$(valor_env OLLAMA_CHAT_MODEL)})"
+    [[ "$IA" == *", )" ]] && IA="con IA local (Ollama)"
+  else
+    IA="${ROJO}con Ollama, pero NO RESPONDE en $OLLAMA${SIN} — ejecuta en otra terminal: ollama serve"
+  fi
+elif grep -qE '^OPENAI_API_KEY=.+' .env; then
   IA="con IA (OPENAI_API_KEY configurada)"
 else
   IA="en modo manual (sin OPENAI_API_KEY)"

@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import type { EstadoRequisito, ItemDocumental } from '../api/tipos'
+import type { EstadoRequisito } from '../api/tipos'
+
+/** Lo mínimo para dibujar un tramo: sirve para el estado documental del asesor y para el del portal. */
+type Tramo = { id: number; nombre: string; obligatorio: boolean; estado: EstadoRequisito }
 
 type Tono = 'sobre-azul' | 'sobre-papel'
 
@@ -39,6 +42,14 @@ export function CifraAcotada({ etiqueta, valor, razon, tono = 'sobre-papel', gra
   )
 }
 
+/** «recibido» → «recibidos»; «por vencer» no cambia. */
+function plural(nombre: string, n: number): string {
+  if (n === 1) return nombre
+  if (nombre === 'por vencer') return nombre
+  if (nombre.startsWith('sugerido por')) return nombre.replace('sugerido', 'sugeridos')
+  return `${nombre}s`
+}
+
 const estiloTramo: Record<EstadoRequisito, { azul: string; papel: string; nombre: string }> = {
   RECIBIDO: { azul: 'tramo bg-white', papel: 'tramo bg-prusia', nombre: 'recibido' },
   POR_VENCER: { azul: 'tramo tramo-punteado text-[#ffd28a]', papel: 'tramo tramo-punteado text-ambar', nombre: 'por vencer' },
@@ -53,7 +64,7 @@ const estiloTramo: Record<EstadoRequisito, { azul: string; papel: string; nombre
  * macizo; lo que falta, punteado, y lo vencido, en rojo. Se lee de un vistazo cuántos faltan y cuáles.
  */
 export function CotaAvance({ items, porcentaje, tono = 'sobre-azul' }: {
-  items: ItemDocumental[]
+  items: Tramo[]
   porcentaje: number
   tono?: Tono
 }) {
@@ -61,7 +72,7 @@ export function CotaAvance({ items, porcentaje, tono = 'sobre-azul' }: {
   const tramos = items.filter((i) => i.obligatorio && i.estado !== 'NO_APLICA')
   const resumen = Object.entries(
     tramos.reduce<Record<string, number>>((acc, i) => ({ ...acc, [i.estado]: (acc[i.estado] ?? 0) + 1 }), {}),
-  ).map(([e, n]) => `${n} ${estiloTramo[e as EstadoRequisito].nombre}`).join(', ')
+  ).map(([e, n]) => `${n} ${plural(estiloTramo[e as EstadoRequisito].nombre, n)}`).join(', ')
 
   return (
     <div className={azul ? 'text-trazo' : 'text-niebla'} role="img" aria-label={`Avance de documentos: ${porcentaje} %. ${resumen}`}>

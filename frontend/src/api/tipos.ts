@@ -1,4 +1,4 @@
-export type Rol = 'ADMIN' | 'ASESOR'
+export type Rol = 'ADMIN' | 'ASESOR' | 'PROPIETARIO' | 'COMPRADOR'
 
 export interface PerfilUsuario {
   id: number
@@ -7,6 +7,8 @@ export interface PerfilUsuario {
   rol: Rol
   inmobiliariaId: number
   inmobiliaria: string
+  /** El hash de su foto de perfil; null si no tiene. Cambia cuando sube otra. */
+  fotoVersion?: string | null
 }
 
 export interface RespuestaLogin {
@@ -24,6 +26,21 @@ export interface EstadoSistema {
 
 /** La foto de portada de un inmueble: `version` cambia al subir otra, `focoX/focoY` es la parte que debe quedar visible. */
 export interface FotoInmueble {
+  version: string
+  focoX: number
+  focoY: number
+  ancho: number
+  alto: number
+}
+
+export type TipoImagen = 'FOTO' | 'PLANO'
+
+/** Una imagen de la galería de un inmueble: una foto (se recorta) o un plano (se muestra completo). */
+export interface ImagenInmueble {
+  id: number
+  tipo: TipoImagen
+  orden: number
+  etiqueta: string | null
   version: string
   focoX: number
   focoY: number
@@ -96,6 +113,8 @@ export interface RespuestaConsulta {
   citas: Cita[]
   sinEvidencia: boolean
   modoManual: boolean
+  /** Algo que afecta la búsqueda, p. ej. fragmentos indexados con otro modelo de embeddings. */
+  aviso: string | null
 }
 
 export type Intencion = 'COMPRAR' | 'ARRENDAR'
@@ -114,6 +133,10 @@ export interface Cliente {
   preferencias: string
   autorizacionDatos: boolean
   autorizacionFecha: string
+  /** Solo en la lista y solo para quien quiere comprar: lo calcula el backend con las reglas. */
+  topeDeCompra?: number | null
+  limitadoPor?: 'AHORRO' | 'CAPACIDAD_DE_PAGO' | null
+  fotoVersion?: string | null
 }
 
 /** Lo que la IA propone a partir de lo que dijo el cliente: solo una sugerencia que el asesor confirma. */
@@ -216,6 +239,7 @@ export interface Propietario {
   estadoCivil: EstadoCivil | null
   autorizacionDatos: boolean
   autorizacionFecha: string
+  fotoVersion?: string | null
 }
 
 export interface Negocio {
@@ -236,6 +260,17 @@ export interface Negocio {
   semaforo: string
   faltan: number
   porcentajeAvance: number
+  propietarioFotoVersion?: string | null
+  clienteCompradorFotoVersion?: string | null
+  asesorFotoVersion?: string | null
+  /** El cierre (venta firmada): cuándo y por cuánto. Solo si el negocio está FIRMADO. */
+  firmadoEn?: string | null
+  valorCierre?: number | null
+  notaCierre?: string | null
+  /** El precio publicado del inmueble: con él se propone el valor del cierre. */
+  precioPublicado?: number | null
+  /** Si quien mira puede cerrarlo ahora (está abierto y es su asesor o un administrador). */
+  puedeCerrar: boolean
 }
 
 export interface ItemDocumental {
@@ -249,6 +284,8 @@ export interface ItemDocumental {
   detalle: string
   venceEl: string | null
   estadoRegistrado: 'PENDIENTE' | 'SUGERIDO' | 'RECIBIDO' | 'NO_APLICA_MANUAL'
+  /** Quién dejó la sugerencia: la IA o el propietario desde su portal. */
+  sugeridoPor: 'IA' | 'PROPIETARIO' | null
   fechaExpedicion: string | null
   documentoId: number | null
   documentoNombre: string | null
@@ -324,6 +361,7 @@ export interface ResumenDiario {
   }[]
   vencenEstaSemana: { negocioId: number; inmueble: string; documento: string; venceEl: string; diasRestantes: number }[]
   recordatoriosPorAprobar: number
+  solicitudesPorAtender: number
 }
 
 export interface CitaAsistente {
@@ -388,9 +426,269 @@ export interface SimulacionReduccion {
   modo: ModoReduccion
   frecuencia: FrecuenciaAbono
   pctCuotaMaxIngreso: number
+  /** Cómo se reparte la primera cuota del crédito actual (la misma en todos los escenarios). */
+  primeraCuotaCapital: number
+  primeraCuotaIntereses: number
   actual: EscenarioReduccion
   escenarios: EscenarioReduccion[]
   escenarioDeLaTabla: number
   tabla: FilaAmortizacion[]
   aviso: string
+}
+
+// ---------------------------------------------------------------- usuarios, invitaciones y portal del propietario
+
+export type EstadoAcceso = 'SIN_INVITAR' | 'INVITADO' | 'ACTIVO' | 'DESACTIVADO'
+
+export interface UsuarioPersonal {
+  id: number
+  nombre: string
+  email: string
+  rol: Rol
+  estado: EstadoAcceso
+  ultimoIngreso: string | null
+  invitacionVence: string | null
+  esUstedMismo: boolean
+}
+
+/** `enlace` es personal y vence en 72 horas: sirve para compartirlo por otro medio si el correo no llega. */
+export interface UsuarioInvitado {
+  usuario: UsuarioPersonal
+  correoEnviado: boolean
+  enlace: string
+}
+
+export interface AccesoPortal {
+  estado: EstadoAcceso
+  email: string | null
+  invitadoEn: string | null
+  invitacionVence: string | null
+  ultimoIngreso: string | null
+}
+
+export interface InvitacionPortal {
+  acceso: AccesoPortal
+  correoEnviado: boolean
+  enlace: string
+}
+
+export interface CorreoVistaPrevia {
+  para: string
+  asunto: string
+  cuerpo: string
+}
+
+export interface VistaInvitacion {
+  nombre: string
+  inmobiliaria: string
+  rol: Rol
+  yaTieneCuenta: boolean
+}
+
+export interface NegocioPortal {
+  id: number
+  inmuebleId: number
+  inmueble: string
+  barrio: string
+  ciudad: string
+  estado: 'ABIERTO' | 'FIRMADO' | 'CANCELADO'
+  listoParaFirmar: boolean
+  semaforo: string
+  faltan: number
+  porcentajeAvance: number
+  fechaFirma: string | null
+  asesorNombre: string | null
+  asesorEmail: string | null
+  foto: FotoInmueble | null
+}
+
+export interface DocumentoPortal {
+  id: number
+  nombre: string
+  descripcion: string
+  obligatorio: boolean
+  estado: EstadoRequisito
+  detalle: string
+  venceEl: string | null
+  enviadoPorUsted: boolean
+  documentoNombre: string | null
+  puedeEnviar: boolean
+}
+
+export interface DetallePortal {
+  negocio: NegocioPortal
+  documentos: DocumentoPortal[]
+  aviso: string
+}
+
+export interface RecordatorioPortal {
+  asunto: string
+  cuerpo: string
+  enviadoEn: string
+}
+
+// ---- Portal del comprador (Fase 9) ----
+
+export type InteresComprador = 'ME_INTERESA' | 'NO_ME_INTERESA'
+
+export interface PresupuestoComprador {
+  topeDeCompra: number
+  limitante: 'AHORRO' | 'CAPACIDAD_DE_PAGO'
+  ahorro: number
+  pctCuotaInicial: number
+  cuotaMaxima: number
+  pctCuotaMaxima: number
+  plazoAnios: number
+  tasa: Tasa
+  avisos: string[]
+}
+
+export interface PerfilComprador {
+  nombre: string
+  asesor: { nombre: string; email: string } | null
+  presupuesto: PresupuestoComprador | null
+}
+
+export interface InmuebleResumenComprador {
+  id: number
+  titulo: string
+  barrio: string
+  ciudad: string
+  precio: number
+  areaM2: number
+  habitaciones: number
+  banos: number
+  parqueaderos: number
+  disponible: boolean
+  nota: string | null
+  interes: InteresComprador | null
+  foto: FotoInmueble | null
+  /** Cuánto pasa el precio de su tope de compra (calculado en el servidor); null si no lo pasa. */
+  excedenteSobreTope: number | null
+}
+
+export interface ControlesSimulador {
+  cuotaInicialMinima: number
+  cuotaInicialMaxima: number
+  ahorroAlcanza: boolean
+  faltanteCuotaInicial: number
+  plazoPorDefecto: number
+  plazoMinimo: number
+  plazoMaximo: number
+}
+
+export interface FichaComprador {
+  id: number
+  titulo: string
+  tipo: string
+  barrio: string
+  ciudad: string
+  estrato: number | null
+  areaM2: number
+  habitaciones: number
+  banos: number
+  parqueaderos: number
+  aceptaMascotas: boolean
+  propiedadHorizontal: boolean
+  esVis: boolean
+  valorAdministracion: number
+  precio: number
+  descripcion: string
+  disponible: boolean
+  nota: string | null
+  interes: InteresComprador | null
+  foto: FotoInmueble | null
+  imagenes: ImagenInmueble[]
+  simulador: ControlesSimulador | null
+  excedenteSobreTope: number | null
+}
+
+export interface SimulacionCompra {
+  precio: number
+  cuotaInicial: number
+  cuotaInicialMinima: number
+  cuotaInicialMaxima: number
+  ahorroAlcanza: boolean
+  faltanteCuotaInicial: number
+  montoFinanciado: number
+  plazoAnios: number
+  numeroCuotas: number
+  cuotaMensual: number
+  totalAPagar: number
+  totalIntereses: number
+  cuotaMaxima: number
+  porcentajeSobreIngreso: number | null
+  cumpleCuotaMaxima: boolean
+  excesoMensual: number
+  veredicto: string
+  tasa: Tasa
+  aviso: string
+}
+
+export interface SolicitudDelComprador {
+  id: number
+  inmuebleId: number | null
+  inmuebleTitulo: string | null
+  mensaje: string
+  creadaEn: string
+  atendida: boolean
+}
+
+export interface CompartidoConCliente {
+  inmuebleId: number
+  titulo: string
+  barrio: string
+  ciudad: string
+  precio: number
+  estado: EstadoInmueble
+  nota: string | null
+  compartidoEn: string
+  interes: InteresComprador | null
+  interesEn: string | null
+}
+
+export interface SolicitudPendiente {
+  id: number
+  clienteId: number
+  clienteNombre: string
+  inmuebleId: number | null
+  inmuebleTitulo: string | null
+  mensaje: string
+  creadaEn: string
+}
+
+// ---------------------------------------------------------------- rendimiento y equipo
+
+export type Periodo = 'MES' | 'ANIO' | 'TODO'
+
+export interface Rendimiento {
+  usuarioId: number
+  nombre: string
+  rol: Rol
+  fotoVersion: string | null
+  vendidos: number
+  valorVendido: number
+  abiertos: number
+  cancelados: number
+  diasPromedioCierre: number | null
+  tasaDeCierre: number | null
+}
+
+export interface CierreReciente {
+  negocioId: number
+  inmueble: string
+  valor: number
+  firmadoEn: string
+}
+
+export interface RendimientoPersonal {
+  periodo: Periodo
+  rendimiento: Rendimiento
+  ultimosCierres: CierreReciente[]
+}
+
+export interface RendimientoEquipo {
+  periodo: Periodo
+  asesores: Rendimiento[]
+  totales: { vendidos: number; valorVendido: number; asesores: number }
 }

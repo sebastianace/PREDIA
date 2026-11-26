@@ -83,6 +83,9 @@ public class HerramientasPredia {
                     : r.respuesta());
             salida.put("citas", r.citas().stream().map(HerramientasPredia::describir).toList());
             salida.put("nota", "Conserva las citas [n] tal como vienen en la respuesta.");
+            if (r.aviso() != null) {
+                salida.put("aviso", r.aviso());
+            }
             return salida;
         });
     }

@@ -19,7 +19,7 @@ public record InmuebleDto(
                 i.getCanonArriendo(), i.isEsVis(), i.isPropiedadHorizontal(), i.getDescripcion(), i.getEstado(), null);
     }
 
-    /** La misma vista con la información de su foto (null si no tiene). */
+    /** La misma vista con la información de su foto de portada (null si no tiene). */
     public InmuebleDto conFoto(FotoInfo foto) {
         return new InmuebleDto(id, codigo, titulo, tipo, direccion, barrio, ciudad, estrato, areaM2, habitaciones, banos,
                 parqueaderos, aceptaMascotas, valorAdministracion, operacion, precioVenta, canonArriendo, esVis,

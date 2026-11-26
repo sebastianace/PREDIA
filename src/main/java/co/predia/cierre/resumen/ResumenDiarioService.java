@@ -10,6 +10,7 @@ import co.predia.cierre.recordatorios.RecordatorioRepository;
 import co.predia.cierre.reglas.EstadoDocumental;
 import co.predia.cierre.reglas.EstadoRequisito;
 import co.predia.cierre.reglas.ServicioEstadoDocumental;
+import co.predia.comprador.ServicioSolicitudes;
 import co.predia.comun.seguridad.UsuarioActual;
 import co.predia.inventario.Inmueble;
 import co.predia.inventario.InmuebleRepository;
@@ -35,16 +36,19 @@ public class ResumenDiarioService {
     private final InmuebleRepository inmuebles;
     private final PropietarioRepository propietarios;
     private final RecordatorioRepository recordatorios;
+    private final ServicioSolicitudes solicitudes;
     private final Clock reloj;
 
     public ResumenDiarioService(NegocioRepository negocios, ServicioEstadoDocumental estadoDocumental,
                                 InmuebleRepository inmuebles, PropietarioRepository propietarios,
-                                RecordatorioRepository recordatorios, Clock reloj) {
+                                RecordatorioRepository recordatorios, ServicioSolicitudes solicitudes,
+                                Clock reloj) {
         this.negocios = negocios;
         this.estadoDocumental = estadoDocumental;
         this.inmuebles = inmuebles;
         this.propietarios = propietarios;
         this.recordatorios = recordatorios;
+        this.solicitudes = solicitudes;
         this.reloj = reloj;
     }
 
@@ -57,7 +61,8 @@ public class ResumenDiarioService {
     }
 
     public record Resumen(LocalDate fecha, int negociosAbiertos, List<NegocioBloqueado> bloqueados,
-                          List<Vencimiento> vencenEstaSemana, long recordatoriosPorAprobar) {
+                          List<Vencimiento> vencenEstaSemana, long recordatoriosPorAprobar,
+                          long solicitudesPorAtender) {
     }
 
     public Resumen resumen(UsuarioActual usuario) {
@@ -104,6 +109,7 @@ public class ResumenDiarioService {
             }
         }
         vencimientos.sort(java.util.Comparator.comparing(Vencimiento::venceEl));
-        return new Resumen(hoy, abiertos.size(), bloqueados, vencimientos, porAprobar);
+        return new Resumen(hoy, abiertos.size(), bloqueados, vencimientos, porAprobar,
+                solicitudes.contarPendientes(usuario));
     }
 }

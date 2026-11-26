@@ -1,5 +1,325 @@
 # Progreso de Predia
 
+## Auditoría completa como el profesor ✅ (26/11/2026)
+
+Se revisó todo el proyecto desde cero (base nueva, Ollama real: `qwen3:8b` + `bge-m3`) con el guion de humo por rol ampliado: 122 comprobaciones sobre acceso y permisos, cálculos en Java, búsqueda y RAG, escaneo de archivos, galería, cierre del negocio, recordatorios, asistente, portales del propietario y del comprador, y la entrega 2.
+
+- **IA fuera de tema:** 10 preguntas ajenas (Messi, receta de sancocho, mundial, clima, poema, Python, una multiplicación, el presidente, «ignora tus instrucciones» y «eres un asistente general») recibieron el aviso fijo de Java, sin llamar herramientas ni citar nada. Los saludos y «¿qué puedes hacer?» no se bloquean. En el RAG, «capital de Francia» devuelve «sin evidencia» y sin citas.
+- **Preguntas del profesor:** las tres responden con la herramienta correcta y sin cifras sin respaldo.
+- **Interfaz:** las 21 pantallas del personal, en escritorio y en 375 px: sin desbordes, sin errores de consola, sin pantallas atascadas en «Cargando…».
+- **Suite:** 306 pruebas. Una dependía del día en que corría (comparaba un «25» con el vencimiento real del certificado, que hoy cae el 25/11); ahora usa un número que nunca es una fecha.
+- **Nota para la demo:** un paz y salvo de administración «del mes en curso» recibido en los últimos 7 días del mes (margen de alerta) sigue contando como «por vencer», porque vence antes de la firma del 1 de diciembre. Es la regla funcionando, no un error: al confirmarlo, el semáforo del 1102 no baja de «Faltan 2 documentos» hasta que cambie el mes.
+- Las 4 comprobaciones que fallaron en la primera pasada eran expectativas viejas del guion (conteos de la demo con las ventas de ejemplo, y 422 en vez de 400 para una nota corta), no errores del producto.
+
+## Extra — Perfiles y equipo, entrega 2: cierre de negocios, Mi perfil y Equipo ✅ (26/11/2026)
+
+**Rama:** `feature/cierre-y-equipo` (sale de `release/1.2.0`). Diseño y boceto aprobados antes de programar. «La IA sugiere, las reglas deciden y la persona confirma»: las ventas **no se escriben a mano**, se cuentan solas desde los cierres confirmados.
+
+- **Cerrar un negocio** (`POST /api/negocios/{id}/cerrar`, migración V11): registra la venta firmada (`estado FIRMADO`, quién, cuándo, valor y nota; una restricción `ck_negocio_cierre` de la base lo exige). Reglas en Java (`ServicioCierreNegocio`): solo el asesor del negocio o un administrador; con el semáforo en verde basta; con documentos pendientes solo un administrador, con una nota de al menos 10 caracteres. El valor propuesto es el precio publicado y el asesor lo confirma o corrige. El inmueble pasa a VENDIDO y la venta cuenta para el asesor que abrió el negocio (no cambia aunque otro lo cierre). El estado FIRMADO no se puede poner ni quitar editando el negocio.
+- **Reabrir** (`POST /api/negocios/{id}/reabrir`): solo administrador (declarado en `ConfiguracionSeguridad`), con nota; el inmueble vuelve a quedar disponible y la venta deja de contar.
+- **Rendimiento** (`ServicioRendimiento`, SQL con la hora de Colombia): vendidos, valor vendido, negocios abiertos, días promedio de cierre y tasa de cierre (vendidos / (vendidos + cancelados)), por periodo (mes, año o todo). `GET /api/perfil/rendimiento` devuelve solo las cifras de quien consulta; `GET /api/equipo/rendimiento` (solo administrador) las de todos los asesores de su inmobiliaria.
+- **Mi perfil** (`PUT /api/perfil`): el asesor edita su nombre y su foto; devuelve un token nuevo porque el nombre viaja en él.
+- **Interfaz:** panel de cierre en el negocio (`CierreNegocio.tsx`), pantalla «Equipo» (ranking con barras, selector de periodo y de métrica, «Líder») y «Mi perfil», con entradas en el menú. Verificado en el navegador (escritorio y 375 px) contra una copia de la base: cerrar con nota, reabrir, el asesor sin acceso a «Equipo» y sin poder forzar el cierre.
+- **Demo:** dos asesores ficticios (`andres@altos.test`, `camila@altos.test`) y seis ventas marcadas «(ejemplo)» para que el ranking tenga qué comparar.
+- **Pruebas:** 306 en total (nuevas: `CierreNegocioApiTest` 10, `RendimientoApiTest` 7, `PerfilApiTest` 2 y la matriz de acceso).
+
+## Extra — Perfiles y equipo, entrega 1: fotos de perfil ✅ (25/11/2026)
+
+**Rama:** `feature/perfiles-y-equipo` (sale de `release/1.2.0`). Diseño y boceto aprobados antes de programar; esta es la primera de dos entregas (la segunda es el cierre de negocios, «Mi perfil» y «Equipo»).
+
+- **Fotos de perfil de clientes, vendedores y asesores.** Tabla aparte `foto_perfil` (V10) para que listar personas nunca cargue bytes. `ProcesadorImagen.procesarPerfil` recorta el mayor cuadrado alrededor de un punto de interés elegido por el asesor y guarda dos copias JPEG (512 px y miniatura de 128 px); nunca se conserva el archivo original ni sus metadatos. Una foto más pequeña no se amplía.
+- **Reglas.** Es un dato personal (Ley 1581 de 2012): la foto de un cliente o vendedor solo se guarda si autorizó el tratamiento de sus datos, y **al eliminar a un cliente (derecho de supresión) su foto se borra con él**. Una persona de otra inmobiliaria responde 404, igual que una inexistente. La foto de un asesor solo la cambia él mismo o un administrador; los demás del personal sí la ven (por eso vive bajo `/api/perfil`, ya que `/api/usuarios` es solo del administrador).
+- **Sin fotos viejas.** Se sirven con `no-cache` y ETag, y la interfaz pide cada foto con su versión (`v=`), el mismo criterio que corrigió las imágenes de los inmuebles. Las listas, la sesión (`/api/auth/yo`) y los negocios traen `fotoVersion`.
+- **Interfaz.** `Avatar` muestra la foto o, si no hay, las iniciales de siempre. `CampoFotoPerfil` (subir, cambiar, quitar y deshacer) con recorte circular que se arrastra, o se mueve con las flechas del teclado, para elegir qué parte se ve; no sube nada hasta guardar a la persona y, si la foto falla, la persona queda guardada y se avisa en su ficha. Aparece en el formulario de cliente, en el de vendedor (Nuevo negocio), en la lista de clientes, la ficha del cliente, los negocios y el menú del asesor.
+- **Pruebas:** 12 nuevas (`ProcesadorPerfilTest` 5 y `FotoPerfilApiTest` 7: subir, ver cuadrada, revalidar, reemplazar, quitar, aislamiento entre inmobiliarias, permisos de asesor y administrador, archivos inválidos, supresión del cliente y versiones en el negocio).
+- **Verificado en el navegador** contra una copia de la base (borrada al terminar): cliente nuevo con foto movida con el ratón, quitar la foto desde «Editar», vendedor con foto al abrir un negocio y la foto de Laura en el menú.
+- La entrega 2 (cierre de negocios, «Mi perfil» y «Equipo») está en la sección de arriba.
+
+## Versión 1.2.0 ✅ (25/11/2026)
+
+**Rama:** `release/1.2.0` (sale de `develop`). Sube la versión del backend (`pom.xml`), del frontend (`package.json`) y de la guía de despliegue, y reúne lo que se fusionó en `develop` desde la 1.1.0:
+
+- Fase 8: usuarios, invitaciones y portal del propietario (PR #14) y la revisión del portal (#16); Swagger con autenticación (#15).
+- Modelo de embeddings por fragmento y regeneración de vectores (#13).
+- Fase 9: portal del comprador (#17), galería de imágenes de los inmuebles (#18) y pulido visual (#19).
+- Escaneo de archivos: revisión del PDF y ClamAV opcional (#20).
+- IA local con Ollama como proveedor elegible (#21).
+- Citas con el rango de secciones y pulido de la demo (#22).
+- Asistente completo en «¿Qué les alcanza?» y temperatura de Ollama (#23).
+- Correcciones tras la presentación: temas ajenos del asistente, imágenes de portada que se quedaban viejas, pruebas independientes del `.env` y procesador de indexación sin carreras.
+- Hoja impresa del estudio de reducción de crédito (una página, con la marca de la inmobiliaria).
+- Rediseño de Clientes y del alta del vendedor, con el tope de compra en la lista.
+
+Verificación antes de publicar: suite completa y `npm run build` del frontend, y recorrido de la demo con Ollama en la instancia real (ver «Preparación de la presentación»).
+
+## Correcciones tras la presentación al profesor ✅ (25/11/2026)
+
+Al probar Predia por completo, el profesor y Sebastián encontraron dos fallas reales. Se corrigieron en `release/1.2.0` antes de publicarla.
+
+- **El asistente respondía temas ajenos** («cuántos años tiene Messi», «cómo quedó el Bucaramanga ayer»), inventando datos. La regla del prompt no alcanzaba con un modelo de 8B: reproducido, tras una conversación sobre un negocio respondió mal 3 de 3 veces. Ahora `FiltroDeTema` clasifica cada mensaje **antes** de llamar al asistente (una llamada aparte, prompt corto, una palabra de respuesta, con lo último que dijo el asistente como contexto). Si es ajeno, responde un aviso fijo escrito en Java, sin herramientas y sin guardarlo en el historial; si el filtro falla o duda, el mensaje pasa. Medido contra Ollama real: 14 de 14 mensajes ajenos rechazados (también con contexto de negocio previo) y 15 de 15 legítimos atendidos, incluidos «sí» y «y el de Cabecera?». Un rechazo tarda menos de 0,6 s y a una pregunta del negocio le suma menos de 1 s. 5 pruebas del filtro y 2 de punta a punta.
+- **Las imágenes no se actualizaban** (el asesor y el comprador veían fotos viejas). Las portadas se servían con `Cache-Control: max-age=30 días, immutable` en una dirección que **no cambia** cuando cambia la foto, así que el navegador no volvía a preguntar. Ahora: la portada (asesor, comprador y propietario) se manda con `no-cache` y ETag (el navegador pregunta siempre y recibe 304 si no cambió), y el frontend añade la versión de la imagen a la dirección (`v=`), con lo que las fotos que ya habían quedado guardadas en el navegador dejan de usarse. Las imágenes de la galería por id (que nunca cambian) siguen guardándose. 2 pruebas nuevas (asesor y comprador).
+- **Las pruebas dependían del `.env` de quien las corre:** con `PREDIA_IA_PROVEEDOR=ollama` en el `.env`, dos pruebas de inventario «sin IA» fallaban. El perfil de pruebas ahora fija el proveedor.
+- **`logs/arrancar.out` estaba versionado** (se coló en un commit por un `git add -A`); sin datos sensibles, pero se sacó del repositorio y `logs/` quedó en `.gitignore`.
+- **`arrancar.sh`** ahora dice el proveedor real de IA y avisa si Ollama está apagado.
+- Suite: 273 pruebas, todas pasan.
+
+**Pendiente (pedido por el profesor, con boceto primero):** rediseñar la impresión de la reducción de crédito (con el ejemplo que dio), y mejorar el diseño de Clientes y de los formularios de crear cliente y vendedor.
+
+
+## Extra — Hoja impresa del estudio de reducción de crédito ✅ (25/11/2026)
+
+**Rama:** `feature/impresion-estudio-reduccion` (sale de `develop`). Pedido por el profesor, que dio como ejemplo la impresión del simulador original del autor. Boceto aprobado antes de programar.
+
+- **Nueva hoja** (una página A4): encabezado con la marca de la inmobiliaria y los datos del cliente, un bloque «Condiciones actuales con el banco» con el crédito actual y hasta tres escenarios lado a lado (saldo, cuotas y tiempo pendientes, tasa, abono, valor de la cuota y del seguro, nueva cuota, total de la deuda, abono a capital e intereses de la primera cuota), un bloque «Dinero y tiempo ahorrado» (intereses, seguros, total, cuotas reducidas, tiempo ahorrado, ingreso requerido y si el ingreso del cliente alcanza) y las firmas. Identidad de Predia (azul de Prusia, Archivo, curvas de nivel suaves); no se copió la marca del ejemplo.
+- **Backend:** la simulación devuelve `primeraCuotaCapital` y `primeraCuotaIntereses` (cómo se reparte la primera cuota), calculados por `CalculadoraReduccion`; el frontend no calcula nada.
+- **Defecto de la impresión anterior, corregido:** lo que no era el estudio solo se ocultaba (`visibility`), pero su altura seguía ocupando páginas: el PDF salía con **3 páginas, 2 en blanco**. Ahora se quita del diseño al imprimir y sale **1 página**. También se activó `print-color-adjust` para que las franjas de color salgan en papel.
+- **Verificado** generando el PDF real con el navegador en modo impresión: plazo/cuota, abono mensual/anual, con y sin cliente y con seguro. Con los abonos del ejemplo (`$104.700`, `$149.571`, `$209.399`) las cuotas y los desembolsos coinciden con el PDF del profesor; los ahorros difieren por unos pesos (p. ej. `$44.766.975` frente a `$44.767.103`) porque Predia redondea cada mes al peso y los totales son la suma de la tabla. El ingreso requerido usa el porcentaje máximo de cuota que configura la inmobiliaria (30 %), no el 33,33 % del ejemplo.
+- **Fuera por ahora (sin decidir):** honorarios del asesor (3 % del ahorro + IVA, modelo de corredor), «estudio válido por 20 días» y la fila «# de veces pagada la deuda / cuotas pagas» del ejemplo, que no se entendió.
+
+## Extra — Rediseño de Clientes y del alta del vendedor ✅ (25/11/2026)
+
+**Rama:** `feature/rediseno-clientes` (sale de `develop`). Pedido por el profesor. Boceto aprobado antes de programar (tres versiones: cifras que no se desbordan, secciones en tarjetas y curvas animadas en los paneles azules).
+
+- **Lista de clientes:** tarjetas a todo el ancho con cabecera de azul de plano y curvas de nivel blancas que se trazan una vez al entrar (el mismo `Terreno` del inicio, ahora dentro de un `PanelAzul` reutilizable). Cada tarjeta muestra ingreso, ahorro y **«Puede comprar hasta»** con lo que lo limita; contacto, autorización de datos, buscador por nombre, zona o correo, y filtros Comprar/Arrendar. Quien quiere arrendar no lleva tope.
+- **Backend:** `GET /api/clientes` devuelve `topeDeCompra` y `limitadoPor` para los compradores, calculados por `PresupuestoService`/`CalculadoraPresupuesto` (el mismo cálculo de la ficha); sin una tasa vigente la lista sigue funcionando sin tope. 2 pruebas nuevas en `ClienteApiTest`.
+- **Nuevo cliente:** cuatro secciones numeradas en tarjetas (contacto, situación económica, qué busca, autorización), con el bloque «Lo que dijo el cliente» arriba y un panel de resumen que muestra qué falta para guardar. Comprar/Arrendar y habitaciones son controles táctiles, las zonas son etiquetas, y **lo que propone la IA queda marcado «Sugerido por IA» hasta que el asesor lo edita**. La barra de guardar queda fija sobre la navegación en el celular.
+- **Vendedor (en «Nuevo negocio»):** «Elegir uno existente / Registrar uno nuevo», persona natural o jurídica, tipo de documento como lista (CC, CE, pasaporte, NIT) junto al número, aviso de firma del cónyuge solo si es casado o en unión marital, y una vista previa azul de cómo queda el vendedor.
+- **Componentes nuevos** en `Formulario.tsx`: `SeccionNumerada`, `Segmentado`, `Contador`, `CampoEtiquetas`, `Autorizacion` y la marca `MarcaIa`; íconos nuevos (`buscar`, `escudo`, `telefono`, `chispa`, `usuarioMas`, `circulo`, `circuloCheck`).
+- **Verificado en el navegador** contra una copia de la base de desarrollo (borrada al terminar): la lista con el tope real de Paola y Juan ($300.000.000); un cliente nuevo leído con la IA real (Ollama), con sus marcas, editado y guardado; el vendedor natural y jurídico; y las tres pantallas a 375 px sin desbordes. Defectos corregidos al probar: la marca «Sugerido por IA» partía las etiquetas de los campos de pesos (ahora va dentro del campo) y el título del vendedor quedaba separado del primer campo.
+- **No cambia** ningún dato ni regla: solo presentación y el tope en la lista.
+
+## Prueba completa antes de la release 1.2.0 ✅ (25/11/2026)
+
+**Rama:** `fix/asistente-completo`. Antes de publicar la 1.2.0 se probó todo junto en una **base nueva** (arranque desde cero: 9 migraciones y demo sembrada) con la rama de la release y Ollama, con un script que recorre 90 comprobaciones por rol (sin Ollama el script no aplica: usa los cuatro roles y el asistente real).
+
+- **Cubre:** permisos de los cuatro roles (sin token 401; asesor sin acceso a usuarios, parámetros ni tasas; propietario y comprador solo a lo suyo, y 404 ante lo ajeno), cálculos (presupuesto, cuota de $2.438.073 a 15 años, reducción de crédito, tasa mal escrita rechazada), búsqueda por significado, indexación y RAG con cita y sin evidencia, escaneo de archivos (imagen disfrazada de PDF, `.txt`, sin archivo), galería de imágenes, cierre (la IA deja SUGERIDO y el asesor confirma o reabre), recordatorio redactado y aprobado (llega a Mailpit), las tres preguntas del asistente y ambos portales completos (invitación por correo, enlace de un solo uso, activación, login, subida del propietario, ficha del comprador sin código ni datos del propietario, simulador, solicitud y atención).
+- **Resultado:** 89 de 90 comprobaciones. Las fallas de la primera corrida (84 comprobaciones) eran del script, no de la aplicación: la forma de la respuesta del estado documental y que el simulador del comprador exige `cuotaInicial`; el asistente, en cambio, sí tenía una inconsistencia real (ver más abajo). La comprobación que queda en rojo («tras confirmar el paz y salvo, faltan 1») no es un error: es la regla de vigencia del paz y salvo (ver más abajo); el resto de la cadena SUGERIDO → RECIBIDO → reabrir sí se verificó.
+- **Interfaz:** las 10 pantallas del asesor sin desbordar a 375 px de ancho, pantalla de ingreso y cierre del negocio revisados en celular.
+- **Asistente más consistente (hallazgo):** «¿Qué les alcanza?» solo usaba `buscarInmuebles` en 3 de 5 corridas y una vez respondió solo con el tope, sin inmuebles. La instrucción ahora manda siempre `buscarInmuebles` con `paraCliente` (ya devuelve el tope): 12 de 12 respuestas completas, sin cifras sin respaldo.
+- **Temperatura de Ollama en 0,2** (`OLLAMA_TEMPERATURE`): uso factual, respuestas más estables. En «¿La venta del 1102 incluye parqueadero?» pasó de 3 «sí» de 5 a 5 de 6; la variación restante sale de qué fragmentos recupera.
+- **Vigencia del paz y salvo:** es «del mes en curso» y la firma tentativa es en diciembre, así que un paz y salvo de noviembre queda «por vencer» y el negocio sigue en «Faltan 2». Es la regla funcionando; se explica en el guion de demo.
+- Todo se hizo en bases nuevas (borradas al terminar) y Mailpit quedó vacío; la base de desarrollo no se tocó.
+- **Prueba intermitente corregida (en la release):** `IndexacionAsincronaTest` falló una vez de ocho corridas porque el procesador programado (cada 5 s) competía con la llamada manual de la prueba y el documento aún estaba en PROCESANDO. El intervalo ahora es configurable (`predia.expedientes.intervalo-indexacion-ms`, 5.000 por defecto) y el perfil de pruebas lo sube a una hora. Tres corridas completas seguidas: 264 pruebas, sin fallos.
+
+## Preparación de la presentación ✅ (25/11/2026)
+
+**Rama:** `fix/seccion-en-citas` (sale de `develop`). Ensayo completo del recorrido de la demo en la instancia real (Ollama, PostgreSQL y Mailpit), por la API y por la interfaz.
+
+- **Umbral de similitud en 0,35** (parámetro de la inmobiliaria; no tiene pantalla, se cambia con `PUT /api/parametros` como ADMIN): con `bge-m3` corta lo ajeno y conserva las paráfrasis (ver la sección de Ollama).
+- **Citas con la sección correcta (error encontrado al ensayar).** El fragmentador guardaba como sección el *último* encabezado visto; como los PDF de la demo caben en un solo fragmento, toda cita decía «CLÁUSULA QUINTA. DEPÓSITO» aunque el parqueadero estuviera en otra cláusula. Ahora cada bloque recuerda su sección y el fragmento cita lo que contiene: una sola, o el rango «primera — última». También se corrigió que el encabezado del bloque siguiente se le atribuyera al fragmento que se cerraba. 3 pruebas nuevas y 3 ajustadas; los PDF ya indexados deben subirse de nuevo para tener la sección nueva.
+- **Recordatorios mejor redactados con Ollama (error encontrado al ensayar).** `qwen3:8b` escribió «le recuerdo que aún pendiente los siguientes documentos». La instrucción ahora fija la estructura del correo y pide frases completas con verbos conjugados; en tres borradores seguidos salieron gramaticales y consistentes. El validador sigue exigiendo todos los documentos pendientes y ningún número nuevo, y si falla se usa la plantilla.
+- **Modelos cargados 2 horas** (`OLLAMA_KEEP_ALIVE`): Ollama los descarga a los 5 minutos y la primera pregunta tras una pausa tardaba mucho más.
+- **Lista de comprobación antes de presentar** en el README (guion de demo).
+
+### Ensayo (todo con Ollama: `qwen3:8b` + `bge-m3`)
+- RAG: parqueadero → sí, con cita; canon, duración y mascotas → respuesta con cita; «mundial de 2014» → «no tengo información» **sin llamar al modelo** (0,04 s).
+- Asistente (6–15 s cada una, `cifrasSinRespaldo` vacío): las tres preguntas del profesor, y «redacta un recordatorio» dejó un BORRADOR sin enviar nada.
+- Cierre: al subir el paz y salvo al negocio, el modelo lo clasificó (`PAZ_Y_SALVO_ADMINISTRACION`, 0,95) y el requisito quedó **SUGERIDO** por la IA; el semáforo siguió en «Faltan 2 documentos» hasta que el asesor lo confirme. Se reabrió y se borró el documento.
+- Interfaz: inicio, expedientes (con la cita), clientes, negocios, recordatorios y asistente sin errores de consola; el asistente muestra «Consultando las herramientas de Predia…» durante la espera.
+- Suite: 264 pruebas, todas pasan.
+- Todo lo hecho en el ensayo se deshizo: documentos, borradores, requisitos y Mailpit quedaron como al empezar.
+
+## Extra — IA local con Ollama ✅ (25/11/2026)
+
+**Rama:** `feature/proveedor-ollama` (sale de `develop`). Diseño aprobado antes de programar. Predia puede correr con modelos locales: nada de lo que se indexa o se pregunta sale del equipo y no hay costo por uso.
+
+- **Selector de proveedor:** `PREDIA_IA_PROVEEDOR=openai|ollama` (por defecto `openai`). Se usan `spring.ai.model.chat` y `spring.ai.model.embedding` de Spring AI; `EstadoIa` ya no depende de propiedades de OpenAI, expone el `proveedor` y falla al arrancar si chat y embeddings no coinciden o el valor es desconocido. `GET /api/sistema/estado` incluye ahora `proveedor`.
+- **Modelos por defecto:** chat `qwen3:8b` y embeddings `bge-m3` (1.024 dimensiones). Predia no descarga modelos: se bajan con `ollama pull`.
+- **Sin migración:** `AjusteDimension` rellena con ceros los vectores de menos de 1.536 dimensiones. Con el relleno la similitud coseno no cambia; un vector más largo se rechaza en vez de recortarse. Volver a OpenAI sigue siendo posible regenerando los vectores.
+- **Modo de pensar:** `qwen3` «piensa» antes de responder y gasta unas diez veces más tokens (40–78 s por respuesta). `AjustesOllama` lo apaga por defecto (`OLLAMA_PENSAR=false`); Spring no permite enlazar ese valor desde `application.yml`.
+- **Renombrado:** `OpenAiProveedorEmbeddings` pasó a `SpringAiProveedorEmbeddings`, porque sirve para cualquier proveedor.
+
+### Pruebas (12 nuevas, 262 en total; no necesitan Ollama ni OpenAI)
+- `AjusteDimensionTest` (4): la dimensión exacta no se toca, un vector de 1.024 se rellena con ceros, el coseno no cambia, uno de 3.072 se rechaza.
+- `EstadoIaTest` (5): OpenAI sin clave = modo manual, con clave disponible, el marcador no cuenta, Ollama sin clave y con sus modelos, proveedor desconocido o mezclado impide arrancar.
+- `AjustesOllamaTest` (3): pensar apagado y encendido, y los demás beans quedan igual.
+
+### Probado en vivo con Ollama real (M5, 16 GB)
+- Indexación de la escritura y el reglamento con `bge-m3`: vectores de 1.536 dimensiones en `fragmento` y documentos clasificados bien (`ESCRITURA_PUBLICA`, `REGLAMENTO_PROPIEDAD_HORIZONTAL`).
+- **Las tres preguntas del profesor con `qwen3:8b`** (8–17 s cada una con el modo de pensar apagado): el estado del negocio 1102 (certificado vencido el 04/11 y paz y salvo pendiente), lo que alcanza Paola y Juan (herramienta `calcularPresupuesto`: $300.000.000, y el Apto 1102) y el parqueadero (sí, con cita al reglamento). `cifrasSinRespaldo` vacío en las tres.
+- **Con el modo de pensar encendido**, la misma pregunta de presupuesto no usó `calcularPresupuesto` y recomendó una casa de $330.000.000, por encima del tope; con él apagado sí la usó. Es variación normal de un modelo de 8.000 millones de parámetros: conviene volver a probar antes de la demo.
+- **`llama3.1`** respondió más corto, no usó `calcularPresupuesto` en la pregunta de presupuesto y dudó en la del parqueadero: se queda como alternativa, no como valor por defecto.
+
+### Umbral de similitud (por modelo)
+Con `bge-m3` el umbral por defecto de 0,30 deja pasar preguntas ajenas («capital de Francia» devolvió citas aunque el modelo dijo que no sabía). En el conjunto de la demo, **0,35–0,40** corta lo ajeno y conserva las paráfrasis («¿dónde puedo dejar mi carro?» encuentra el parqueadero); 0,45 ya pierde paráfrasis y 0,50 pierde preguntas directas. El umbral es un parámetro de cada inmobiliaria (lo cambia un ADMIN): al cambiar de modelo hay que recalibrarlo. Los valores salen de una demo de dos documentos; con más documentos conviene medir de nuevo.
+
+### Lo que no se hizo
+- No hay comprobación de que el servidor de Ollama esté encendido al arrancar: si está apagado, el asistente responde 502 y la indexación reintenta, igual que con un proveedor en la nube caído.
+- La prueba se hizo en una copia de la base de desarrollo (borrada al terminar), sin tocar el 8080 ni enviar correos.
+
+## Extra — Escaneo de archivos ✅ (24/11/2026)
+
+**Rama:** `feature/escaneo-archivos` (sale de `develop`). Diseño aprobado antes de programar. Cierra lo que faltaba del punto 4 del flujo («límites de tamaño, validación y escaneo de archivos»).
+
+- **Revisión del PDF** (`InspectorPdf`, siempre activa): firma `%PDF-` en los primeros 1.024 bytes (la extensión y el tipo que declara el navegador no bastan) y rechazo de JavaScript, acciones que lanzan programas y archivos incrustados, recorriendo todos los objetos del documento (también los comprimidos).
+- **Antivirus ClamAV opcional** (`EscanerClamAv`): el archivo viaja a `clamd` por el comando `INSTREAM`. Apagado por defecto (`ESCANEO_MODO=DESACTIVADO`) para que Predia siga arrancando con solo PostgreSQL. Con `CLAMAV` y `ESCANEO_OBLIGATORIO=true`, si el antivirus no responde el archivo se rechaza con 503: nunca se da por limpio lo que no se pudo verificar.
+- **Efecto de un rechazo:** 422 «rechazado por seguridad» (sin el nombre de la amenaza) y no queda documento, trabajo ni temporal. En el log solo van el hash y el nombre de la amenaza.
+- **Docker:** servicio `clamav` bajo el perfil `escaneo` (`docker compose --profile escaneo up -d clamav`). Se usa `clamav/clamav-debian` porque la imagen `clamav/clamav` solo publica amd64 y el Mac de desarrollo es Apple Silicon.
+
+### Pruebas (19 nuevas, 250 en total; no llaman a OpenAI ni necesitan ClamAV)
+- `InspectorPdfTest` (8): un PDF normal y un enlace web pasan; JavaScript al abrir, JavaScript dentro de una anotación, `Launch` y archivos incrustados se rechazan; la firma distingue un PDF de una imagen o un ejecutable con extensión `.pdf` y tolera basura corta antes de la firma.
+- `EscanerClamAvTest` (6): el protocolo `INSTREAM` contra un `clamd` falso en un socket (el archivo llega completo; `OK`, `FOUND` con el nombre de la amenaza, `ERROR` nunca se da por limpio; sin antivirus, obligatorio o no).
+- `CargaSeguraApiTest` (5, PostgreSQL real): archivo limpio → 202; amenaza → 422 sin documento ni temporal y sin nombrar la amenaza; antivirus caído → 503 sin documento ni temporal; PDF con JavaScript → 422 aunque el antivirus no lo vea; un PNG con extensión `.pdf` → 422.
+
+### Probado en vivo con ClamAV real (Docker, arm64)
+- Un archivo EICAR (la cadena de prueba estándar de los antivirus, que no es un virus) subido como `.pdf` → **422 «rechazado por seguridad»** y una línea en el log con el hash y `Eicar-Test-Signature`.
+- Un PDF con JavaScript en `/OpenAction` → **422 «El PDF contiene JavaScript»**.
+- Con el contenedor de ClamAV detenido → **503 «No se pudo verificar el archivo…»**; al volver a encenderlo, el mismo archivo limpio se aceptó (202).
+- **Límite que conviene saber:** ClamAV reconoce el archivo EICAR cuando es el archivo completo; pegado al final de un PDF real no lo marcó. Es una propiedad de esa firma de prueba, no de Predia; por eso la revisión estructural del PDF va además del antivirus.
+- La prueba se hizo en una copia de la base de desarrollo, que se borró al terminar.
+
+### Lo que no se hizo
+- No se escanean las fotos y planos de la galería: no se guardan los bytes originales, solo la imagen decodificada y vuelta a codificar como JPEG (`ProcesadorImagen`).
+- No hay un aviso en la interfaz de que un archivo se subió «sin verificar» cuando el antivirus está apagado.
+
+## Extra — Pulido visual de Negocios, Clientes y Activar cuenta ✅ (24/11/2026)
+
+**Rama:** `feature/rediseno-pantallas` (sale de `feature/galeria-inmuebles`). Boceto aprobado antes de programar; Sebastián pidió el cambio del panel azul de «Activar cuenta» (un dibujo en vez de curvas sueltas) y se mostraron dos opciones: eligió el edificio.
+
+- **Negocios:** cada negocio es una tarjeta con cabecera azul de Prusia y curvas de nivel, semáforo, avatares de quien vende y quien compra, la cota de avance y la firma tentativa. Arriba, tres resúmenes (negocios abiertos, documentos por resolver, próxima firma) que son sumas de lo que ya entrega el servidor.
+- **Clientes:** tarjeta con avatar de iniciales, franja cobalto, etiquetas (intención, zona, habitaciones) y, a la derecha, el ingreso y el ahorro.
+- **Activar cuenta:** el panel azul lleva la **fachada de un edificio dibujada con líneas blancas** (pisos, ventanas, entrada, suelo y una cota vertical que marca el «Apto 1102»), que se traza al entrar; la parte del formulario es una tarjeta con pasos, lo que podrá hacer el propietario o el comprador, mostrar u ocultar la contraseña y un medidor orientativo (la única regla que se exige sigue siendo el mínimo de 10 caracteres).
+- Verificado en el navegador, en escritorio y en celular (375 px); en celular el chip y el lema del panel se ocultan para no pisar el dibujo. `npm run build` sin errores.
+
+## Extra — Galería de fotos y planos por inmueble ✅ (24/11/2026)
+
+**Rama:** `feature/galeria-inmuebles` (sale de `feature/portal-comprador`; su PR apunta a esa rama hasta que se fusione). Boceto aprobado antes de programar.
+
+### Por qué
+Un inmueble tenía una sola foto (V6) y un plano aparte (V8). El comprador necesitaba ver varias fotos «pasándolas una por una», y a veces un inmueble no tiene plano sino solo fotos. Ahora todo es una sola galería ordenada.
+
+### Qué quedó
+- **Tabla `imagen_inmueble`** (migración V9): `id, inmueble_id, inmobiliaria_id, tipo (FOTO|PLANO), orden, etiqueta, grande, miniatura, ancho, alto, foco_x, foco_y, hash, subida_por, creada_en`. Reemplaza a `foto_inmueble` y `plano_inmueble`: la migración **copia lo que ya estaba subido** (la foto primero, el plano después, con la etiqueta «Plano») y borra las tablas viejas. Probada contra una copia de la base de desarrollo: las 2 fotos y los 2 planos de la demo pasaron intactos.
+- **Reglas:** una foto se guarda a 1600 px (miniatura de 480) y se recorta con su punto de interés; un plano, a 2000 px con más calidad y **nunca se recorta**. Máximo **12 imágenes** por inmueble y 8 MB por archivo. La **portada** del inventario es la primera FOTO por orden (un plano nunca es portada); sin fotos se ve el terreno.
+- **API del asesor** `/api/inmuebles/{id}/imagenes`: `GET` (lista en orden), `POST` multipart (`tipo`, `etiqueta`, `focoX`, `focoY`), `GET /{imagenId}?tam=` (con `ETag`), `PATCH /{imagenId}` (tipo, etiqueta, encuadre), `PUT /orden` (debe nombrar cada imagen una sola vez) y `DELETE /{imagenId}` (el orden queda sin huecos). `GET /api/inmuebles/{id}/foto` sigue entregando la portada. Se retiraron `PUT/PATCH/DELETE /foto` y `/plano`.
+- **API del comprador:** la ficha trae `imagenes` (en vez de `planoVersion`) y `GET /api/comprador/inmuebles/{id}/imagenes/{imagenId}` solo responde si el inmueble se le compartió.
+- **Asesor:** en «Editar inmueble», una sola cuadrícula de «Fotos y planos»: agrega varias a la vez (botones «Agregar fotos» y «Agregar planos»), ordena arrastrando o con las flechas, nombra cada una (sala, cocina…), cambia entre Foto y Plano, elige el encuadre de una foto y la quita. Cada cambio se guarda al instante. Un inmueble nuevo se guarda primero y pasa a su edición para agregar las imágenes.
+- **Comprador:** un carrusel con flechas, teclado y deslizar con el dedo, contador («2 / 6»), tira de miniaturas y visor a pantalla completa con ampliación (para leer las medidas de un plano).
+- Un valor inválido en un parámetro (por ejemplo, un tipo de imagen inventado) ahora responde `400` en vez de `500`.
+
+### Pruebas (231 en total; no llaman a OpenAI)
+- `GaleriaInmuebleApiTest` (11, PostgreSQL real): orden de subida y portada (un plano primero no es portada); tamaños de foto y plano con su miniatura; sin fotos no hay portada; reordenar, cambiar tipo, etiqueta y encuadre (lo no enviado se conserva); el orden debe nombrar cada imagen una vez; quitar no deja huecos; tope de 12; `ETag`/304; archivo falso, vacío, de 9 MB y tipo inventado; **otra inmobiliaria no ve, sube, ordena, edita ni quita (404)** ni alcanza una imagen ajena con un inmueble propio; sin sesión → 401.
+- `PortalCompradorApiTest`: la galería (fotos y planos) solo se ve si el inmueble se comparte.
+
+### Probado en vivo (API real, PostgreSQL)
+Migración V9 sobre una copia de la base; subida de 3 fotos y un plano desde el navegador, reordenar y nombrar; como comprador, carrusel con flechas, miniaturas y visor (también en 375 px). La copia de la base y los servidores de prueba se borraron.
+
+### Lo que no se hizo
+- No se probó con fotos reales de celular ni HEIC (el navegador de pruebas no abre el selector de archivos del sistema).
+- Un plano migrado de la tabla anterior usa su imagen completa como miniatura hasta que se vuelva a subir.
+
+## Fase 9 — Portal del comprador ✅ (24/11/2026)
+
+**Rama:** `feature/portal-comprador` (sale de `develop`). Diseño aprobado en `docs/DISENO.md`, sección 11, y boceto aprobado antes de programar las pantallas.
+
+### Por qué
+El comprador era solo una ficha que administraba el asesor. Ahora tiene su propia cuenta para ver su presupuesto, los inmuebles que el asesor le comparte y simular su compra.
+
+### Qué quedó
+- **Cuarto rol, COMPRADOR** (migración V8: `usuario.cliente_id`, `inmueble_compartido`, `solicitud_comprador`, `plano_inmueble`). `/api/comprador/**` es solo suyo; el personal no entra y él no entra a nada del personal ni del portal del propietario. El JWT lleva `cliente_id`; desactivarlo corta su sesión al instante, igual que al propietario.
+- **El asesor decide qué ve:** «Compartir con el cliente» desde los resultados de la búsqueda (con una nota opcional) y «Compartidos con el cliente» en su ficha, con el interés que marcó y «Dejar de compartir». Un inmueble no compartido (o compartido a otro cliente) responde 404.
+- **Acceso del cliente:** el mismo componente de invitación del propietario (vista previa del correo, enlace de un solo uso a 72 h, desactivar). Un correo solo puede tener un rol.
+- **Inicio del comprador:** su tope de compra como cifra acotada con su razón (ahorro o capacidad de pago), cuota máxima, tasa usada y las tarjetas de inmuebles con «Me interesa» / «No me interesa».
+- **Ficha del inmueble:** foto, **plano** (con visor a pantalla completa y ampliación), datos clave, nota del asesor y **«Simule su compra»**: cuota inicial y plazo; las cifras las calcula el servidor (`CalculadoraCompra` + `SimuladorCreditoService`), con una pequeña espera al mover los controles. La cuota inicial mínima es el porcentaje de la inmobiliaria (más bajo en VIS) y la máxima, su ahorro sin pasar del precio.
+- **Privacidad:** el comprador no ve el código interno, la dirección exacta ni nada del propietario.
+- **«Quiero más información»:** un mensaje al asesor (máximo 5 sin atender). No envía correos: aparece en el inicio del asesor («N mensajes de compradores por atender») y en `/solicitudes`, donde lo marca como atendido.
+- **Plano del inmueble:** se guarda reducido a 2.000 px (calidad alta, nunca el original). *(Después pasó a la galería de fotos y planos: ver arriba.)*
+- Un método HTTP no permitido ahora responde `405` (antes, `500`).
+- **Pulido tras revisar el diseño en vivo:** si un inmueble compartido cuesta más que el tope de compra del cliente, la tarjeta y la ficha muestran «Supera en $X lo que hoy puede comprar» (el valor lo calcula `CalculadoraCompra.excedenteSobreTope`; solo informa, la decisión es del asesor); el simulador muestra un esqueleto mientras llegan las cifras y las deja atenuadas mientras se recalculan; y se quitó el doble punto de «a. m..» en la tarjeta de acceso.
+
+### Pruebas (228 en total, +21; no llaman a OpenAI)
+- `CalculadoraCompraTest` (8, unitaria): mínima = porcentaje del precio redondeado hacia arriba; máxima = ahorro sin pasar del precio menos un peso; qué falta si el ahorro no alcanza; sin ahorro o sin precio; validación del rango; el excedente sobre el tope solo existe si el precio lo pasa.
+- `PortalCompradorApiTest` (13): solo ve lo compartido y sin código ni dirección; 404 para lo no compartido, lo de otro cliente (misma o distinta inmobiliaria) y su foto y simulación; la simulación respeta el rango y el plazo; un inmueble vendido se ve pero no se simula; interés y mensajes llegan al asesor sin enviar correos; tope de 5 mensajes; dejar de compartir cierra la puerta; plano solo si se comparte; invitar exige correo y no usa uno ya ocupado por otro rol; desactivar corta la sesión; perfil con tope y asesor; el excedente sobre el tope llega calculado en la lista y la ficha; y la **matriz de acceso** de los cuatro roles.
+
+### Probado en vivo (API real, PostgreSQL, Mailpit)
+Laura invitó a «Paola y Juan», el enlace llegó a Mailpit, activaron la cuenta y entraron a su portal: tope de $300.000.000 («lo limita su ahorro»), dos inmuebles compartidos, simulación del 1102 con cuota de **$2.223.109 (29,6 % del ingreso)**, la misma cifra de la demo; el deslizador de cuota inicial del Provenza va de $80.400.000 a $90.000.000; plano, visor, «Me interesa» y mensaje al asesor; en celular (375 px) sin desborde. **Error encontrado al probar:** abrir un enlace de invitación con una sesión vencida guardada en el navegador daba «Debes iniciar sesión» (el token vencido se enviaba también a las rutas públicas); ahora no se envía en el ingreso, la activación ni la invitación. La base de desarrollo quedó como estaba (sin la cuenta, lo compartido, los mensajes, la foto y el plano de prueba) y Mailpit, limpio.
+
+### Lo que no se hizo
+- El plan de pagos por cuotas durante la construcción (separación, cuota inicial en N cuotas, saldo final): era solo un ejemplo de la captura.
+- El comprador no puede cambiar su contraseña por su cuenta (lo resuelve el asesor reenviando el enlace).
+- El plano se guarda como JPEG: las líneas muy finas pueden suavizarse.
+- Sigue pendiente un límite de intentos en el ingreso y proteger o apagar Swagger en producción.
+
+## Revisión del portal del vendedor y del acceso por rol ✅ (23/11/2026)
+
+**Rama:** `fix/revision-portal` (sale de `develop`)
+
+Revisión de punta a punta con la aplicación corriendo (API real, PostgreSQL, Mailpit): activación con enlace (válido, inválido, contraseñas que no coinciden), ingreso del vendedor por la página normal, un vendedor con dos ventas, uno sin ventas, una venta firmada, subidas con archivos malos, y una matriz de acceso de 15 rutas con asesor, administrador y vendedor (más sin sesión). El acceso salió como se esperaba. Lo que se encontró y se corrigió:
+
+- **Un `500` al enviar sin archivo** (o con una petición que no es multipart): ahora responde `400` («Falta un dato de la petición…») o `415`. Afectaba a cualquier subida, no solo al portal.
+- **El correo de invitación elegía una venta al azar:** con dos ventas, nombraba solo la más reciente. Ahora dice «sus ventas» (sin ventas, «su inmueble»; las canceladas no cuentan).
+- **Plural en la cota:** decía «4 recibido» y «8 pendiente»; ahora «4 recibidos», «8 pendientes».
+- **El portal en celular no decía de qué inmobiliaria era:** el nombre se ocultaba por debajo de 640 px; ahora se ve siempre.
+- **La foto del inmueble casi no se veía** en la cabecera del portal por la capa que protege la lectura del texto; se aligeró.
+- El mensaje del enlace inválido dejó de tutear: la página no sabe si habla con un propietario o con personal.
+
+### Pruebas (207 en total, +2)
+- `PortalPropietarioApiTest` (+1): enviar sin archivo o con un tipo incorrecto es un error del cliente (400/422), no un 500.
+- `UsuariosEInvitacionesApiTest` (+1): el correo nombra la venta con una, «sus ventas» con dos y «su inmueble» con ninguna.
+
+### Lo que se encontró y no se corrigió
+- **El comprador no tiene portal ni cuenta** (solo ADMIN, ASESOR y PROPIETARIO): es la Fase 9. Hoy el comprador es una ficha que administra el asesor.
+- **No hay límite de intentos en el ingreso**: se pueden probar contraseñas sin freno. Conviene agregarlo antes de producción.
+- **Swagger sigue público** (decisión pendiente para producción).
+- Una venta marcada FIRMADO con documentos pendientes muestra «Su venta ya se firmó» pero la cota sigue en 0 %: es coherente con los datos, pero se ve raro; en uso real una venta firmada tiene todo recibido.
+
+
+## Fase 8 — Usuarios, invitaciones y portal del propietario ✅ (23/11/2026)
+
+**Rama:** `feature/usuarios-y-portal` (sale de `develop`; incluye la guía de pruebas de `docs/guia-de-pruebas`). Diseño aprobado en `docs/DISENO.md`, sección 10.
+
+### Por qué
+No había forma de crear usuarios: los dos de la demo los sembraba `DatosDemo`, así que con la demo apagada nadie podía entrar. Y el propietario que vende no tenía cómo ver qué le faltaba para firmar.
+
+### Qué quedó
+- **Tres roles.** ADMIN y ASESOR (el personal) y el nuevo **PROPIETARIO**, que solo tiene su portal.
+- **Seguridad separada por rol:** `/api/**` pasó de «cualquiera con sesión» a **solo ADMIN o ASESOR**; el portal vive en `/api/portal/**` y es **solo del PROPIETARIO**; `/api/usuarios/**` es solo del ADMIN. Dentro del portal todo se filtra por el propietario del token: el negocio de otro propietario (aunque sea de la misma inmobiliaria) responde 404.
+- **Desactivar corta la sesión al instante:** en cada petición se comprueba que el usuario siga activo y con el mismo rol (antes, un token valía hasta que vencía, 8 horas).
+- **Invitaciones** (`invitacion_acceso`, migración V7): enlace de **un solo uso** que vence a las **72 horas**; en la base solo queda su SHA-256; crear uno nuevo anula el anterior. Sirve para crear la cuenta y, reenviándolo, para elegir una contraseña nueva. Quien invita recibe además el enlace para compartirlo por otro medio si el correo no llega.
+- **Usuarios** (pantalla del ADMIN): crear e invitar, cambiar el rol, desactivar y reactivar, reenviar la invitación. No puede quitarse su propio acceso ni dejar la inmobiliaria sin ADMIN.
+- **Primer administrador:** si no existe ningún ADMIN y están `PREDIA_ADMIN_*`, se crea la inmobiliaria y su administrador **sin contraseña**, y el enlace para crearla se escribe una vez en el log.
+- **Invitar al propietario** desde el negocio: el asesor ve el correo tal como saldrá (al propietario se le trata de «usted») y solo se envía cuando lo confirma. También puede desactivar su acceso.
+- **Portal del propietario** (pensado para celular): la foto o el terreno del inmueble, «Le faltan N documentos para firmar», la cota de avance, la firma prevista y el contacto de su asesor; cada documento con su estado, la frase escrita en Java, **cómo conseguirlo** (la descripción del catálogo) y **Enviar documento**; los recordatorios que de verdad se le enviaron. No ve al comprador ni notas internas.
+- **Lo que envía el propietario queda en revisión** (`requisito_negocio.sugerido_por = PROPIETARIO`), nunca recibido: el asesor lo ve como «Enviado por el propietario» y lo confirma. La IA no pisa lo que él eligió.
+- Sigue entrando **después de firmar**; su acceso solo termina si lo desactivan.
+
+### Pruebas (203 en total; las 14 nuevas no llaman a OpenAI)
+- `PortalPropietarioApiTest` (7): ve su venta y sus documentos pero **no al comprador**; otro propietario (misma u otra inmobiliaria) recibe 404; lo enviado queda SUGERIDO por el propietario, nunca RECIBIDO, y **no sale ningún correo**; no puede reemplazar un documento recibido y vigente; solo ve recordatorios enviados (no borradores); desactivarlo corta su sesión; y la **matriz de acceso**: el propietario recibe 403 en negocios, clientes, inmuebles, documentos, consultas, asistente, usuarios, tasas…, y el personal 403 en el portal.
+- `UsuariosEInvitacionesApiTest` (4): invitación → enlace → contraseña → login (el token no se guarda en claro y no sirve dos veces); enlace reemplazado o vencido no sirve; reenviar recupera la contraseña; reglas del ADMIN (no quitarse su acceso, no repetir correo, no crear propietarios desde ahí, desactivar o cambiar el rol corta la sesión, un usuario ajeno es 404); el asesor invita al propietario, que entra a su portal.
+- `PrimerAdministradorTest` (3, unitaria): crea inmobiliaria y ADMIN sin contraseña; con un ADMIN existente no hace nada; sin variables solo avisa.
+
+### Probado en vivo (API real, PostgreSQL, Mailpit)
+Laura invitó a Jorge desde el 1102 (el correo llegó a Mailpit con su nombre y el inmueble), Jorge abrió el enlace, creó su contraseña y entró a su portal; envió el paz y salvo y quedó «En revisión»; Laura lo vio como «Enviado por el propietario» y el último ingreso de Jorge; con su sesión, Jorge recibió 403 en negocios, clientes, documentos y usuarios. Revisado en escritorio y en celular (sin desborde). **Un error encontrado al probar:** el documento enviado por el propietario decía «Sugerido por la IA»; ahora dice «En revisión» en el portal y «Enviado por el propietario» para el asesor. La base de desarrollo quedó como estaba (sin la cuenta de Jorge ni el documento de prueba).
+
+### Lo que no se hizo
+- El portal del comprador con el plan de pagos (Fase 9).
+- Un «olvidé mi contraseña» autónomo (hoy lo resuelve el asesor o el ADMIN reenviando el enlace).
+- No se probó con un servidor SMTP real (solo Mailpit).
+
+
+## Corrección — Modelo de embeddings y HTTPS ✅ (23/11/2026)
+
+**Rama:** `fix/modelo-embeddings-y-https` (sale de `develop`)
+
+Salió de auditar el proyecto contra `Requerimientos.md` (el punto 11 del flujo de consulta pide embeddings «con el mismo modelo utilizado para el índice consultado», y el 3 pide el envío cifrado por HTTPS).
+
+### Qué quedó
+- **La búsqueda vectorial solo compara contra fragmentos indexados con el mismo modelo** que vectoriza la pregunta (`f.embedding_modelo = ?`). Antes el modelo se guardaba por fragmento pero no se comparaba: cambiar `OPENAI_EMBEDDING_MODEL` habría mezclado vectores incompatibles y dado resultados sin sentido, sin avisar.
+- **Aviso, no silencio:** la respuesta de la consulta trae `aviso` con cuántos fragmentos quedaron fuera de la búsqueda por significado (siguen encontrándose por palabras); se muestra en Expedientes y lo recibe el asistente.
+- **Regeneración sin volver a subir PDF:** `POST /api/documentos/regenerar-vectores` (solo ADMIN, en `ConfiguracionSeguridad`) recalcula, desde el texto guardado, los vectores de otro modelo y los que quedaron sin vector (modo manual). Trabaja por tandas de 300 y devuelve `regenerados`, `pendientes` y el modelo; se repite hasta que `pendientes` sea 0. Solo toca la inmobiliaria del ADMIN, exige IA (503 si no) y, si el proveedor falla a mitad, conserva lo ya regenerado (502).
+- **Inmuebles:** un vector de otro modelo cuenta como pendiente y se recalcula solo en la siguiente búsqueda.
+- **HTTPS:** [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) explica cómo ponerlo detrás de un proxy con certificado (Caddy, con su `Caddyfile`), con `SERVER_FORWARD_HEADERS_STRATEGY=framework`, y cómo comprobarlo. **La guía no se probó en un servidor real.** El README apunta a ella.
+
+### Pruebas (189 en total; las 3 nuevas no llaman a OpenAI)
+- `ConsultaRagApiTest` (+2): con el mismo modelo la búsqueda por vector encuentra el fragmento; al cambiar de modelo ya no aparece y se avisa («1 fragmento»); el asesor no puede regenerar (403) y el ADMIN sí, tras lo cual se encuentra de nuevo y desaparece el aviso; regenerar solo toca la inmobiliaria propia (la ajena queda con su modelo) y sin IA responde 503.
+- `InventarioBusquedaIaTest` (+1): al cambiar el modelo, los vectores de inmuebles se recalculan en vez de mezclarse.
+- Las dos pruebas existentes de la consulta que insertaban fragmentos con el modelo `pruebas` ahora fijan ese modelo en el simulador de IA.
+
+### Lo que no se hizo
+- ~~El escaneo de archivos (antivirus)~~: implementado después (ver «Extra — Escaneo de archivos», arriba).
+- No hay botón en la interfaz para regenerar los vectores: se llama al endpoint (Swagger) como ADMIN.
+
+
 ## Extra — Foto de portada de cada inmueble ✅ (23/11/2026)
 
 **Rama:** `feature/fotos-inmuebles` (sale de `feature/rediseno`; su PR apunta a la rama previa hasta que se fusione)
@@ -15,7 +335,7 @@ El asesor puede subir una foto por inmueble; aparece en la cabecera de cada tarj
 - La foto va en el formulario del inmueble (alta y edición). Si el inmueble se guarda pero la foto falla, no se pierde nada: se abre la edición con el motivo.
 
 ### Decisiones
-- **Una foto de portada por inmueble**, no una galería (no se pidió; sería la siguiente mejora).
+- **Una foto de portada por inmueble**, no una galería. *(Resuelto después con la galería de fotos y planos.)*
 - **En la base de datos, no en disco:** una copia de seguridad de la base incluye las fotos, no hay volúmenes que administrar y el filtro por inmobiliaria es el mismo que en todo lo demás. Con muchas fotos conviene pasar a un almacenamiento de objetos.
 - Las fotos **sí se guardan**, a diferencia de los PDF de los clientes: son material comercial de la propia inmobiliaria.
 - El servidor no lee la orientación EXIF; lo hace el navegador al reducir. Un cliente de la API que suba fotos de celular directas puede verlas giradas.

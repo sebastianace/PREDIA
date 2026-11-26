@@ -1,16 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Documento, EstadoDocumental, HipotecaVigente, ItemDocumental, Negocio, Recordatorio } from '../api/tipos'
+import { CierreNegocio } from '../componentes/CierreNegocio'
+import { useSesion } from '../sesion/Sesion'
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
 import { CotaAvance } from '../componentes/Cota'
 import { EstadoRequisitoChip } from '../componentes/Semaforo'
+import { AccesoPortalPropietario } from '../componentes/AccesoPortalPropietario'
 import { Terreno } from '../componentes/Terreno'
 import { formatoFecha, formatoFechaHora } from '../formato'
 
 export function NegocioDetalle() {
   const { id } = useParams()
+  const { usuario } = useSesion()
+  // Si la foto del vendedor no se pudo guardar al abrir el negocio, el formulario avisa aquí (el negocio sí quedó).
+  const avisoFoto = (useLocation().state as { avisoFoto?: string } | null)?.avisoFoto
   const [negocio, setNegocio] = useState<Negocio | null>(null)
   const [estado, setEstado] = useState<EstadoDocumental | null>(null)
   const [documentos, setDocumentos] = useState<Documento[]>([])
@@ -109,6 +115,7 @@ export function NegocioDetalle() {
 
   return (
     <div className="mx-auto max-w-3xl">
+      {avisoFoto && <div className="mb-3"><Aviso tipo="error">{avisoFoto}</Aviso></div>}
       <header className="relative isolate overflow-hidden rounded-panel bg-prusia px-5 pb-6 pt-5 text-white md:px-8 md:pb-8 md:pt-6">
         <Terreno semilla={negocio.inmuebleId * 31 + 7} trazar niveles={12}
           className="absolute inset-0 -z-10 size-full text-trazo opacity-40" />
@@ -135,6 +142,7 @@ export function NegocioDetalle() {
           <CotaAvance items={estado.items} porcentaje={estado.porcentajeAvance} tono="sobre-azul" />
         </div>
       </header>
+      <CierreNegocio negocio={negocio} estado={estado} esAdmin={usuario?.rol === 'ADMIN'} alCambiar={() => void cargar()} />
       {estado.advertencias.length > 0 && (
         <ul className="mt-4 space-y-2">
           {estado.advertencias.map((a) => <li key={a}><Aviso tipo="info">{a}</Aviso></li>)}
@@ -163,6 +171,8 @@ export function NegocioDetalle() {
           ))}
         </ul>
       </section>
+
+      <AccesoPortalPropietario propietarioId={negocio.propietarioId} nombre={negocio.propietarioNombre} />
 
       <section className="mt-10" aria-labelledby="titulo-recordatorios">
         <h2 id="titulo-recordatorios" className="text-lg font-semibold">Recordatorios al propietario</h2>
@@ -257,12 +267,18 @@ function FilaRequisito({ item, negocioId, documentos, abierto, onAbrir, onCambio
             {!item.obligatorio && <span className="ml-2 text-xs font-normal text-niebla">(recomendado)</span>}
           </div>
           <p className="mt-0.5 text-sm text-grafito">{item.detalle}</p>
+          {item.estado === 'SUGERIDO' && item.sugeridoPor === 'PROPIETARIO' && (
+            <p className="mt-1 inline-block border-l-2 border-cobalto bg-cobalto-suave px-2 py-0.5 text-xs text-prusia">
+              Lo envió el propietario desde su portal: revísalo y confírmalo
+            </p>
+          )}
           {item.documentoNombre && <p className="mt-0.5 text-xs text-niebla">Documento: {item.documentoNombre}</p>}
           {item.recibidoPor && item.estadoRegistrado === 'RECIBIDO' && (
             <p className="mt-0.5 text-xs text-niebla">Lo confirmó {item.recibidoPor}.</p>
           )}
         </div>
-        <EstadoRequisitoChip estado={item.estado} />
+        <EstadoRequisitoChip estado={item.estado}
+          etiqueta={item.estado === 'SUGERIDO' && item.sugeridoPor === 'PROPIETARIO' ? 'Enviado por el propietario' : undefined} />
       </div>
 
       {!noAplicaPorReglas && (

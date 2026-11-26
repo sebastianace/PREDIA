@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSesion } from '../sesion/Sesion'
@@ -6,7 +7,7 @@ import { Terreno } from './Terreno'
 import { Icono, type NombreIcono } from './Iconos'
 
 // En escritorio van todas en la barra lateral; en celular, las principales abajo y el resto en "Más".
-const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: boolean }[] = [
+const todas: { ruta: string; nombre: string; icono: NombreIcono; principal: boolean; soloAdmin?: boolean }[] = [
   { ruta: '/', nombre: 'Inicio', icono: 'inicio', principal: true },
   { ruta: '/negocios', nombre: 'Negocios', icono: 'negocios', principal: true },
   { ruta: '/inventario', nombre: 'Inventario', icono: 'inventario', principal: true },
@@ -17,13 +18,16 @@ const secciones: { ruta: string; nombre: string; icono: NombreIcono; principal: 
   { ruta: '/expedientes', nombre: 'Expedientes', icono: 'expediente', principal: false },
   { ruta: '/tasas', nombre: 'Tasas', icono: 'tasas', principal: false },
   { ruta: '/requisitos', nombre: 'Requisitos', icono: 'requisitos', principal: false },
+  { ruta: '/equipo', nombre: 'Equipo', icono: 'barras', principal: false, soloAdmin: true },
+  { ruta: '/usuarios', nombre: 'Usuarios', icono: 'clientes', principal: false, soloAdmin: true },
+  { ruta: '/perfil', nombre: 'Mi perfil', icono: 'usuario', principal: false },
 ]
 
-const iniciales = (nombre = '') =>
-  nombre.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
+const fotoDe = (u: { id: number; fotoVersion?: string | null } | null) => (u ? { ruta: `/perfil/usuarios/${u.id}/foto`, version: u.fotoVersion } : undefined)
 
 export function Plantilla() {
   const { usuario, cerrar } = useSesion()
+  const secciones = todas.filter((s) => !s.soloAdmin || usuario?.rol === 'ADMIN')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [masAbierto, setMasAbierto] = useState(false)
   const { pathname } = useLocation()
@@ -49,9 +53,7 @@ export function Plantilla() {
           ))}
         </nav>
         <div className="flex items-center gap-3 border-t border-white/10 px-6 py-5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-sm font-semibold text-prusia">
-            {iniciales(usuario?.nombre)}
-          </span>
+          <Avatar nombre={usuario?.nombre ?? ''} tono="blanco" tamano="grande" foto={fotoDe(usuario)} />
           <div className="min-w-0 flex-1 text-sm">
             <div className="truncate font-medium">{usuario?.nombre}</div>
             <div className="truncate text-white/55">{usuario?.inmobiliaria}</div>
@@ -69,8 +71,8 @@ export function Plantilla() {
           <span className="ancha text-xl font-bold tracking-tight">Predia</span>
           <div className="relative">
             <button onClick={() => setMenuAbierto((v) => !v)} aria-expanded={menuAbierto} aria-label="Tu cuenta"
-              className="grid size-9 place-items-center rounded-full bg-white text-sm font-semibold text-prusia">
-              {iniciales(usuario?.nombre)}
+              className="rounded-full">
+              <Avatar nombre={usuario?.nombre ?? ''} tono="blanco" tamano="grande" foto={fotoDe(usuario)} />
             </button>
             {menuAbierto && (
               <div className="absolute right-0 top-11 w-60 rounded-panel border border-linea bg-white p-4 text-sm text-grafito shadow-[0_12px_32px_-12px_rgb(11_37_69/0.35)]">

@@ -8,7 +8,13 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
@@ -72,11 +78,43 @@ public class ManejadorErrores {
         return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 
+    @ExceptionHandler(EscaneoNoDisponibleException.class)
+    ProblemDetail escaneoNoDisponible(EscaneoNoDisponibleException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+    }
+
     @ExceptionHandler(FalloDeIaException.class)
     ProblemDetail falloDeIa(FalloDeIaException e) {
         // Se registra solo el tipo de la causa: el mensaje del proveedor podría traer fragmentos de la consulta.
         log.warn("Falló la IA: {}", e.getCause() == null ? "sin causa" : e.getCause().getClass().getSimpleName());
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, e.getMessage());
+    }
+
+    /** Falta el archivo, un parámetro obligatorio o la petición no es del tipo esperado: es un error del cliente. */
+    @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class,
+            MultipartException.class})
+    ProblemDetail peticionIncompleta(Exception e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Falta un dato de la petición (por ejemplo, el archivo). Revísala e intenta de nuevo.");
+    }
+
+    /** Un valor que no es de los permitidos (por ejemplo, un tipo de imagen inventado): error del cliente, no del servidor. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ProblemDetail valorNoPermitido(MethodArgumentTypeMismatchException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "El valor de «" + e.getName() + "» no es válido. Revísalo e intenta de nuevo.");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    ProblemDetail tipoNoSoportado(HttpMediaTypeNotSupportedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "El tipo de contenido de la petición no es el esperado.");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ProblemDetail metodoNoPermitido(HttpRequestMethodNotSupportedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.METHOD_NOT_ALLOWED,
+                "Esa operación no está disponible para esta ruta.");
     }
 
     @ExceptionHandler(Exception.class)

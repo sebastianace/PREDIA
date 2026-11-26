@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
-import type { Cliente, PresupuestoCliente, RespuestaBusqueda, ResultadoInmueble, Simulacion, Tasa } from '../api/tipos'
+import type { Cliente, CompartidoConCliente, PresupuestoCliente, RespuestaBusqueda, ResultadoInmueble, Simulacion, Tasa } from '../api/tipos'
+import { Avatar } from '../componentes/Avatar'
 import { CifraAcotada } from '../componentes/Cota'
+import { AccesoPortalPropietario } from '../componentes/AccesoPortalPropietario'
 import { Terreno } from '../componentes/Terreno'
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
 import { formatoFechaHora, formatoPesos, formatoPorcentaje, formatoTasaEa } from '../formato'
@@ -10,6 +12,8 @@ import { formatoFechaHora, formatoPesos, formatoPorcentaje, formatoTasaEa } from
 const plazos = [5, 10, 15, 20, 25, 30]
 
 export function ClienteDetalle() {
+  // Si la foto no se pudo guardar al crear o editar al cliente, el formulario avisa aquí (el cliente sí quedó guardado).
+  const avisoFoto = (useLocation().state as { avisoFoto?: string } | null)?.avisoFoto
   const { id } = useParams()
   const navegar = useNavigate()
   const [cliente, setCliente] = useState<Cliente | null>(null)
@@ -21,14 +25,31 @@ export function ClienteDetalle() {
   const [errorPresupuesto, setErrorPresupuesto] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [compartidos, setCompartidos] = useState<CompartidoConCliente[]>([])
   const [busqueda, setBusqueda] = useState<RespuestaBusqueda | null>(null)
   const [buscando, setBuscando] = useState(false)
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null)
 
+  const cargarCompartidos = useCallback(() => {
+    api<CompartidoConCliente[]>(`/clientes/${id}/inmuebles-compartidos`).then(setCompartidos).catch(() => setCompartidos([]))
+  }, [id])
+
+  const compartir = async (inmuebleId: number, nota: string) => {
+    await api(`/clientes/${id}/inmuebles-compartidos`, { method: 'POST', body: JSON.stringify({ inmuebleId, nota: nota.trim() === '' ? null : nota.trim() }) })
+    cargarCompartidos()
+  }
+
+  const dejarDeCompartir = async (c: CompartidoConCliente) => {
+    if (!window.confirm(`¿Dejar de compartir «${c.titulo}» con ${cliente?.nombre}? Ya no lo verá en su portal.`)) return
+    await api(`/clientes/${id}/inmuebles-compartidos/${c.inmuebleId}`, { method: 'DELETE' })
+    cargarCompartidos()
+  }
+
   useEffect(() => {
     api<Cliente>(`/clientes/${id}`).then(setCliente).catch((e) => setError(e.message))
+    cargarCompartidos()
     api<Tasa[]>('/tasas').then(setTasas).catch(() => setTasas([]))
-  }, [id])
+  }, [id, cargarCompartidos])
 
   // El presupuesto se recalcula en el backend cada vez que cambia el plazo, la tasa o el tipo de vivienda.
   useEffect(() => {
@@ -81,14 +102,18 @@ export function ClienteDetalle() {
   return (
     <div className="mx-auto max-w-3xl">
       <Link to="/clientes" className="text-sm text-niebla hover:text-tinta">← Clientes</Link>
+      {avisoFoto && <div className="mt-3"><Aviso tipo="error">{avisoFoto}</Aviso></div>}
       <div className="mt-2 flex items-start justify-between gap-4">
-        <div>
+        <div className="flex min-w-0 items-center gap-4">
+          <Avatar nombre={cliente.nombre} tamano="gigante" foto={{ ruta: `/clientes/${cliente.id}/foto`, version: cliente.fotoVersion }} />
+          <div className="min-w-0">
           <h1 className="ancha text-[32px] font-semibold leading-[1.05] md:text-5xl">{cliente.nombre}</h1>
           <p className="mt-1 text-niebla">
             {cliente.intencion === 'COMPRAR' ? 'Quiere comprar' : 'Quiere arrendar'}
             {cliente.zonas.length > 0 && ` en ${cliente.zonas.join(', ')}`}
             {cliente.habitacionesMin > 0 && ` · ${cliente.habitacionesMin}+ habitaciones`}
           </p>
+          </div>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <Link to={`/reduccion?cliente=${cliente.id}`} className={claseBotonSecundario}>Reducir su crédito</Link>
@@ -183,10 +208,40 @@ export function ClienteDetalle() {
           {busqueda.aviso && <div className="mt-3"><Aviso tipo="info">{busqueda.aviso}</Aviso></div>}
           <ul className="mt-4 space-y-4">
             {busqueda.resultados.map((r) => (
-              <TarjetaResultado key={r.inmueble.id} resultado={r} cliente={cliente} plazo={plazo} tasaId={tasaId} />
+              <TarjetaResultado key={r.inmueble.id} resultado={r} cliente={cliente} plazo={plazo} tasaId={tasaId}
+                compartido={compartidos.some((c) => c.inmuebleId === r.inmueble.id)} onCompartir={compartir} />
             ))}
           </ul>
         </section>
+      )}
+
+      {cliente.intencion === 'COMPRAR' && (
+        <>
+          <section className="mt-10" aria-labelledby="titulo-compartidos">
+            <h2 id="titulo-compartidos" className="text-lg font-semibold">Compartidos con el cliente</h2>
+            <p className="mt-1 text-sm text-niebla">
+              Solo ve estos inmuebles en su portal, sin la dirección exacta ni datos del propietario. Tú decides cuáles.
+            </p>
+            {compartidos.length === 0 && <p className="mt-3 text-sm text-niebla">Todavía no le has compartido ninguno. Búscalos arriba y usa «Compartir con el cliente».</p>}
+            <ul className="mt-3 divide-y divide-linea border-y border-linea">
+              {compartidos.map((c) => (
+                <li key={c.inmuebleId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-tinta">{c.titulo}</div>
+                    <div className="truncate text-sm text-niebla">{formatoPesos(c.precio)} · {c.barrio}{c.nota && ` · «${c.nota}»`}</div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-sm">
+                    {c.interes === 'ME_INTERESA' && <span className="rounded-full bg-cobalto-suave px-2.5 py-1 text-xs font-semibold text-cobalto-hondo">Le interesa</span>}
+                    {c.interes === 'NO_ME_INTERESA' && <span className="rounded-full bg-papel px-2.5 py-1 text-xs font-semibold text-grafito ring-1 ring-linea">No le interesa</span>}
+                    {c.estado !== 'DISPONIBLE' && <span className="text-xs font-medium text-sello">No disponible</span>}
+                    <button onClick={() => void dejarDeCompartir(c)} className="text-red-700 hover:underline">Dejar de compartir</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <AccesoPortalPropietario clienteId={cliente.id} nombre={cliente.nombre} />
+        </>
       )}
 
       <div className="mt-12 border-t border-linea pt-6">
@@ -198,12 +253,28 @@ export function ClienteDetalle() {
   )
 }
 
-function TarjetaResultado({ resultado, cliente, plazo, tasaId }:
-  { resultado: ResultadoInmueble; cliente: Cliente; plazo: number | null; tasaId: number | '' }) {
+function TarjetaResultado({ resultado, cliente, plazo, tasaId, compartido, onCompartir }:
+  { resultado: ResultadoInmueble; cliente: Cliente; plazo: number | null; tasaId: number | ''; compartido: boolean
+    onCompartir: (inmuebleId: number, nota: string) => Promise<void> }) {
   const { inmueble: i, coincidenciaPct } = resultado
   const [simulacion, setSimulacion] = useState<Simulacion | null>(null)
   const [simulando, setSimulando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [compartiendo, setCompartiendo] = useState(false)
+  const [nota, setNota] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  const confirmarCompartir = async () => {
+    setEnviando(true); setError(null)
+    try {
+      await onCompartir(i.id, nota)
+      setCompartiendo(false); setNota('')
+    } catch (e) {
+      setError(e instanceof ErrorApi ? e.message : 'No se pudo compartir.')
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   const simular = async () => {
     setSimulando(true)
@@ -236,9 +307,27 @@ function TarjetaResultado({ resultado, cliente, plazo, tasaId }:
       </div>
       <p className="ancha cifra mt-3 text-2xl font-semibold text-tinta">{formatoPesos(i.precioVenta)}</p>
 
-      <button onClick={() => void simular()} disabled={simulando} className={`${claseBotonSecundario} mt-4`}>
-        {simulando ? 'Calculando…' : 'Simular crédito'}
-      </button>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button onClick={() => void simular()} disabled={simulando} className={claseBotonSecundario}>
+          {simulando ? 'Calculando…' : 'Simular crédito'}
+        </button>
+        {cliente.intencion === 'COMPRAR' && !compartiendo && (
+          compartido
+            ? <span className="self-center text-sm font-medium text-emerald-700">✓ Compartido con el cliente</span>
+            : <button onClick={() => setCompartiendo(true)} className={claseBotonSecundario}>Compartir con el cliente</button>
+        )}
+      </div>
+      {compartiendo && (
+        <div className="mt-3 border-t border-linea pt-3">
+          <label htmlFor={`nota-${i.id}`} className="mb-1.5 block text-sm font-medium text-tinta">Nota para {cliente.nombre} (opcional)</label>
+          <input id={`nota-${i.id}`} value={nota} onChange={(e) => setNota(e.target.value)} maxLength={500}
+            placeholder="Por ejemplo: queda cerca del colegio que buscaban." className={claseInput} />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button onClick={() => void confirmarCompartir()} disabled={enviando} className={claseBotonPrimario}>{enviando ? 'Compartiendo…' : 'Compartir'}</button>
+            <button onClick={() => setCompartiendo(false)} disabled={enviando} className={claseBotonSecundario}>Cancelar</button>
+          </div>
+        </div>
+      )}
       {error && <div className="mt-3"><Aviso tipo="error">{error}</Aviso></div>}
 
       {simulacion && (

@@ -44,7 +44,8 @@ public class SugerenciaRequisitos {
 
             for (RequisitoNegocio fila : filas) {
                 RequisitoCatalogo requisito = delCatalogo.get(fila.getRequisitoId());
-                if (requisito == null) {
+                if (requisito == null || fila.getSugeridoPor() == OrigenSugerencia.PROPIETARIO) {
+                    // Lo que eligió el propietario no lo cambia la IA: lo revisa el asesor.
                     continue;
                 }
                 boolean coincide = requisito.getTipoDocumento() == e.tipo() && e.tipo() != TipoDocumentoSugerido.OTRO;

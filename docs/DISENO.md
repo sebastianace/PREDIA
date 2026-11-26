@@ -340,6 +340,220 @@ export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
 
 - Sin el PDF original no se pueden verificar firmas, sellos ni tablas complejas. Un cambio en el OCR o en la extracción obliga a volver a subir el archivo; los embeddings, en cambio, se pueden regenerar desde el texto guardado.
 - La vigencia depende de la fecha de expedición que confirma el asesor.
-- No hay antivirus (ClamAV): se valida el tipo, la estructura y el tamaño.
+- El antivirus (ClamAV) es opcional y viene apagado por defecto; la revisión estructural del PDF (firma, JavaScript, acciones que lanzan programas y archivos incrustados) está siempre activa. Ver la sección «Escaneo de archivos».
 - La columna `vector(1536)` está atada al modelo actual. Pasar a un proveedor local con otra dimensión requiere una migración y reindexar.
 - La lista de requisitos es de referencia; Predia no da asesoría legal.
+
+## 10. Fase 8 — Usuarios y portal del propietario (aprobada el 23/11/2026)
+
+**Objetivo.** Resolver dos cosas a la vez: (1) hoy no hay forma de crear usuarios ni el primer administrador, así que con la demo apagada nadie podría entrar; (2) el propietario que vende no puede ver qué le falta para firmar. El comprador (plan de pagos, ficha del inmueble) queda para la Fase 9.
+
+### 10.1 Roles
+
+| Rol | Quién es | Qué puede hacer |
+|---|---|---|
+| `ADMIN` | Personal de la inmobiliaria | Todo lo del asesor + tasas, parámetros, catálogo de requisitos, regenerar vectores y **gestionar usuarios** |
+| `ASESOR` | Personal de la inmobiliaria | El trabajo diario, e **invitar al propietario** de sus negocios al portal |
+| `PROPIETARIO` (nuevo) | El vendedor de un inmueble | **Solo el portal**: sus negocios, sus documentos y sus recordatorios |
+
+El propietario **no** ve nada del resto de la inmobiliaria: ni otros negocios, ni clientes, ni expedientes, ni el asistente, ni el nombre del comprador (es un dato personal de otra persona).
+
+### 10.2 Modelo de datos (`V7__usuarios_y_portal.sql`)
+
+- **`usuario`** (cambios):
+  - `rol` admite `PROPIETARIO`.
+  - `propietario_id BIGINT NULL REFERENCES propietario(id)`, con `CHECK ((rol = 'PROPIETARIO') = (propietario_id IS NOT NULL))`: un usuario propietario siempre apunta a su ficha y uno del personal nunca.
+  - `password_hash` pasa a **NULL** mientras el usuario no active su cuenta, con `CHECK (NOT activo OR password_hash IS NOT NULL)`.
+  - `creado_por BIGINT NULL REFERENCES usuario(id)`, `ultimo_ingreso TIMESTAMPTZ NULL`.
+- **`invitacion_acceso`** (nueva): `id, inmobiliaria_id, usuario_id, token_hash VARCHAR(64) UNIQUE, expira_en, usada_en NULL, creada_por NULL, creada_en`. Solo se guarda el **SHA-256 del token**; el token en claro va únicamente en el enlace. Vale **72 horas** y **un solo uso**. Sirve para el personal, para el propietario y, más adelante, para «olvidé mi contraseña».
+- **`requisito_negocio`**: `sugerido_por VARCHAR(12) NULL CHECK (sugerido_por IN ('IA', 'PROPIETARIO'))`, para que el asesor sepa si una sugerencia la hizo la IA o la subió el propietario.
+
+### 10.3 Seguridad
+
+- **El cambio más importante:** hoy `/api/**` solo exige sesión. Pasa a exigir **`ADMIN` o `ASESOR`**, y el portal vive aparte en **`/api/portal/**` con `PROPIETARIO`**. Así un propietario con sesión no puede llamar a ningún endpoint del personal aunque conozca la URL (403), y el personal no entra al portal.
+- En el portal, todo se busca por `negocio.propietario_id = <el del usuario>` además de la inmobiliaria: un negocio de otro propietario, aunque sea de la misma inmobiliaria, responde **404**.
+- El JWT del propietario lleva el claim `propietario_id`; `UsuarioActual` lo expone. Nunca sale de un parámetro.
+- **Desactivar a alguien corta su sesión de inmediato:** un filtro comprueba en cada petición que el usuario siga activo (una consulta por id). Sin esto, un token robado o de alguien despedido seguiría valiendo hasta 8 horas.
+- Contraseñas: mínimo 10 caracteres, BCrypt (como hoy).
+- Sin registro abierto: **solo se entra por invitación**.
+
+### 10.4 Primer administrador
+
+Al arrancar, si **no existe ningún ADMIN** y están definidas `PREDIA_ADMIN_EMAIL`, `PREDIA_ADMIN_NOMBRE` y `PREDIA_INMOBILIARIA_NOMBRE`, Predia crea la inmobiliaria y ese administrador **sin contraseña**, y escribe **una sola vez en el log** el enlace de activación (72 h). Así no hay ninguna contraseña en variables de entorno. Con la demo encendida no hace falta: `DatosDemo` sigue creando a `admin@altos.test` y `laura@altos.test`.
+
+### 10.5 Endpoints
+
+| Método y ruta | Quién | Qué hace |
+|---|---|---|
+| `GET /api/usuarios` | ADMIN | Personal de la inmobiliaria (no lista propietarios) |
+| `POST /api/usuarios` | ADMIN | Crea un ADMIN o ASESOR (`nombre, email, rol`) y le envía la invitación |
+| `PUT /api/usuarios/{id}` | ADMIN | Cambia rol o activa/desactiva. **No** puede desactivarse a sí mismo ni dejar la inmobiliaria sin ADMIN |
+| `POST /api/usuarios/{id}/invitacion` | ADMIN | Reenvía la invitación (la anterior deja de valer). A un usuario ya activo le sirve para **elegir una contraseña nueva** si la olvidó |
+| `GET /api/propietarios/{id}/acceso` | ADMIN, ASESOR | Estado del acceso al portal: sin invitar, invitado (fecha), activo (último ingreso) |
+| `GET /api/propietarios/{id}/invitacion/vista-previa` | ADMIN, ASESOR | El correo que se enviará, para revisarlo antes |
+| `POST /api/propietarios/{id}/invitacion` | ADMIN, ASESOR | Crea (o reenvía) la invitación al portal y la envía por correo. Exige que el propietario tenga correo. Reenviarla también le sirve para elegir una contraseña nueva |
+| `PUT /api/propietarios/{id}/acceso` | ADMIN, ASESOR | Activa o desactiva el acceso del propietario al portal |
+| `GET /api/auth/invitaciones/{token}` | público | Valida el enlace y devuelve nombre e inmobiliaria (sin datos sensibles) |
+| `POST /api/auth/activar` | público | `token, password`: fija la contraseña, activa la cuenta y gasta el token |
+| `GET /api/portal/negocios` | PROPIETARIO | Sus negocios: inmueble, ciudad, estado, semáforo, avance, fecha de firma y contacto del asesor |
+| `GET /api/portal/negocios/{id}` | PROPIETARIO | Su estado documental: cada documento con su estado, la frase ya escrita en Java, cuándo vence y **cómo conseguirlo** (la descripción del catálogo). Sin notas internas del asesor |
+| `POST /api/portal/negocios/{id}/requisitos/{rid}/documento` | PROPIETARIO | Sube el PDF de ese documento: se indexa como cualquier otro y el requisito queda **SUGERIDO por el propietario**, nunca RECIBIDO |
+| `GET /api/portal/negocios/{id}/recordatorios` | PROPIETARIO | Los recordatorios que de verdad se le **enviaron** (no los borradores) |
+| `GET /api/portal/negocios/{id}/foto` | PROPIETARIO | La foto del inmueble, si tiene |
+
+**Gobernanza:** el envío de una invitación es una acción explícita del asesor (pulsa «Enviar invitación» después de ver el correo). Lo que sube el propietario queda sugerido hasta que el asesor lo confirma, con el mismo flujo de hoy. El portal no usa IA en esta fase.
+
+### 10.6 Pantallas
+
+- **Usuarios** (en «Más», solo para el ADMIN): lista del personal con rol, estado y último ingreso; «Nuevo usuario»; cambiar rol; desactivar o reactivar; reenviar invitación.
+- **Activar cuenta** (`/activar?token=…`, pública): saludo con el nombre y la inmobiliaria, elegir contraseña dos veces. Si el enlace venció o ya se usó, lo dice y pide uno nuevo al asesor.
+- **Detalle del negocio** (asesor): junto a «Vende», el estado del portal del propietario y el botón **«Invitar al portal»**, que muestra el correo antes de enviarlo. En los documentos, la etiqueta **«Lo envió el propietario»** en las sugerencias que vienen del portal.
+- **Portal del propietario** (`/portal`, con su propia plantilla, pensada primero para celular):
+  - Cabecera con la foto del inmueble (o su terreno), el nombre y **«Te faltan 2 documentos para firmar»**, con la misma cota de avance.
+  - La lista de documentos: lo recibido, lo que falta y lo vencido (con sello), qué significa cada uno, cómo conseguirlo y el botón **«Subir»** en lo que falta.
+  - Los recordatorios que le enviaron y el contacto de su asesor.
+- Al iniciar sesión, un propietario va directo a `/portal`; el personal, al inicio de siempre.
+
+### 10.7 Pruebas previstas
+
+- **Matriz de acceso:** un PROPIETARIO recibe 403 en `/api/negocios`, `/api/clientes`, `/api/inmuebles`, `/api/documentos`, `/api/consultas`, `/api/asistente`, `/api/usuarios`…; el personal recibe 403 en `/api/portal/**`; un ASESOR recibe 403 en `/api/usuarios`.
+- Un propietario no ve el negocio de otro propietario de la misma inmobiliaria (404), ni de otra inmobiliaria (404), ni el nombre del comprador.
+- Lo que sube el propietario queda SUGERIDO con `sugerido_por = PROPIETARIO`, nunca RECIBIDO, y no se envía ningún correo.
+- Invitación: el token se guarda como hash, vence a las 72 h, sirve una sola vez, y reenviar anula la anterior. Activar fija la contraseña y permite iniciar sesión.
+- Desactivar a un usuario invalida su token al instante (401). El ADMIN no puede desactivarse a sí mismo ni quitar al último ADMIN.
+- Primer administrador: sin ningún ADMIN y con las variables definidas se crea uno con invitación; si ya existe, no hace nada.
+
+### 10.8 Decisiones de la revisión
+
+- Después de invitarlo, el propietario entra **cuando quiera** con su correo y contraseña; el enlace de 72 horas solo sirve para crear (o recuperar) la contraseña.
+- **Sigue entrando después de firmar**, para consultar lo que entregó. Su acceso solo termina si el asesor o el ADMIN lo desactivan.
+- «Olvidé mi contraseña» se resuelve en esta fase reenviando la invitación.
+
+### 10.9 Fuera de esta fase
+
+Portal del comprador y plan de pagos (Fase 9); un «olvidé mi contraseña» autónomo, sin pasar por el asesor; línea de tiempo, agenda y avisos; que el propietario hable con el asistente.
+
+## 11. Fase 9 — Portal del comprador (aprobada e implementada)
+
+**Objetivo.** Que el comprador (por ejemplo «Paola y Juan») pueda ver los inmuebles que su asesor le compartió, con una ficha clara (foto, plano, datos) y un **simulador de compra** que le diga qué le cuesta y si le alcanza. El comprador **no navega el inventario**: solo ve lo que el asesor decide mostrarle. Entra por invitación, como el propietario.
+
+Alcance aprobado el 24/11/2026: ficha con plano, simulador, inmuebles compartidos, «me interesa» y contacto. La línea de tiempo de la compra, la agenda de visitas y los comentarios tras la visita quedan para la Fase 10.
+
+### 11.1 Roles
+
+Se agrega **`COMPRADOR`**, atado a su ficha de `cliente`. El comprador no ve a otros clientes, ni al propietario (ni sus datos ni sus documentos), ni el inventario completo, ni el asistente.
+
+| Rol | Entra a |
+|---|---|
+| ADMIN, ASESOR | La aplicación de trabajo (`/api/**`) |
+| PROPIETARIO | Su portal (`/api/portal/**`) |
+| COMPRADOR (nuevo) | Su portal (`/api/comprador/**`) |
+
+El asesor del comprador es quien registró su autorización de datos (`cliente.autorizacion_registrada_por`); a ese asesor le llegan sus solicitudes (el ADMIN ve todas). Un correo solo puede tener un rol: quien sea a la vez vendedor y comprador necesitaría dos correos (límite documentado).
+
+### 11.2 Modelo de datos (`V8__portal_comprador.sql`)
+
+- **`usuario`**: el `rol` admite `COMPRADOR`; `cliente_id BIGINT NULL REFERENCES cliente(id) ON DELETE CASCADE` con `CHECK ((rol = 'COMPRADOR') = (cliente_id IS NOT NULL))` e índice único parcial. **Borrar un cliente borra también su cuenta y todo lo que compartió** (privacidad: el botón «Eliminar cliente y sus datos» ya existe).
+- **`inmueble_compartido`**: `id, inmobiliaria_id, cliente_id, inmueble_id, nota VARCHAR(500) NULL, compartido_por, compartido_en, interes VARCHAR(14) NULL CHECK (interes IN ('ME_INTERESA','NO_ME_INTERESA')), interes_en NULL`, único por `(cliente_id, inmueble_id)`, con `ON DELETE CASCADE` hacia cliente e inmueble. Es **la lista blanca**: lo que no esté aquí, el comprador no lo ve.
+- **`solicitud_comprador`**: `id, inmobiliaria_id, cliente_id, inmueble_id NULL, mensaje VARCHAR(1000), creada_en, atendida_en NULL, atendida_por NULL`. Es el «Quiero más información»: un aviso al asesor, **nunca un correo ni una respuesta automática**.
+- **`plano_inmueble`** *(reemplazada después por la galería `imagen_inmueble`, migración V9: fotos y planos en una sola tabla ordenada, con tipo, orden, etiqueta y miniatura; ver `PROGRESO.md`)*: `inmueble_id PK, inmobiliaria_id, imagen BYTEA, ancho, alto, hash, subido_por, actualizada_en`. Una sola copia (no hay miniatura) de hasta 2.000 px, que se muestra **completa, sin recortar** (un plano no admite recorte). Reutiliza `ProcesadorImagen` con otro tamaño y mayor calidad de JPEG; las líneas muy finas pueden perder algo de nitidez y está dicho en las limitaciones.
+
+### 11.3 Seguridad
+
+- `/api/comprador/**` solo `COMPRADOR`; el resto de `/api/**` sigue siendo solo del personal, y `/api/portal/**` solo del propietario. Cada rol recibe 403 en las rutas de los demás.
+- El JWT lleva el claim `cliente_id`; `UsuarioActual` expone `clienteId`. Nunca sale de un parámetro. Se mantiene la comprobación por petición de que el usuario siga activo y con el mismo rol.
+- Todo se busca por `inmueble_compartido(cliente_id = el del token)` dentro de su inmobiliaria: un inmueble no compartido, o compartido a otro cliente, responde **404**.
+- **Qué no sale en la ficha del comprador:** el código interno, la **dirección exacta** (muestra barrio y ciudad; la dirección se da en la visita), el propietario y cualquier dato del negocio.
+- Si un inmueble compartido pasa a vendido o arrendado, sigue en su lista con la etiqueta «Ya no está disponible» y el simulador se desactiva (la API responde 422).
+- Solicitudes: máximo 5 sin atender por comprador, para evitar abuso.
+- Sin registro abierto: solo por invitación, igual que el propietario (enlace de un solo uso, 72 h; reenviarlo recupera la contraseña). Exige que el cliente tenga correo y la autorización de datos registrada.
+
+### 11.4 El simulador de compra
+
+Reutiliza `SimuladorCreditoService`, `CalculadoraCredito` y `CalculadoraPresupuesto`; **ningún número lo calcula el navegador ni la IA**. Solo se agrega el rango de la cuota inicial en una clase pura nueva con pruebas (`CalculadoraCompra`).
+
+- **Entradas:** `cuotaInicial` y `plazoAnios`.
+- **Rango de la cuota inicial:** de la **mínima** (30 % del precio, 20 % si es VIS: los porcentajes de la inmobiliaria) hasta lo que el comprador **tiene ahorrado** (nunca más que el precio menos un peso). Si su ahorro no alcanza la mínima, el simulador usa la mínima y lo dice: «Te faltan $X para la cuota inicial mínima».
+- **Salidas:** monto a financiar, cuota mensual, total a pagar, intereses, qué porcentaje de su ingreso es la cuota, su cuota máxima y un veredicto en palabras escritas en Java: «Está dentro de tu cuota máxima» o «La supera por $X al mes». Más la tasa usada, con la marca de «tasa de ejemplo» y el aviso de que la aprobación es del banco.
+- No se inventan gastos de escrituración ni impuestos: si la inmobiliaria quiere sumarlos, será un parámetro suyo en una fase posterior.
+
+### 11.5 Endpoints
+
+**Del comprador** (`/api/comprador/**`, solo `COMPRADOR`):
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/comprador/perfil` | Su nombre, su asesor (nombre y correo) y su presupuesto: tope de compra, cuota máxima y de dónde salen, con la tasa usada |
+| `GET /api/comprador/inmuebles` | Los inmuebles compartidos: título, barrio, ciudad, precio, datos clave, foto, nota del asesor, su interés y si sigue disponible |
+| `GET /api/comprador/inmuebles/{id}` | La ficha completa, el rango del simulador y la lista de imágenes de su galería |
+| `GET /api/comprador/inmuebles/{id}/foto` y `/imagenes/{imagenId}` | La portada y cada imagen de la galería (miniatura o grande, con la sesión) |
+| `POST /api/comprador/inmuebles/{id}/simulacion` | `cuotaInicial, plazoAnios` → la simulación calculada en Java |
+| `PUT /api/comprador/inmuebles/{id}/interes` | `ME_INTERESA`, `NO_ME_INTERESA` o `null` (quitarlo) |
+| `POST /api/comprador/solicitudes` | `inmuebleId?, mensaje` → un aviso al asesor |
+| `GET /api/comprador/solicitudes` | Sus solicitudes y si ya las atendieron |
+
+**Del personal** (ADMIN, ASESOR):
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/clientes/{id}/acceso`, `GET …/invitacion/vista-previa`, `POST …/invitacion`, `PUT …/acceso` | Lo mismo que para el propietario: estado del acceso, ver el correo antes de enviarlo, invitar, activar o desactivar |
+| `POST /api/clientes/{id}/inmuebles-compartidos` | `inmuebleId, nota?` → comparte un inmueble **disponible y en venta** |
+| `GET /api/clientes/{id}/inmuebles-compartidos` | Lo compartido, con el interés que marcó el comprador |
+| `DELETE /api/clientes/{id}/inmuebles-compartidos/{inmuebleId}` | Deja de compartirlo |
+| `PUT / GET / DELETE /api/inmuebles/{id}/plano` | Sube, consulta o quita el plano |
+| `GET /api/solicitudes`, `PUT /api/solicitudes/{id}/atender` | Las solicitudes de sus compradores (el ADMIN ve todas) |
+
+El resumen diario suma **solicitudes por atender**.
+
+### 11.6 Pantallas
+
+- **Ficha del inmueble** (`/comprador/inmuebles/:id`), de dos columnas en escritorio y apilada en celular:
+  - *Izquierda:* foto grande, plano (completo, con su propio visor), precio, fila de datos clave (área, habitaciones, baños, parqueaderos, estrato, administración), descripción y lo que incluye (mascotas, propiedad horizontal, VIS), con la nota del asesor.
+  - *Derecha, «Simula tu compra»:* controles deslizantes de cuota inicial y plazo; las cifras se piden al servidor al soltar (con una pequeña espera) y se muestran como **cifras acotadas** (cuota mensual, monto a financiar, intereses) junto al veredicto; botón **«Quiero más información»**, que abre una caja de texto y avisa al asesor.
+- **Inicio del comprador** (`/comprador`): su presupuesto arriba (tope de compra con su razón) y debajo las tarjetas de los inmuebles compartidos, con foto, precio y los botones «Me interesa» / «No me interesa».
+- **Asesor, en la ficha del cliente:** «Acceso del cliente» (el mismo componente de invitar), el botón **«Compartir con el cliente»** en cada resultado de la búsqueda, y la sección **«Compartidos con el cliente»** con el interés que marcó. En el formulario del inmueble, **«Plano»**. En el inicio, la tarjeta de **solicitudes por atender**.
+- Estilo: el mismo lenguaje de terreno y cotas del resto de Predia. Se trata de «usted» al comprador.
+
+### 11.7 Pruebas previstas
+
+- **Matriz de acceso** con los cuatro roles: el COMPRADOR recibe 403 en todo lo del personal, del propietario y de otros roles; el personal y el PROPIETARIO reciben 403 en `/api/comprador/**`.
+- Visibilidad: un inmueble no compartido responde 404; uno compartido a **otro cliente** (misma inmobiliaria) responde 404; uno de otra inmobiliaria responde 404.
+- La ficha **no contiene** el código, la dirección exacta ni datos del propietario (se comprueba sobre el JSON).
+- Simulador: las cifras coinciden con `SimuladorCreditoService`/`CalculadoraCredito` para varias combinaciones; por debajo de la cuota inicial mínima, 422 con el mínimo; si el ahorro no alcanza, usa la mínima y lo dice; con el inmueble ya vendido, 422; pruebas unitarias de `CalculadoraCompra` (rangos, VIS, ahorro justo, ahorro mayor que el precio).
+- «Me interesa» queda guardado y lo ve el asesor; las solicitudes llegan al asesor correcto, el tope de 5 se respeta, y **no sale ningún correo**.
+- Compartir solo acepta inmuebles disponibles y en venta; borrar el cliente borra su cuenta, lo compartido y sus solicitudes.
+- Invitación del comprador: exige correo; el token no se guarda en claro, vence y sirve una vez; un correo ya usado por un propietario se rechaza con un mensaje claro.
+- Plano: se reduce y se guarda; rechaza archivos que no son imágenes; solo lo ve el comprador al que se le compartió el inmueble.
+
+### 11.8 Fuera de esta fase
+
+Línea de tiempo de la compra, agenda de visitas y comentarios tras la visita (**Fase 10**, y conecta con el extra de IA 2 de análisis de sentimiento); galería de varias fotos; arrendatarios (hoy solo compradores); el asistente de IA hablando con el comprador; los gastos de escrituración como parámetro; un asesor asignado a cada cliente por separado (hoy es quien registró su autorización).
+
+## 11. Escaneo de archivos (aprobado el 24/11/2026)
+
+El punto 4 del flujo pide «límites de tamaño, validación y escaneo de archivos». El único punto de entrada de los PDF es `ServicioCargaDocumento.cargar`, que usan el asesor y el portal del propietario.
+
+**Orden en la carga:** tamaño y tipo declarado → archivo temporal con hash → **antivirus** → **firma `%PDF-`** → abrir con PDFBox (cifrado, páginas) → **inspección del contenido activo** → registro y cola de indexación.
+
+- `InspectorPdf` (Java puro): recorre todos los objetos del PDF (sin seguir referencias, así que no hay ciclos) y rechaza `/JS`, `/JavaScript`, acciones `/S /JavaScript` o `/S /Launch`, y archivos incrustados (`/EF`, `/EmbeddedFiles`, `/Type /EmbeddedFile`). No bloquea `/OpenAction` en general: muchos PDF legítimos lo usan para abrirse en una página.
+- `EscanerArchivos` con dos implementaciones elegidas por `predia.expedientes.escaneo.modo`: `EscanerDesactivado` (por defecto) y `EscanerClamAv` (comando `INSTREAM` de `clamd` por TCP, sin librería externa).
+- Un archivo infectado → 422 («rechazado por seguridad»; sin el nombre de la amenaza). Antivirus caído y `obligatorio=true` → 503. Antivirus caído y `obligatorio=false` → se acepta y queda sin verificar.
+- ClamAV va en `docker-compose.yml` bajo el perfil `escaneo` (imagen `clamav/clamav-debian`, porque la imagen principal no publica arm64 para Apple Silicon).
+
+## 12. IA local con Ollama (aprobado el 25/11/2026)
+
+- **Selector:** `PREDIA_IA_PROVEEDOR=openai|ollama` fija `spring.ai.model.chat` y `spring.ai.model.embedding`. Ambos starters de Spring AI están en el classpath; solo uno se activa. `EstadoIa` expone `proveedor`, `modeloChat` y `modeloEmbeddings` y no permite mezclar proveedores.
+- **Disponibilidad:** con OpenAI, sin clave = modo manual. Con Ollama no hay clave, así que la IA se da por disponible; si el servidor está apagado, cada uso falla con los avisos de siempre (502 en el asistente, reintentos en la indexación).
+- **Vectores:** las columnas siguen en `vector(1536)`. `AjusteDimension` rellena con ceros los vectores más cortos (la similitud coseno no cambia) y rechaza los más largos. Se descartó migrar a `vector(1024)`: borraría los vectores existentes y ataría la base a un solo tamaño.
+- **Modelos:** `qwen3:8b` para chat y herramientas, `bge-m3` para embeddings. Predia no descarga modelos.
+- **Modo de pensar:** apagado por defecto (`predia.ia.ollama.pensar`), por tiempo de respuesta.
+- **Umbral de similitud:** depende del modelo; es un parámetro de la inmobiliaria y se recalibra al cambiar de proveedor.
+
+## 13. Cierre de negocios, Mi perfil y Equipo (aprobado el 25/11/2026)
+
+- **Modelo (`V11`):** `negocio` gana `firmado_en`, `firmado_por`, `valor_cierre` y `nota_cierre`. La restricción `ck_negocio_cierre` obliga a que un negocio FIRMADO los tenga todos y a que uno que no lo es no los tenga.
+- **Reglas:** cerrar exige semáforo verde; con documentos pendientes solo un administrador, con nota de al menos 10 caracteres. El valor de cierre lo confirma la persona (se propone el precio publicado). Reabrir es solo del administrador y con nota. La venta se acredita a `negocio.asesor_id`, que no cambia.
+- **Estadísticas:** las calcula SQL (`ServicioRendimiento`) con la hora de Colombia. Tasa de cierre = vendidos / (vendidos + cancelados); días promedio = `firmado_en` − `creado_en`. Nada se captura a mano.
+- **Endpoints:** `POST /api/negocios/{id}/cerrar`, `POST /api/negocios/{id}/reabrir` (solo ADMIN), `PUT /api/perfil`, `GET /api/perfil/rendimiento`, `GET /api/equipo/rendimiento` (solo ADMIN).
+- **Visibilidad:** el administrador ve a todo el equipo; el asesor solo sus propias cifras.
+

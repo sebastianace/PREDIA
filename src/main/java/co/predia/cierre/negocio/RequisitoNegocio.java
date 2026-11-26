@@ -54,6 +54,10 @@ public class RequisitoNegocio {
 
     private String nota;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sugerido_por")
+    private OrigenSugerencia sugeridoPor;
+
     protected RequisitoNegocio() {
     }
 
@@ -72,7 +76,23 @@ public class RequisitoNegocio {
         this.documentoId = documentoId;
         this.fechaExpedicion = fechaExpedicion;
         this.sugeridoEn = Instant.now();
+        this.sugeridoPor = OrigenSugerencia.IA;
         return true;
+    }
+
+    /**
+     * El propietario subió el documento desde su portal: queda SUGERIDO para que el asesor lo revise. Puede reemplazar
+     * un documento que ya venció o está por vencer (el que conserva la persona deja de servir), nunca uno vigente.
+     */
+    public void sugerirPorPropietario(Long documentoId, LocalDate fechaExpedicion) {
+        this.estadoRegistrado = EstadoRegistrado.SUGERIDO;
+        this.documentoId = documentoId;
+        this.fechaExpedicion = fechaExpedicion;
+        this.sugeridoEn = Instant.now();
+        this.sugeridoPor = OrigenSugerencia.PROPIETARIO;
+        this.recibidoPor = null;
+        this.recibidoEn = null;
+        this.nota = null;
     }
 
     /** Solo el asesor puede dar un requisito por recibido. */
@@ -99,6 +119,7 @@ public class RequisitoNegocio {
         this.documentoId = null;
         this.fechaExpedicion = null;
         this.sugeridoEn = null;
+        this.sugeridoPor = null;
         this.recibidoPor = null;
         this.recibidoEn = null;
         this.nota = null;
@@ -115,4 +136,5 @@ public class RequisitoNegocio {
     public Long getRecibidoPor() { return recibidoPor; }
     public Instant getRecibidoEn() { return recibidoEn; }
     public String getNota() { return nota; }
+    public OrigenSugerencia getSugeridoPor() { return sugeridoPor; }
 }

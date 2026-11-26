@@ -22,9 +22,11 @@ public class SistemaController {
     public EstadoSistema estado() {
         String aviso = estadoIa.disponible() ? null
                 : "La IA no está disponible: Predia funciona en modo manual (formularios y búsqueda por texto).";
-        return new EstadoSistema(estadoIa.disponible(), estadoIa.modeloChat(), estadoIa.modeloEmbeddings(), aviso);
+        return new EstadoSistema(estadoIa.disponible(), estadoIa.proveedor(), estadoIa.modeloChat(),
+                estadoIa.modeloEmbeddings(), aviso);
     }
 
-    public record EstadoSistema(boolean iaDisponible, String modeloChat, String modeloEmbeddings, String aviso) {
+    public record EstadoSistema(boolean iaDisponible, String proveedor, String modeloChat, String modeloEmbeddings,
+                         String aviso) {
     }
 }

@@ -19,5 +19,8 @@ public interface NegocioRepository extends JpaRepository<Negocio, Long> {
     /** Para el trabajo diario, que recorre todas las inmobiliarias. */
     List<Negocio> findByEstado(EstadoNegocio estado);
 
+    /** Los negocios de un propietario: lo que ve en su portal (siempre dentro de su inmobiliaria). */
+    List<Negocio> findByInmobiliariaIdAndPropietarioIdOrderByCreadoEnDesc(Long inmobiliariaId, Long propietarioId);
+
     long countByInmobiliariaId(Long inmobiliariaId);
 }
