@@ -72,6 +72,14 @@ public abstract class PruebaIntegracion {
     public static final String PASSWORD_PRUEBA = "ClaveDePrueba123";
 
     @Autowired protected MockMvc mvc;
+    @Autowired private co.predia.comun.seguridad.LimitadorIntentos limitadorIntentos;
+
+    /** Los contadores de intentos fallidos son de la aplicación (compartida entre clases): cada prueba parte de cero. */
+    @org.junit.jupiter.api.BeforeEach
+    void reiniciarLimitadorDeIntentos() {
+        limitadorIntentos.reiniciar();
+    }
+
     @Autowired protected InmobiliariaRepository inmobiliarias;
     @Autowired protected UsuarioRepository usuarios;
     @Autowired protected ParametrosInmobiliariaRepository parametros;

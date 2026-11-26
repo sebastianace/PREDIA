@@ -2,10 +2,12 @@ package co.predia.auth;
 
 import co.predia.perfil.FotoPerfilRepositorio;
 import co.predia.perfil.SujetoFoto;
+import co.predia.comun.seguridad.LimitadorIntentos;
 import co.predia.comun.seguridad.ServicioJwt;
 import co.predia.comun.seguridad.SesionActual;
 import co.predia.comun.seguridad.UsuarioActual;
 import co.predia.comun.web.CredencialesInvalidasException;
+import co.predia.comun.web.RecursoNoEncontradoException;
 import co.predia.inmobiliaria.InmobiliariaRepository;
 import co.predia.inmobiliaria.Rol;
 import co.predia.inmobiliaria.Usuario;
@@ -14,6 +16,7 @@ import co.predia.usuarios.ServicioInvitaciones;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -40,10 +43,13 @@ public class AuthController {
     private final SesionActual sesion;
     private final FotoPerfilRepositorio fotos;
     private final ServicioInvitaciones invitaciones;
+    private final LimitadorIntentos limitador;
 
     public AuthController(UsuarioRepository usuarios, InmobiliariaRepository inmobiliarias,
                           PasswordEncoder passwordEncoder, ServicioJwt servicioJwt, SesionActual sesion,
-                          ServicioInvitaciones invitaciones, FotoPerfilRepositorio fotos) {
+                          ServicioInvitaciones invitaciones, FotoPerfilRepositorio fotos,
+                          LimitadorIntentos limitador) {
+        this.limitador = limitador;
         this.fotos = fotos;
         this.invitaciones = invitaciones;
         this.usuarios = usuarios;
@@ -56,10 +62,18 @@ public class AuthController {
     @PostMapping("/login")
     @SecurityRequirements   // público: no lleva candado en Swagger
     @Operation(summary = "Inicia sesión y devuelve un JWT")
-    public RespuestaLogin login(@Valid @RequestBody SolicitudLogin solicitud) {
-        Usuario usuario = usuarios.findByEmailIgnoreCaseAndActivoTrue(solicitud.email().trim())
+    public RespuestaLogin login(@Valid @RequestBody SolicitudLogin solicitud, HttpServletRequest peticion) {
+        String correo = solicitud.email().trim();
+        String ip = peticion.getRemoteAddr();
+        limitador.verificarLogin(correo, ip);   // bloqueado: ni la contraseña correcta entra
+        Usuario usuario = usuarios.findByEmailIgnoreCaseAndActivoTrue(correo)
                 .filter(u -> passwordEncoder.matches(solicitud.password(), u.getPasswordHash()))
-                .orElseThrow(CredencialesInvalidasException::new);
+                .orElse(null);
+        if (usuario == null) {
+            limitador.fallaLogin(correo, ip);
+            throw new CredencialesInvalidasException();
+        }
+        limitador.exitoLogin(correo);
         usuario.registrarIngreso();
         usuarios.save(usuario);
         ServicioJwt.TokenEmitido token = servicioJwt.emitir(usuario);
@@ -70,15 +84,30 @@ public class AuthController {
     @GetMapping("/invitaciones/{token}")
     @SecurityRequirements   // público: no lleva candado en Swagger
     @Operation(summary = "Valida un enlace de invitación (público): devuelve a quién y de qué inmobiliaria")
-    public ServicioInvitaciones.Vista invitacion(@PathVariable String token) {
-        return invitaciones.ver(token);
+    public ServicioInvitaciones.Vista invitacion(@PathVariable String token, HttpServletRequest peticion) {
+        String ip = peticion.getRemoteAddr();
+        limitador.verificarEnlace(ip);
+        try {
+            return invitaciones.ver(token);
+        } catch (RecursoNoEncontradoException e) {
+            limitador.fallaEnlace(ip);   // enlace inexistente, vencido o ya usado
+            throw e;
+        }
     }
 
     @PostMapping("/activar")
     @SecurityRequirements   // público: no lleva candado en Swagger
     @Operation(summary = "Crea (o recupera) la contraseña con un enlace de invitación y deja la cuenta activa")
-    public RespuestaLogin activar(@Valid @RequestBody SolicitudActivacion s) {
-        Usuario usuario = invitaciones.activar(s.token(), s.password());
+    public RespuestaLogin activar(@Valid @RequestBody SolicitudActivacion s, HttpServletRequest peticion) {
+        String ip = peticion.getRemoteAddr();
+        limitador.verificarEnlace(ip);
+        Usuario usuario;
+        try {
+            usuario = invitaciones.activar(s.token(), s.password());
+        } catch (RecursoNoEncontradoException e) {
+            limitador.fallaEnlace(ip);
+            throw e;
+        }
         usuario.registrarIngreso();
         usuarios.save(usuario);
         ServicioJwt.TokenEmitido token = servicioJwt.emitir(usuario);

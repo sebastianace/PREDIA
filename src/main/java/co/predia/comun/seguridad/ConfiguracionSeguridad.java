@@ -3,6 +3,7 @@ package co.predia.comun.seguridad;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import co.predia.inmobiliaria.Usuario;
 import co.predia.inmobiliaria.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -25,6 +26,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -38,11 +40,24 @@ import java.util.List;
 @EnableMethodSecurity
 public class ConfiguracionSeguridad {
 
+    /** Una respuesta de la API es JSON o una imagen: no debe poder cargar nada ni mostrarse dentro de otra página. */
+    private static final String CSP_API = "default-src 'none'; frame-ancestors 'none'";
+
     @Bean
-    SecurityFilterChain cadenaSeguridad(HttpSecurity http, RespuestasSeguridad respuestas, UsuarioRepository usuarios)
+    SecurityFilterChain cadenaSeguridad(HttpSecurity http, RespuestasSeguridad respuestas, UsuarioRepository usuarios,
+                                        @Value("${springdoc.swagger-ui.enabled:false}") boolean swaggerActivo)
             throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(h -> {
+                    h.frameOptions(f -> f.deny());
+                    h.referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER));
+                    h.permissionsPolicyHeader(p -> p.policy("camera=(), microphone=(), geolocation=(), payment=()"));
+                    // Swagger UI necesita cargar sus propios scripts: con él encendido (solo desarrollo) no se aplica la CSP.
+                    if (!swaggerActivo) {
+                        h.contentSecurityPolicy(c -> c.policyDirectives(CSP_API));
+                    }
+                })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/activar").permitAll()

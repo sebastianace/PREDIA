@@ -74,7 +74,11 @@ spring:
           keep-alive: ${OLLAMA_KEEP_ALIVE:2h}
 
 springdoc:
+  # La documentación de la API revela todos los endpoints: apagada por defecto. En desarrollo: PREDIA_SWAGGER=true.
+  api-docs:
+    enabled: ${PREDIA_SWAGGER:false}
   swagger-ui:
+    enabled: ${PREDIA_SWAGGER:false}
     path: /swagger-ui.html
     # El token pegado en «Authorize» se conserva al recargar la página (solo en tu navegador).
     persist-authorization: true
@@ -87,6 +91,13 @@ predia:
   jwt:
     secreto: ${JWT_SECRET:}
     horas-validez: ${JWT_HORAS_VALIDEZ:8}
+  seguridad:
+    # Intentos fallidos antes de bloquear (por correo, por IP al iniciar sesión y por IP con enlaces de invitación)
+    # y minutos que dura el bloqueo. Solo se tocan si hace falta.
+    intentos-por-correo: ${PREDIA_INTENTOS_POR_CORREO:5}
+    intentos-por-ip: ${PREDIA_INTENTOS_POR_IP:20}
+    intentos-enlace-por-ip: ${PREDIA_INTENTOS_ENLACE_POR_IP:10}
+    ventana-minutos: ${PREDIA_VENTANA_INTENTOS_MIN:15}
   demo:
     habilitada: ${DEMO_HABILITADA:true}
     password: ${DEMO_PASSWORD:}

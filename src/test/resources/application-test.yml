@@ -8,6 +8,11 @@ spring:
       embedding: openai
     openai:
       api-key: sin-configurar
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 predia:
   jwt:
     secreto: secreto-solo-para-pruebas-automatizadas-0123456789

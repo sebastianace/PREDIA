@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,6 +39,68 @@ class AutenticacionTest extends PruebaIntegracion {
                                 {"email": "%s", "password": "otra-clave"}""".formatted(asesor.getEmail())))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("Email o contraseña incorrectos."));
+    }
+
+    @Test
+    void tras5ContrasenasIncorrectasElLoginSeBloqueaAunConLaContrasenaCorrecta() throws Exception {
+        Usuario asesor = crearUsuario(crearInmobiliaria("Inmobiliaria Bloqueo"), Rol.ASESOR);
+        String mala = """
+                {"email": "%s", "password": "otra-clave"}""".formatted(asesor.getEmail());
+        String buena = """
+                {"email": "%s", "password": "%s"}""".formatted(asesor.getEmail(), PASSWORD_PRUEBA);
+
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(buena))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("Demasiados intentos")));
+    }
+
+    @Test
+    void unAciertoAntesDelMaximoDejaElContadorEnCero() throws Exception {
+        Usuario asesor = crearUsuario(crearInmobiliaria("Inmobiliaria Acierto"), Rol.ASESOR);
+        String mala = """
+                {"email": "%s", "password": "otra-clave"}""".formatted(asesor.getEmail());
+        String buena = """
+                {"email": "%s", "password": "%s"}""".formatted(asesor.getEmail(), PASSWORD_PRUEBA);
+
+        for (int i = 0; i < 4; i++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                    .andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(buena))
+                .andExpect(status().isOk());
+        for (int i = 0; i < 4; i++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Test
+    void adivinarEnlacesDeInvitacionSeBloqueaTrasDiezFallos() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            mvc.perform(get("/api/auth/invitaciones/token-inventado-" + i)).andExpect(status().isNotFound());
+        }
+
+        mvc.perform(get("/api/auth/invitaciones/token-inventado-final")).andExpect(status().isTooManyRequests());
+        mvc.perform(post("/api/auth/activar").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token": "otro-token", "password": "UnaClaveLargaYSegura1"}"""))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void lasRespuestasDeLaApiLlevanCabecerasDeSeguridad() throws Exception {
+        mvc.perform(get("/api/inmuebles"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(header().exists("Permissions-Policy"))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
     }
 
     @Test

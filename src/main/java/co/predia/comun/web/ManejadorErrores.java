@@ -2,8 +2,10 @@ package co.predia.comun.web;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -40,6 +42,13 @@ public class ManejadorErrores {
     @ExceptionHandler(CredencialesInvalidasException.class)
     ProblemDetail credenciales(CredencialesInvalidasException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(DemasiadosIntentosException.class)
+    ResponseEntity<ProblemDetail> demasiadosIntentos(DemasiadosIntentosException e) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getSegundosEspera()))
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, e.getMessage()));
     }
 
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
