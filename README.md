@@ -156,6 +156,7 @@ Nadie se registra solo: se entra por invitación. Desactivar a alguien cierra su
 |---|---|---|
 | `admin@altos.test` | ADMIN | el valor de `DEMO_PASSWORD` en tu `.env` |
 | `laura@altos.test` | ASESOR | el valor de `DEMO_PASSWORD` en tu `.env` |
+| `andres@altos.test`, `camila@altos.test` | ASESOR (ficticios, solo para que «Equipo» tenga con qué comparar) | el valor de `DEMO_PASSWORD` en tu `.env` |
 
 ### Variables de entorno
 
@@ -216,6 +217,7 @@ Las pruebas usan un PostgreSQL con pgvector real en un contenedor desechable (Te
 | Checklist de documentos para el cierre | Muestra qué le falta al vendedor y qué está por vencer, con semáforo y recordatorios aprobados por el asesor. *(Fase 5)* |
 | Asistente con herramientas | Chat que elige entre siete herramientas (expedientes, inventario, presupuesto, crédito, reducción de crédito, estado del negocio y borrador de recordatorio) con tool calling. Las cifras salen de Java, el tenant del usuario autenticado y los recordatorios solo quedan como borrador. *(Fase 6)* |
 | Usuarios y portal del propietario | El ADMIN crea al personal y el asesor invita al propietario que vende. Cada persona recibe un enlace de un solo uso (72 h) para crear su contraseña y después entra cuando quiera. El propietario solo ve **su portal**: cuánto le falta para firmar, qué documentos vencieron, cómo conseguirlos, y puede enviarlos; lo que envía queda en revisión hasta que el asesor lo confirma. *(Fase 8)* |
+| Cierre de negocios y equipo | El asesor **cierra el negocio** cuando se firma la venta (con el semáforo en verde; un administrador puede forzarlo con una nota y es el único que puede reabrirlo). El inmueble pasa a vendido y la venta cuenta sola para el asesor: nadie escribe las cifras a mano. «Mi perfil» muestra al asesor sus propias ventas y le deja editar su nombre y su foto; «Equipo» (solo administrador) compara a los asesores por ventas, valor vendido y días de cierre. Las ventas de los asesores ficticios de la demo están marcadas «(ejemplo)». *(Extra)* |
 | Portal del comprador | El asesor invita a un cliente y decide qué inmuebles le comparte (sin dirección exacta, código ni datos del propietario). El comprador ve su tope de compra con la razón de cada cifra, las fotos y los planos de cada inmueble en un carrusel, **simula su compra** moviendo la cuota inicial y el plazo (las cifras las calcula el servidor), marca «me interesa» y le escribe al asesor, que ve esos mensajes en su inicio. *(Fase 9)* |
 
 ## Guion de demo

@@ -1,5 +1,17 @@
 # Progreso de Predia
 
+## Extra — Perfiles y equipo, entrega 2: cierre de negocios, Mi perfil y Equipo ✅ (26/11/2026)
+
+**Rama:** `feature/cierre-y-equipo` (sale de `release/1.2.0`). Diseño y boceto aprobados antes de programar. «La IA sugiere, las reglas deciden y la persona confirma»: las ventas **no se escriben a mano**, se cuentan solas desde los cierres confirmados.
+
+- **Cerrar un negocio** (`POST /api/negocios/{id}/cerrar`, migración V11): registra la venta firmada (`estado FIRMADO`, quién, cuándo, valor y nota; una restricción `ck_negocio_cierre` de la base lo exige). Reglas en Java (`ServicioCierreNegocio`): solo el asesor del negocio o un administrador; con el semáforo en verde basta; con documentos pendientes solo un administrador, con una nota de al menos 10 caracteres. El valor propuesto es el precio publicado y el asesor lo confirma o corrige. El inmueble pasa a VENDIDO y la venta cuenta para el asesor que abrió el negocio (no cambia aunque otro lo cierre). El estado FIRMADO no se puede poner ni quitar editando el negocio.
+- **Reabrir** (`POST /api/negocios/{id}/reabrir`): solo administrador (declarado en `ConfiguracionSeguridad`), con nota; el inmueble vuelve a quedar disponible y la venta deja de contar.
+- **Rendimiento** (`ServicioRendimiento`, SQL con la hora de Colombia): vendidos, valor vendido, negocios abiertos, días promedio de cierre y tasa de cierre (vendidos / (vendidos + cancelados)), por periodo (mes, año o todo). `GET /api/perfil/rendimiento` devuelve solo las cifras de quien consulta; `GET /api/equipo/rendimiento` (solo administrador) las de todos los asesores de su inmobiliaria.
+- **Mi perfil** (`PUT /api/perfil`): el asesor edita su nombre y su foto; devuelve un token nuevo porque el nombre viaja en él.
+- **Interfaz:** panel de cierre en el negocio (`CierreNegocio.tsx`), pantalla «Equipo» (ranking con barras, selector de periodo y de métrica, «Líder») y «Mi perfil», con entradas en el menú. Verificado en el navegador (escritorio y 375 px) contra una copia de la base: cerrar con nota, reabrir, el asesor sin acceso a «Equipo» y sin poder forzar el cierre.
+- **Demo:** dos asesores ficticios (`andres@altos.test`, `camila@altos.test`) y seis ventas marcadas «(ejemplo)» para que el ranking tenga qué comparar.
+- **Pruebas:** 306 en total (nuevas: `CierreNegocioApiTest` 10, `RendimientoApiTest` 7, `PerfilApiTest` 2 y la matriz de acceso).
+
 ## Extra — Perfiles y equipo, entrega 1: fotos de perfil ✅ (25/11/2026)
 
 **Rama:** `feature/perfiles-y-equipo` (sale de `release/1.2.0`). Diseño y boceto aprobados antes de programar; esta es la primera de dos entregas (la segunda es el cierre de negocios, «Mi perfil» y «Equipo»).
@@ -10,7 +22,7 @@
 - **Interfaz.** `Avatar` muestra la foto o, si no hay, las iniciales de siempre. `CampoFotoPerfil` (subir, cambiar, quitar y deshacer) con recorte circular que se arrastra, o se mueve con las flechas del teclado, para elegir qué parte se ve; no sube nada hasta guardar a la persona y, si la foto falla, la persona queda guardada y se avisa en su ficha. Aparece en el formulario de cliente, en el de vendedor (Nuevo negocio), en la lista de clientes, la ficha del cliente, los negocios y el menú del asesor.
 - **Pruebas:** 12 nuevas (`ProcesadorPerfilTest` 5 y `FotoPerfilApiTest` 7: subir, ver cuadrada, revalidar, reemplazar, quitar, aislamiento entre inmobiliarias, permisos de asesor y administrador, archivos inválidos, supresión del cliente y versiones en el negocio).
 - **Verificado en el navegador** contra una copia de la base (borrada al terminar): cliente nuevo con foto movida con el ratón, quitar la foto desde «Editar», vendedor con foto al abrir un negocio y la foto de Laura en el menú.
-- **Falta (entrega 2):** pantalla «Mi perfil» para que el asesor edite su nombre y su foto, cerrar negocios (que cuenta las ventas) y «Equipo» para el administrador.
+- La entrega 2 (cierre de negocios, «Mi perfil» y «Equipo») está en la sección de arriba.
 
 ## Versión 1.2.0 ✅ (25/11/2026)
 
