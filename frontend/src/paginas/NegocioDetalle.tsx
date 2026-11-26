@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useLocation, useParams } from 'react-router-dom'
 import { api, ErrorApi } from '../api/cliente'
 import type { Documento, EstadoDocumental, HipotecaVigente, ItemDocumental, Negocio, Recordatorio } from '../api/tipos'
+import { CierreNegocio } from '../componentes/CierreNegocio'
+import { useSesion } from '../sesion/Sesion'
 import { Aviso, Campo, claseBotonPrimario, claseBotonSecundario, claseInput } from '../componentes/Formulario'
 import { CotaAvance } from '../componentes/Cota'
 import { EstadoRequisitoChip } from '../componentes/Semaforo'
@@ -12,6 +14,7 @@ import { formatoFecha, formatoFechaHora } from '../formato'
 
 export function NegocioDetalle() {
   const { id } = useParams()
+  const { usuario } = useSesion()
   // Si la foto del vendedor no se pudo guardar al abrir el negocio, el formulario avisa aquí (el negocio sí quedó).
   const avisoFoto = (useLocation().state as { avisoFoto?: string } | null)?.avisoFoto
   const [negocio, setNegocio] = useState<Negocio | null>(null)
@@ -139,6 +142,7 @@ export function NegocioDetalle() {
           <CotaAvance items={estado.items} porcentaje={estado.porcentajeAvance} tono="sobre-azul" />
         </div>
       </header>
+      <CierreNegocio negocio={negocio} estado={estado} esAdmin={usuario?.rol === 'ADMIN'} alCambiar={() => void cargar()} />
       {estado.advertencias.length > 0 && (
         <ul className="mt-4 space-y-2">
           {estado.advertencias.map((a) => <li key={a}><Aviso tipo="info">{a}</Aviso></li>)}

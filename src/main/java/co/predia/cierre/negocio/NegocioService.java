@@ -86,9 +86,20 @@ public class NegocioService {
         Negocio negocio = negocios.findByIdAndInmobiliariaId(negocioId, tenant)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Negocio", negocioId));
         validarParticipantes(tenant, d);
+        EstadoNegocio estadoActual = negocio.getEstado();
+        EstadoNegocio nuevo = d.estado() == null ? estadoActual : d.estado();
+        // Una venta solo se registra con «Cerrar negocio» (que exige la lista de documentos y deja quién la confirmó) y
+        // solo un administrador la deshace: por aquí el estado FIRMADO ni se pone ni se quita.
+        if (nuevo == EstadoNegocio.FIRMADO && estadoActual != EstadoNegocio.FIRMADO) {
+            throw new ReglaNegocioException("Un negocio se da por firmado con «Cerrar negocio», no editando su estado.");
+        }
+        if (estadoActual == EstadoNegocio.FIRMADO && nuevo != EstadoNegocio.FIRMADO) {
+            throw new ReglaNegocioException("Un negocio firmado solo lo reabre un administrador.");
+        }
         negocio.actualizar(d.propietarioId(), d.clienteCompradorId(), d.fechaFirmaTentativa(),
                 d.actuaPorApoderado(), d.hipotecaVigente() == null ? HipotecaVigente.DESCONOCIDO : d.hipotecaVigente(),
-                d.estado() == null ? negocio.getEstado() : d.estado());
+                estadoActual);
+        negocio.cambiarEstadoSinCierre(nuevo, java.time.Instant.now(reloj));
         return negocios.save(negocio);
     }
 

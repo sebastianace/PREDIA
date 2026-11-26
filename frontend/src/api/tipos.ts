@@ -263,6 +263,14 @@ export interface Negocio {
   propietarioFotoVersion?: string | null
   clienteCompradorFotoVersion?: string | null
   asesorFotoVersion?: string | null
+  /** El cierre (venta firmada): cuándo y por cuánto. Solo si el negocio está FIRMADO. */
+  firmadoEn?: string | null
+  valorCierre?: number | null
+  notaCierre?: string | null
+  /** El precio publicado del inmueble: con él se propone el valor del cierre. */
+  precioPublicado?: number | null
+  /** Si quien mira puede cerrarlo ahora (está abierto y es su asesor o un administrador). */
+  puedeCerrar: boolean
 }
 
 export interface ItemDocumental {
@@ -647,4 +655,40 @@ export interface SolicitudPendiente {
   inmuebleTitulo: string | null
   mensaje: string
   creadaEn: string
+}
+
+// ---------------------------------------------------------------- rendimiento y equipo
+
+export type Periodo = 'MES' | 'ANIO' | 'TODO'
+
+export interface Rendimiento {
+  usuarioId: number
+  nombre: string
+  rol: Rol
+  fotoVersion: string | null
+  vendidos: number
+  valorVendido: number
+  abiertos: number
+  cancelados: number
+  diasPromedioCierre: number | null
+  tasaDeCierre: number | null
+}
+
+export interface CierreReciente {
+  negocioId: number
+  inmueble: string
+  valor: number
+  firmadoEn: string
+}
+
+export interface RendimientoPersonal {
+  periodo: Periodo
+  rendimiento: Rendimiento
+  ultimosCierres: CierreReciente[]
+}
+
+export interface RendimientoEquipo {
+  periodo: Periodo
+  asesores: Rendimiento[]
+  totales: { vendidos: number; valorVendido: number; asesores: number }
 }

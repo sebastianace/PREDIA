@@ -548,3 +548,12 @@ El punto 4 del flujo pide «límites de tamaño, validación y escaneo de archiv
 - **Modelos:** `qwen3:8b` para chat y herramientas, `bge-m3` para embeddings. Predia no descarga modelos.
 - **Modo de pensar:** apagado por defecto (`predia.ia.ollama.pensar`), por tiempo de respuesta.
 - **Umbral de similitud:** depende del modelo; es un parámetro de la inmobiliaria y se recalibra al cambiar de proveedor.
+
+## 13. Cierre de negocios, Mi perfil y Equipo (aprobado el 25/11/2026)
+
+- **Modelo (`V11`):** `negocio` gana `firmado_en`, `firmado_por`, `valor_cierre` y `nota_cierre`. La restricción `ck_negocio_cierre` obliga a que un negocio FIRMADO los tenga todos y a que uno que no lo es no los tenga.
+- **Reglas:** cerrar exige semáforo verde; con documentos pendientes solo un administrador, con nota de al menos 10 caracteres. El valor de cierre lo confirma la persona (se propone el precio publicado). Reabrir es solo del administrador y con nota. La venta se acredita a `negocio.asesor_id`, que no cambia.
+- **Estadísticas:** las calcula SQL (`ServicioRendimiento`) con la hora de Colombia. Tasa de cierre = vendidos / (vendidos + cancelados); días promedio = `firmado_en` − `creado_en`. Nada se captura a mano.
+- **Endpoints:** `POST /api/negocios/{id}/cerrar`, `POST /api/negocios/{id}/reabrir` (solo ADMIN), `PUT /api/perfil`, `GET /api/perfil/rendimiento`, `GET /api/equipo/rendimiento` (solo ADMIN).
+- **Visibilidad:** el administrador ve a todo el equipo; el asesor solo sus propias cifras.
+

@@ -386,7 +386,8 @@ class PortalCompradorApiTest extends PruebaIntegracion {
 
         // El comprador no entra a nada del personal ni del portal del propietario.
         for (String ruta : new String[]{"/api/clientes", "/api/inmuebles", "/api/portal/negocios", "/api/usuarios",
-                "/api/solicitudes-comprador", "/api/resumen-diario"}) {
+                "/api/solicitudes-comprador", "/api/resumen-diario", "/api/perfil/rendimiento", "/api/equipo/rendimiento",
+                "/api/perfil/usuarios/1/foto"}) {
             mvc.perform(get(ruta).header("Authorization", bearer(e.comprador()))).andExpect(status().isForbidden());
         }
         // El personal no entra al portal del comprador.
